@@ -1,5 +1,21 @@
 # AllSkyKamera
- Bibliothek für Python Allsky Kamer auf RaspberryPi
+ Bibliothek für Python Allsky Kamera auf RaspberryPi
+
+---
+
+# Repository klonen
+git clone git@github.com:gottie29/AllSkyKamera.git
+cd AllSkyKamera
+
+# Python-Abhängigkeiten installieren
+pip install -r requirements.txt
+
+# Individuelle Zugangsdaten setzen
+cp askutils/ASKsecret.example.py askutils/ASKsecret.py
+nano askutils/ASKsecret.py   # API_KEY eintragen
+
+# Test: Sensor oder Funktion starten
+python3 beispiel_skript.py
 
 ---
 
