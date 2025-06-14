@@ -3,6 +3,25 @@
 
 ---
 
+# 🛠 Voraussetzungen & Installation
+
+## 📦 Benötigte Python-Module
+
+Das Skript zur Systemüberwachung verwendet folgende Module:
+
+- `psutil` – Systeminformationen wie CPU, RAM, Temperatur
+- `influxdb-client` – Verbindung zur InfluxDB 2.x API
+- `requests` – Für den Abruf geheimer Zugangsdaten via API
+
+## 📥 Installation auf dem Raspberry Pi
+
+```bash
+sudo apt update
+sudo apt install python3-pip -y
+pip3 install psutil influxdb-client requests
+
+---
+
 # Installation der askutils
 
 ## Repository klonen
