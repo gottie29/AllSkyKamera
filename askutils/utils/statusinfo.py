@@ -1,3 +1,4 @@
+# Module fuer den Status der Raspi
 import psutil, datetime, subprocess
 
 def get_temp():

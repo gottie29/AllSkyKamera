@@ -21,6 +21,25 @@ FTP_VIDEO_DIR = "videos"
 FTP_KEOGRAM_DIR = "keograms"
 FTP_STARTRAIL_DIR = "startrails"
 
+
+################### CRONTABS ###################################
+# Eintragen lassen mit dem Skriptaufruf
+# python3 -m scripts.manage_crontabs
+# im Verzeichnis AllskyKamera
+################################################################
+CRONTABS = [
+    {
+        "comment": "Allsky Raspi-Status",
+        "schedule": "*/1 * * * *",  # alle 5 Minuten
+        "command": "cd /home/pi/AllSkyKamera && python3 -m scripts.raspi_status"
+    },
+    # Weitere Jobs kannst du einfach ergänzen
+]
+
+
+
+
+
 from askutils.utils.load_secrets import load_remote_secrets
 _secrets = load_remote_secrets(API_KEY, API_URL)
 
