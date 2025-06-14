@@ -15,7 +15,6 @@ Das Skript zur Systemüberwachung verwendet folgende Module:
 
 ## 📥 Installation auf dem Raspberry Pi
 
-```bash
 sudo apt update
 sudo apt install python3-pip -y
 pip3 install psutil influxdb-client requests
