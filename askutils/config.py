@@ -11,6 +11,7 @@ STANDORT_NAME = "Allsky Kamera 002"
 LATITUDE = 52.239988
 LONGITUDE = 13.432869
 
+
 # 📁 Pfade
 IMAGE_BASE_PATH = "/home/pi/allsky/images"
 SCRIPTS_PATH = "/home/pi/scripts4"
