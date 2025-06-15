@@ -36,6 +36,11 @@ CRONTABS = [
         "schedule": "*/1 * * * *",  # alle 5 Minuten
         "command": "cd /home/pi/AllSkyKamera && python3 -m scripts.raspi_status"
     },
+    {
+        "comment": "Config Update",
+        "schedule": "0 12 * * *",  #  12 Uhr Mittags
+        "command": "cd /home/pi/AllSkyKamera && python3 -m scripts.upload_config_json"
+    },
     # Weitere Jobs kannst du einfach ergänzen
 ]
 
