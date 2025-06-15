@@ -7,7 +7,10 @@ except ImportError:
 
 # 📍 Kamera-Standort
 KAMERA_ID = "ASK002"
-STANDORT_NAME = "Allsky Kamera 002"
+KAMERA_NAME = "AllSkyKamera Dabendorf"
+STANDORT_NAME = "Dabendorf bei Zossen"
+BENUTZER_NAME = "Stefan Gotthold"
+KONTAKT_EMAIL = "gottie@web.de"
 LATITUDE = 52.239988
 LONGITUDE = 13.432869
 
