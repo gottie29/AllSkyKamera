@@ -24,8 +24,8 @@ Das Skript zur Systemüberwachung verwendet folgende Module:
 # Installation der askutils
 
 ## Repository klonen
-git clone git@github.com:gottie29/AllSkyKamera.git
-cd AllSkyKamera
+- git clone git@github.com:gottie29/AllSkyKamera.git
+- cd AllSkyKamera
 
 ## Python-Abhängigkeiten installieren
 pip install -r requirements.txt
