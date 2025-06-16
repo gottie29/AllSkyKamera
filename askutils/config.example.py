@@ -1,29 +1,31 @@
+# Konfiguration der Kamera
 # config.py
+
+
 try:
     from askutils.ASKsecret import API_KEY, API_URL
 except ImportError:
     print("❌ Datei 'ASKsecret.py' fehlt oder ist ungültig!")
     API_KEY = API_URL = None
 
+####################################################################
+# Benutzereinstellungen vornehmen
+####################################################################
 # 📍 Kamera-Standort
-KAMERA_ID = "ASK002"
-KAMERA_NAME = "AllSkyKamera Dabendorf"
-STANDORT_NAME = "Dabendorf bei Zossen"
-BENUTZER_NAME = "Stefan Gotthold"
-KONTAKT_EMAIL = "gottie@web.de"
-LATITUDE = 52.239988
-LONGITUDE = 13.432869
+KAMERA_ID = "e.g. ASK001" # muss zum Secret passen
+KAMERA_NAME = "e.g. meine Kamera"
+STANDORT_NAME = "e.g. mein Standort"
+BENUTZER_NAME = "e.g. mein Name"
+KONTAKT_EMAIL = "e.g. meine E-Mail"
+LATITUDE = 52.239988 # ACHTUNG sehr genau, am besten nicht auf den eigenen Standort direkt setzen
+LONGITUDE = 13.432869 # ACHTUNG sehr genau, am besten nicht auf den eigenen Standort direkt setzen
 
-
+###########################################################
 # 📁 Pfade
+###########################################################
 IMAGE_BASE_PATH = "/home/pi/allsky/images"
 SCRIPTS_PATH = "/home/pi/scripts4"
 LOG_PATH = f"{SCRIPTS_PATH}/logs"
-
-FTP_VIDEO_DIR = "videos"
-FTP_KEOGRAM_DIR = "keograms"
-FTP_STARTRAIL_DIR = "startrails"
-
 
 ################### CRONTABS ###################################
 # Eintragen lassen mit dem Skriptaufruf
@@ -45,8 +47,12 @@ CRONTABS = [
 ]
 
 
-
-
+###################################################################
+# Nichts ändern !!!
+###################################################################
+FTP_VIDEO_DIR = "videos"
+FTP_KEOGRAM_DIR = "keograms"
+FTP_STARTRAIL_DIR = "startrails"
 
 from askutils.utils.load_secrets import load_remote_secrets
 _secrets = load_remote_secrets(API_KEY, API_URL)
