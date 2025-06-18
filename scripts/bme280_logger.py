@@ -23,5 +23,16 @@ def main():
     print(f"💧 Feuchte    : {hum:.2f} %")
     print(f"❄️ Taupunkt   : {taupunkt:.2f} °C")
 
+    # Daten an Influx senden
+    influx_writer.log_metric("bme280", {
+        "temp": float(temp),
+        "press": float(pressure),
+        "hum": float(hum),
+        "dewpoint": float(taupunkt),
+
+}, tags={"host": "host1"})
+
+
+
 if __name__ == "__main__":
     main()
