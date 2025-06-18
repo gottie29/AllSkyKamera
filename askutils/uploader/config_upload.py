@@ -16,12 +16,24 @@ EXPORT_FIELDS = [
     "LONGITUDE"
 ]
 
+# Optional exportierte Felder – nur wenn vorhanden
+OPTIONAL_FIELDS = [
+    "BME280_ENABLED"
+]
+
 def extract_config_data():
-    return {
+    data = {
         key: getattr(config, key)
         for key in EXPORT_FIELDS
         if hasattr(config, key)
     }
+
+    # Füge optionale Felder hinzu, wenn sie existieren
+    for opt in OPTIONAL_FIELDS:
+        if hasattr(config, opt):
+            data[opt] = getattr(config, opt)
+
+    return data
 
 def create_config_json(filename="config.json"):
     data = extract_config_data()
