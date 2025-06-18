@@ -1,5 +1,9 @@
 # AllSkyKamera
- Bibliothek für Python Allsky Kamera auf RaspberryPi
+Bibliothek für Python Allsky Kamera auf Raspberry Pi
+ 
+- Raspberry Pi 4B mit 2-4 GB RAM
+- Version = Debian GNU/Linux 12 (bookworm)
+- Aktuell arbeite ich mit Python 3.9 oder höher
 
 ---
 
@@ -31,8 +35,17 @@ Das Skript zur Systemüberwachung verwendet folgende Module:
 pip install -r requirements.txt
 
 ## Individuelle Zugangsdaten setzen
-cp askutils/ASKsecret.example.py askutils/ASKsecret.py
-nano askutils/ASKsecret.py   # API_KEY eintragen
+- cp askutils/ASKsecret.example.py askutils/ASKsecret.py
+- nano askutils/ASKsecret.py   # API_KEY eintragen
+
+## Vorrausetzungen für Sensoren (nur falls vorhanden)
+
+### Lichtsensor TSL2591 - Adafruit TSL2591
+- pip3 install adafruit-circuitpython-tsl2591
+
+
+
+
 
 ## Test: Sensor oder Funktion starten
 python3 beispiel_skript.py

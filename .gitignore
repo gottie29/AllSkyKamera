@@ -163,3 +163,4 @@ cython_debug/
 askutils/ASKsecret.py
 publish.sh
 askutils/config.py
+config.json
