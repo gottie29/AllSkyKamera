@@ -21,6 +21,19 @@ LATITUDE = 52.239988 # ACHTUNG sehr genau, am besten nicht auf den eigenen Stand
 LONGITUDE = 13.432869 # ACHTUNG sehr genau, am besten nicht auf den eigenen Standort direkt setzen
 
 ###########################################################
+# Sensoren
+###########################################################
+# BME280-Konfiguration  
+###########################################################
+# BME280 ist ein Umweltsensor, der Temperatur, Luftfeuchtigkeit und Luftdruck misst.
+# Er wird über I2C angesprochen und benötigt die Adresse 0x76
+# Standardmäßig ist der Sensor aktiviert, du kannst ihn aber deaktivieren, wenn du ihn nicht verwendest.
+# Wenn du den Sensor deaktivierst, werden keine Messwerte in die Datenbank geschrieben
+# und die entsprechenden Grafiken werden nicht erstellt.
+BME280_ENABLED = True
+BME280_I2C_ADDRESS = 0x76
+
+###########################################################
 # 📁 Pfade
 ###########################################################
 IMAGE_BASE_PATH = "/home/pi/allsky/images"
