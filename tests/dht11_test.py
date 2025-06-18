@@ -1,16 +1,13 @@
-#!/usr/bin/env python3
-import os
-os.environ['ADAFRUIT_DHT_PLATFORM'] = 'Raspberry_Pi'
+from gpiozero import DigitalInputDevice
+import time
 
-import Adafruit_DHT
+# Einfache manuelle Auslese (rudimentär)
+def is_connected():
+    try:
+        sensor = DigitalInputDevice(4)  # GPIO 4
+        return True
+    except Exception:
+        return False
 
-sensor = Adafruit_DHT.DHT11
-pin = 4  # GPIO 4 (Pin 7)
-
-humidity, temperature = Adafruit_DHT.read_retry(sensor, pin)
-
-if humidity is not None and temperature is not None:
-    print(f"🌡️ Temperatur: {temperature:.1f} °C")
-    print(f"💧 Feuchte:    {humidity:.1f} %")
-else:
-    print("❌ Fehler beim Auslesen des DHT11-Sensors.")
+def read_dht11():
+    raise NotImplementedError("Nutze besser DHT11 über alternative Lib wie `pigpio` oder externen Dienst.")
