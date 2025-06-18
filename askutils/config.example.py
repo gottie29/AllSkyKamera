@@ -33,6 +33,19 @@ LONGITUDE = 13.432869 # ACHTUNG sehr genau, am besten nicht auf den eigenen Stan
 BME280_ENABLED = True
 BME280_I2C_ADDRESS = 0x76
 
+############################################################
+# TSL2591-Konfiguration
+############################################################
+# TSL2591 ist ein Lichtsensor, der Helligkeit in Lux misst.
+# Er wird ebenfalls über I2C angesprochen und benötigt die Adresse 0x29
+# Standardmäßig ist der Sensor aktiviert, du kannst ihn aber deaktivieren, wenn du ihn nicht verwendest.
+# Wenn du den Sensor deaktivierst, werden keine Messwerte in die Datenbank geschrieben
+TSL2591_ENABLED = True
+TSL2591_I2C_ADDRESS = 0x29  # Standardadresse
+TSL2591_SQM2_LIMIT = 6.0    # unterhalb wird SQM2 auf 0.0001 gesetzt
+TSL2591_SQM_CORRECTION = 0.0  # Kalibrierwert in mag/arcsec²
+
+
 ###########################################################
 # 📁 Pfade
 ###########################################################
