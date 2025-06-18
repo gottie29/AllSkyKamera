@@ -48,6 +48,12 @@ pip install -r requirements.txt
 - pip3 install adafruit-circuitpython-tsl2591
 - Einschalten von i2c in raspi-config
 
+### Temperatursensor DHT11
+- pip3 install Adafruit_DHT
+(Für neuer Systeme verwende:)
+- pip3 install Adafruit_DHT --install-option="--force-pi" --break-system-packages
+
+
 ## Test: Sensor oder Funktion starten
 python3 beispiel_skript.py
 
