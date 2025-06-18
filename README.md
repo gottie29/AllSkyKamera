@@ -41,12 +41,12 @@ pip install -r requirements.txt
 
 ## Vorrausetzungen für Sensoren (nur falls vorhanden)
 
+### Temperatursensor BME280
+- Einschalten von i2c in raspi-config
+
 ### Lichtsensor TSL2591 - Adafruit TSL2591
 - pip3 install adafruit-circuitpython-tsl2591
-
-
-
-
+- Einschalten von i2c in raspi-config
 
 ## Test: Sensor oder Funktion starten
 python3 beispiel_skript.py
@@ -76,3 +76,15 @@ Erstelle eine Datei `ASKsecret.py` im Ordner `askutils/` mit folgendem Inhalt:
 # askutils/ASKsecret.py
 API_KEY = "dein_api_key"
 API_URL = "https://allskykamera.space/getSecrets.php"
+
+---
+
+# Erste Schritte
+
+## Anpassen der config.py
+
+## Erstellen der crontabs auf der config.py
+python3 -m scripts.manage_crontabs
+
+
+
