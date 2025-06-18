@@ -1,42 +1,30 @@
+#!/usr/bin/env python3
 import time
 import pigpio
-from askutils import config
 
-DHT11_GPIO = config.DHT11_GPIO
+GPIO_PIN = 4  # GPIO 4 (physisch Pin 7)
 
-class DHT11Reader:
-    def __init__(self, pi, gpio):
-        self.pi = pi
-        self.gpio = gpio
-        self.humidity = None
-        self.temperature = None
+def read_dht11(pi, gpio):
+    h, t = pi.read_dht11(gpio)
+    return h, t
 
-    def read(self):
-        h, t = self.pi.read_dht11(self.gpio)
-        if h is not None and t is not None:
-            self.humidity = h
-            self.temperature = t
-            return True
-        return False
-
-def is_connected():
-    try:
-        pi = pigpio.pi()
-        h, t = pi.read_dht11(DHT11_GPIO)
-        pi.stop()
-        return h is not None and t is not None
-    except Exception:
-        return False
-
-def read_dht11():
+def main():
+    print("📡 DHT11 Standalone-Test über GPIO 4")
     pi = pigpio.pi()
+
+    if not pi.connected:
+        print("❌ pigpiod nicht gestartet. Bitte mit `sudo systemctl start pigpiod` starten.")
+        return
+
     try:
-        h, t = pi.read_dht11(DHT11_GPIO)
-        if h is None or t is None:
-            raise RuntimeError("Keine gültigen DHT11-Werte.")
-        return {
-            "temperature": round(t, 2),
-            "humidity": round(h, 2)
-        }
+        humidity, temperature = read_dht11(pi, GPIO_PIN)
+        if humidity is not None and temperature is not None:
+            print(f"🌡️ Temperatur: {temperature:.1f} °C")
+            print(f"💧 Luftfeuchte: {humidity:.1f} %")
+        else:
+            print("❌ Keine gültigen Messwerte erhalten. Bitte Verkabelung prüfen.")
     finally:
         pi.stop()
+
+if __name__ == "__main__":
+    main()
