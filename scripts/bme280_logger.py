@@ -1,8 +1,12 @@
 #!/usr/bin/python3
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+
+from askutils import config
+from askutils.sensors import bme280
 from influxdb_client import InfluxDBClient
 from influxdb_client.client.write_api import SYNCHRONOUS
-import config
-from askutils.sensors import bme280
 
 def main():
     if not config.BME280_ENABLED:
