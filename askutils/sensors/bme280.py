@@ -4,7 +4,8 @@ import smbus
 import time
 import math
 from ctypes import c_short, c_byte, c_ubyte
-import config  # Zentrale Konfiguration einbinden
+from .. import config
+
 
 bus = smbus.SMBus(1)
 DEVICE = config.BME280_I2C_ADDRESS
