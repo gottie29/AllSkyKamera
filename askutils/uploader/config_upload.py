@@ -19,8 +19,7 @@ EXPORT_FIELDS = [
 # Optional exportierte Felder – nur wenn vorhanden
 OPTIONAL_FIELDS = [
     "BME280_ENABLED",
-    "TSL2591_ENABLED",
-    "DHT11_ENABLED"
+    "TSL2591_ENABLED"
 ]
 
 def extract_config_data():

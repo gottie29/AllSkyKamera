@@ -45,16 +45,7 @@ TSL2591_I2C_ADDRESS = 0x29  # Standardadresse
 TSL2591_SQM2_LIMIT = 6.0    # unterhalb wird SQM2 auf 0.0001 gesetzt
 TSL2591_SQM_CORRECTION = 0.0  # Kalibrierwert in mag/arcsec²
 
-############################################################
-# DHT11-Konfiguration
-############################################################
-# DHT11 ist ein einfacher Temperatursensor, der Temperatur und Luftfeuchtigkeit misst
-# Er wird über GPIO angesprochen und benötigt einen freien GPIO-Pin
-# Standardmäßig ist der Sensor aktiviert, du kannst ihn aber deaktivieren, wenn du ihn nicht verwendest.
-# Wenn du den Sensor deaktivierst, werden keine Messwerte in die Datenbank geschrieben
-# und die entsprechenden Grafiken werden nicht erstellt.
-DHT11_ENABLED = True
-DHT11_GPIO = 4  # z. B. GPIO 4 (physisch Pin 7)
+
 
 
 
