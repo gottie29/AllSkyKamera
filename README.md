@@ -22,6 +22,7 @@ Das Skript zur Systemüberwachung verwendet folgende Module:
 - sudo apt update
 - sudo apt install python3-pip -y
 - pip3 install psutil influxdb-client requests
+(Systemweit mit der Option --break-system-packages)
 
 ---
 
