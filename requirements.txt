@@ -1,0 +1,2 @@
+Influx-Client installieren
+sudo pip3 install influxdb-client
