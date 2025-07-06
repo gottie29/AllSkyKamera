@@ -5,13 +5,13 @@ import os
 from askutils import config
 from askutils.utils.logger import log, warn
 
-def get_existing_crontab():
+def get_existing_crontab() -> str:
     result = subprocess.run(["crontab", "-l"], capture_output=True, text=True)
     if result.returncode != 0:
         return ""
     return result.stdout
 
-def write_new_crontab(new_content):
+def write_new_crontab(new_content: str):
     with tempfile.NamedTemporaryFile(delete=False, mode="w") as temp:
         temp.write(new_content)
         temp_path = temp.name
@@ -19,26 +19,34 @@ def write_new_crontab(new_content):
     os.unlink(temp_path)
 
 def update_crontab():
-    existing = get_existing_crontab().splitlines()
-    updated = []
-    existing_comments = set()
+    existing_lines = get_existing_crontab().splitlines()
+    filtered = []
 
-    for line in existing:
-        if line.strip().startswith("# AUTOCRON:"):
-            # merken, welche AutoCron-Kommentare schon da waren
-            existing_comments.add(line.strip())
+    # Entferne alte AUTOCRON-Einträge und alle zugehörigen Kommandozeilen
+    skip_next = False
+    for line in existing_lines:
+        stripped = line.strip()
+        if skip_next:
+            skip_next = False
             continue
-        if not any(c in line for c in ["python3 -m scripts.raspi_status"]):  # ggf. anpassen
-            updated.append(line)
+        # Kommentare der Form '# AUTOCRON: ...'
+        if stripped.startswith('# AUTOCRON:'):
+            skip_next = True
+            continue
+        # Cron-Zeilen, die einen unserer Jobs aus config.CRONTABS enthalten
+        if any(job['command'] in stripped for job in config.CRONTABS):
+            continue
+        filtered.append(line)
 
-    # Nun alle neuen definieren
+    # Füge nun aktuelle CRONTABS hinzu
     for job in config.CRONTABS:
-        comment_line = f"# AUTOCRON: {job['comment']}"
-        cmd_line = f"{job['schedule']} {job['command']}"
-        updated.append(comment_line)
-        updated.append(cmd_line)
+        comment = f"# AUTOCRON: {job['comment']}"
+        entry = f"{job['schedule']} {job['command']}"
+        filtered.append(comment)
+        filtered.append(entry)
 
-    write_new_crontab("\n".join(updated) + "\n")
+    new_crontab = "\n".join(filtered) + "\n"
+    write_new_crontab(new_crontab)
     log("✅ Crontab wurde aktualisiert.")
 
 if __name__ == "__main__":
