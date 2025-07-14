@@ -8,9 +8,7 @@ fi
 
 set -euo pipefail
 
-# Dieses Skript installiert und konfiguriert die AllSky-Kamera-Software.
 # Muss im Projekt-Root (mit askutils/) ausgeführt werden.
-
 if [ ! -d "askutils" ]; then
     echo "❌ Dieses Skript muss im Projekt-Root (mit askutils/) aufgerufen werden."
     exit 1
@@ -19,22 +17,38 @@ fi
 PROJECT_ROOT="$(pwd)"
 echo "Arbeitsverzeichnis: $PROJECT_ROOT"
 
+# Sofortige Prüfung: existiert bereits eine askutils/config.py?
+if [ -f askutils/config.py ]; then
+  read -r -p "askutils/config.py existiert bereits. Möchten Sie sie sichern und neu anlegen? (y/n): " OVERWRITE
+  case "$OVERWRITE" in
+    [Yy]* )
+      mv askutils/config.py askutils/config.old.py
+      echo "→ Alte config.py wurde in askutils/config.old.py umbenannt."
+      ;;
+    * )
+      echo "→ Bestehende askutils/config.py bleibt erhalten. Installation abgebrochen."
+      exit 0
+      ;;
+  esac
+fi
+
+# Schritt 0: API-Key
 echo
 echo "Um einen API-Key zu erhalten, besuchen Sie: https://allskykamera.space"
 read -r -p "Haben Sie bereits einen API-Key? (y/n): " HAS_KEY
 case "$HAS_KEY" in
-    [Yy]* ) ;;
-    * )
-        echo "Bitte beantragen Sie einen API-Key auf https://allskykamera.space und führen Sie das Skript erneut aus."
-        exit 1
-        ;;
+  [Yy]* ) ;;
+  * )
+    echo "Bitte beantragen Sie einen API-Key auf https://allskykamera.space und führen Sie das Skript erneut aus."
+    exit 1
+    ;;
 esac
 
-# 0. API_KEY abfragen und testen
 echo
 echo "=== 0. API-Zugangsdaten abfragen & testen ==="
 read -r -p "API_KEY: " API_KEY
-API_URL="https://allskykamera.space/getSecrets.php"
+ENC_API_URL="aHR0cHM6Ly9hbGxza3lrYW1lcmEuc3BhY2UvZ2V0U2VjcmV0cy5waHA="
+API_URL=$(printf '%s' "$ENC_API_URL" | base64 -d)
 
 echo "> Teste API-Zugang..."
 if ! RESPONSE=$(curl -s --fail "${API_URL}?key=${API_KEY}"); then
@@ -42,136 +56,172 @@ if ! RESPONSE=$(curl -s --fail "${API_URL}?key=${API_KEY}"); then
     exit 1
 fi
 
-# Auf Fehlerfeld prüfen
 if echo "$RESPONSE" | grep -q '"error"'; then
     ERRMSG=$(echo "$RESPONSE" | sed -n 's/.*"error"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
     echo "❌ API-Fehler: ${ERRMSG:-unbekannt}. Abbruch."
     exit 1
 fi
 
-# Extrahiere influx_url und validiere
-INFLUX_URL=$(echo "$RESPONSE" | jq -r '.influx_url // empty')
-if [ -z "$INFLUX_URL" ]; then
-    echo "❌ Ungültige API-Antwort: influx_url fehlt oder leer. Abbruch."
-    exit 1
-fi
+INFLUX_URL=$(echo "$RESPONSE" | sed -n 's/.*"influx_url"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
+KAMERA_ID=$(echo "$RESPONSE" | sed -n 's/.*"kamera_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
 
-# Extrahiere Kamera-ID und validiere
-KAMERA_ID=$(echo "$RESPONSE" | jq -r '.kamera_id // empty')
-if [ -z "$KAMERA_ID" ]; then
-    echo "❌ Ungültige API-Antwort: kamera_id fehlt oder leer. Abbruch."
+if [ -z "$INFLUX_URL" ] || [ -z "$KAMERA_ID" ]; then
+    echo "❌ Ungültige API-Antwort. Abbruch."
     exit 1
 fi
 
 echo "✅ API-Zugang validiert."
 echo "→ Verbundene Kamera-ID: $KAMERA_ID"
 
-# 1. Pfad zum Thomas Jaquin Interface abfragen
+# Schritt 1: Pfad zum Thomas-Jaquin-Interface
 echo
 echo "=== 1. Pfad zum Thomas-Jaquin-Interface ==="
-read -r -p "Pfad zum Interface [default: /home/pi/allsky]: " ALLSKY_PATH
-ALLSKY_PATH=${ALLSKY_PATH:-/home/pi/allsky}
-echo "→ Interface-Pfad gesetzt auf: $ALLSKY_PATH"
+DEFAULT_ALLSKY_PATH="$HOME/allsky"
+read -r -p "Pfad zum Interface [Default: $DEFAULT_ALLSKY_PATH]: " ALLSKY_PATH
+ALLSKY_PATH=${ALLSKY_PATH:-$DEFAULT_ALLSKY_PATH}
+echo "→ Interface-Pfad: $ALLSKY_PATH"
 
-# 2. System-Voraussetzungen
+# Schritt 2: System-Pakete installieren
 echo
 echo "=== 2. System-Pakete installieren ==="
 sudo apt-get update
 sudo apt-get install -y \
     python3-pip python3-venv python3-smbus i2c-tools raspi-config \
-    python3-psutil libatlas-base-dev libopenjp2-7 libtiff5 curl dos2unix jq
+    python3-psutil libatlas-base-dev python3-pil curl dos2unix
 
-# 3. Schnittstellen aktivieren
+# Schritt 3: Schnittstellen aktivieren
 echo
 echo "=== 3. I²C, 1-Wire und Kamera aktivieren ==="
-sudo raspi-config nonint do_i2c 0
-sudo raspi-config nonint do_1wire 0
-sudo raspi-config nonint do_camera 0
+if sudo raspi-config nonint do_i2c 0 &>/dev/null; then
+  echo "→ I²C aktiviert."
+else
+  echo "→ I²C übersprungen."
+fi
+if sudo raspi-config nonint do_1wire 0 &>/dev/null; then
+  echo "→ 1-Wire aktiviert."
+else
+  echo "→ 1-Wire übersprungen."
+fi
+if sudo raspi-config nonint do_camera 0 &>/dev/null; then
+  echo "→ Kamera aktiviert."
+else
+  echo "→ Kamera übersprungen."
+fi
 
-# 4. Python-Abhängigkeiten
+# Schritt 4: Python-Abhängigkeiten installieren
 echo
 echo "=== 4. Python-Abhängigkeiten installieren ==="
 pip3 install --user \
-    influxdb-client adafruit-circuitpython-tsl2591 requests \
-    pillow numpy matplotlib
+    influxdb-client \
+    adafruit-circuitpython-tsl2591 \
+    requests \
+    pillow \
+    numpy \
+    matplotlib \
+    --break-system-packages
 
-# 5. askutils/ASKsecret.py anlegen
+# Schritt 5: askutils/ASKsecret.py anlegen
 echo
 echo "=== 5. askutils/ASKsecret.py anlegen ==="
 cat > askutils/ASKsecret.py <<EOF
+import base64
+
 # Automatisch generierte Datei – nicht ins Repo committen!
 API_KEY = "${API_KEY}"
-API_URL = "${API_URL}"
+ENC_API_URL = "${ENC_API_URL}"
+API_URL = base64.b64decode(ENC_API_URL).decode()
 EOF
 echo "→ askutils/ASKsecret.py erstellt"
 
-# 6. config.py erzeugen
+# Schritt 6: askutils/config.py anlegen
 echo
-echo "=== 6. config.py anlegen ==="
-read -r -p "KAMERA_NAME: " KAMERA_NAME
-read -r -p "STANDORT_NAME: " STANDORT_NAME
-read -r -p "BENUTZER_NAME: " BENUTZER_NAME
-read -r -p "KONTAKT_EMAIL: " KONTAKT_EMAIL
-read -r -p "LATITUDE: " LATITUDE
-read -r -p "LONGITUDE: " LONGITUDE
+echo "=== 6. askutils/config.py anlegen ==="
 
-read -r -p "IMAGE_BASE_PATH (z.B. images): " IMAGE_BASE_PATH
-read -r -p "IMAGE_PATH (z.B. tmp): " IMAGE_PATH
+# Kamera-Grunddaten
+read -r -p "Name der Kamera (z.B. Meine AllskyCam): " KAMERA_NAME
+read -r -p "Name des Standortes (z.B. Berliner Sternwarte): " STANDORT_NAME
+read -r -p "Benutzername (z.B. Tom Mustermann): " BENUTZER_NAME
+read -r -p "E-Mailadresse: " KONTAKT_EMAIL
+read -r -p "Webseite (optional): " WEBSITE
 
-read -r -p "PIX_SIZE_MM: " PIX_SIZE_MM
-read -r -p "FOCAL_MM: " FOCAL_MM
-read -r -p "ZP: " ZP
-read -r -p "SQM_PATCH_SIZE: " SQM_PATCH_SIZE
+# Standortkoordinaten
+read -r -p "Breitengrad des Standortes (z.B. 52.1253): " LATITUDE
+read -r -p "Längengrad des Standortes (z.B. 13.1245): " LONGITUDE
 
-read -r -p "BME280_ENABLED (True/False): " BME280_ENABLED
-read -r -p "BME280_I2C_ADDRESS (hex, z.B. 0x76): " BME280_I2C_ADDRESS
+# Image-Pfade (fest)
+IMAGE_BASE_PATH="images"
+IMAGE_PATH="tmp"
+echo "→ IMAGE_BASE_PATH=$IMAGE_BASE_PATH, IMAGE_PATH=$IMAGE_PATH"
 
-read -r -p "TSL2591_ENABLED (True/False): " TSL2591_ENABLED
-read -r -p "TSL2591_I2C_ADDRESS (hex, z.B. 0x29): " TSL2591_I2C_ADDRESS
-read -r -p "TSL2591_SQM2_LIMIT: " TSL2591_SQM2_LIMIT
-read -r -p "TSL2591_SQM_CORRECTION: " TSL2591_SQM_CORRECTION
+# Objektiv- & SQM-Daten
+read -r -p "Pixelgröße des Kamerachips in mm (z.B. 0.00155): " PIX_SIZE_MM
+read -r -p "Brennweite in mm (z.B. 1.85): " FOCAL_MM
+read -r -p "Nullpunkt Helligkeit ZP (Default: 6.0): " ZP_INPUT
+ZP=${ZP_INPUT:-6.0}
+read -r -p "SQM-Patchgröße in Pixeln (z.B. 100): " SQM_PATCH_SIZE
 
-read -r -p "DS18B20_ENABLED (True/False): " DS18B20_ENABLED
+# Sensorenauswahl
+read -r -p "BME280 verwenden? (y/n): " USE_BME
+if [[ "$USE_BME" =~ ^[Yy] ]]; then
+  BME280_ENABLED=True
+  read -r -p "I2C-Adresse BME280 (z.B. 0x76): " BME280_I2C_ADDRESS
+else
+  BME280_ENABLED=False
+  BME280_I2C_ADDRESS=0x00
+fi
 
-cat > config.py <<EOF
-# Konfiguration der Kamera
-# config.py
+read -r -p "TSL2591 verwenden? (y/n): " USE_TSL
+if [[ "$USE_TSL" =~ ^[Yy] ]]; then
+  TSL2591_ENABLED=True
+  read -r -p "I2C-Adresse TSL2591 (z.B. 0x29): " TSL2591_I2C_ADDRESS
+  read -r -p "SQM2-Limit (z.B. 6.0): " TSL2591_SQM2_LIMIT
+  read -r -p "SQM-Korrekturwert (z.B. 0.0): " TSL2591_SQM_CORRECTION
+else
+  TSL2591_ENABLED=False
+  TSL2591_I2C_ADDRESS=0x00
+  TSL2591_SQM2_LIMIT=0.0
+  TSL2591_SQM_CORRECTION=0.0
+fi
+
+read -r -p "DS18B20 verwenden? (y/n): " USE_DS
+if [[ "$USE_DS" =~ ^[Yy] ]]; then
+  DS18B20_ENABLED=True
+else
+  DS18B20_ENABLED=False
+fi
+
+cat > askutils/config.py <<EOF
+# config.py – automatisch generiert
 
 try:
     from askutils.ASKsecret import API_KEY, API_URL
 except ImportError:
-    print("❌ Datei 'ASKsecret.py' fehlt oder ist ungültig!")
     API_KEY = API_URL = None
 
-####################################################################
-# Benutzereinstellungen
-####################################################################
-KAMERA_ID     = "${KAMERA_ID}"
-KAMERA_NAME   = "${KAMERA_NAME}"
-STANDORT_NAME = "${STANDORT_NAME}"
-BENUTZER_NAME = "${BENUTZER_NAME}"
-KONTAKT_EMAIL = "${KONTAKT_EMAIL}"
-LATITUDE      = ${LATITUDE}
-LONGITUDE     = ${LONGITUDE}
+# Kameradaten
+KAMERA_ID      = "${KAMERA_ID}"
+KAMERA_NAME    = "${KAMERA_NAME}"
+STANDORT_NAME  = "${STANDORT_NAME}"
+BENUTZER_NAME  = "${BENUTZER_NAME}"
+KONTAKT_EMAIL  = "${KONTAKT_EMAIL}"
+WEBSEITE       = "${WEBSITE}"
 
-####################################################################
+# Standortkoordinaten
+LATITUDE       = ${LATITUDE}
+LONGITUDE      = ${LONGITUDE}
+
 # Pfade
-####################################################################
 ALLSKY_PATH     = "${ALLSKY_PATH}"
 IMAGE_BASE_PATH = "${IMAGE_BASE_PATH}"
 IMAGE_PATH      = "${IMAGE_PATH}"
 
-####################################################################
-# Kamera-Optik & SQM
-####################################################################
+# Objektiv- & SQM-Daten
 PIX_SIZE_MM    = ${PIX_SIZE_MM}
 FOCAL_MM       = ${FOCAL_MM}
 ZP             = ${ZP}
 SQM_PATCH_SIZE = ${SQM_PATCH_SIZE}
 
-####################################################################
 # Sensoren
-####################################################################
 BME280_ENABLED      = ${BME280_ENABLED}
 BME280_I2C_ADDRESS  = ${BME280_I2C_ADDRESS}
 
@@ -182,7 +232,7 @@ TSL2591_SQM_CORRECTION  = ${TSL2591_SQM_CORRECTION}
 
 DS18B20_ENABLED = ${DS18B20_ENABLED}
 
-################### CRONTABS ###################################
+# CRONTABS
 CRONTABS = [
     {
         "comment": "Allsky Raspi-Status",
@@ -194,21 +244,55 @@ CRONTABS = [
         "schedule": "0 12 * * *",
         "command": "cd ${PROJECT_ROOT} && python3 -m scripts.upload_config_json"
     },
+$(if [ "${BME280_ENABLED}" = "True" ]; then
+cat <<'    EOF'
     {
         "comment": "BME280 Sensor",
         "schedule": "*/1 * * * *",
         "command": "cd ${PROJECT_ROOT} && python3 -m scripts.bme280_logger"
     },
+    EOF
+else
+cat <<'    EOF'
+    # BME280 deaktiviert
+    EOF
+fi)
+$(if [ "${TSL2591_ENABLED}" = "True" ]; then
+cat <<'    EOF'
     {
         "comment": "TSL2591 Sensor",
         "schedule": "*/1 * * * *",
         "command": "cd ${PROJECT_ROOT} && python3 -m scripts.tsl2591_logger"
     },
+    EOF
+else
+cat <<'    EOF'
+    # TSL2591 deaktiviert
+	#{
+    #    "comment": "TSL2591 Sensor",
+    #    "schedule": "*/1 * * * *",
+    #    "command": "cd ${PROJECT_ROOT} && python3 -m scripts.tsl2591_logger"
+    #},
+    EOF
+fi)
+$(if [ "${DS18B20_ENABLED}" = "True" ]; then
+cat <<'    EOF'
     {
         "comment": "DS18B20 Sensor",
         "schedule": "*/1 * * * *",
         "command": "cd ${PROJECT_ROOT} && python3 -m scripts.ds18b20_logger"
     },
+    EOF
+else
+cat <<'    EOF'
+    # DS18B20 deaktiviert
+	#{
+    #    "comment": "DS18B20 Sensor",
+    #    "schedule": "*/1 * * * *",
+    #    "command": "cd ${PROJECT_ROOT} && python3 -m scripts.ds18b20_logger"
+    #},
+    EOF
+fi)
     {
         "comment": "Image FTP-Upload",
         "schedule": "*/2 * * * *",
@@ -231,17 +315,9 @@ CRONTABS = [
     }
 ]
 
-###################################################################
-# Nichts ändern !!!
-###################################################################
-FTP_VIDEO_DIR     = "videos"
-FTP_KEOGRAM_DIR   = "keogram"
-FTP_STARTRAIL_DIR = "startrails"
-FTP_SQM_DIR       = "sqm"
-
+# Secrets laden
 from askutils.utils.load_secrets import load_remote_secrets
 _secrets = load_remote_secrets(API_KEY, API_URL)
-
 if _secrets:
     INFLUX_URL     = _secrets["INFLUX_URL"]
     INFLUX_TOKEN   = _secrets["INFLUX_TOKEN"]
@@ -257,22 +333,31 @@ else:
     FTP_USER = FTP_PASS = FTP_SERVER = FTP_REMOTE_DIR = None
 EOF
 
-echo "→ config.py erstellt"
+echo "→ askutils/config.py erstellt"
 
-# 7. FTP-Upload testen
+# Schritt 7: FTP-Upload testen
 echo
 echo "=== 7. FTP-Upload testen ==="
 python3 tests/ftp_upload_test.py
 
-# 8. InfluxDB-Verbindung testen
+# Schritt 8: InfluxDB-Verbindung testen
 echo
 echo "=== 8. InfluxDB-Verbindung testen ==="
 HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${INFLUX_URL}/health")
 if [ "$HTTP_CODE" != "200" ]; then
-    echo "❌ InfluxDB-Erreichbarkeit fehlgeschlagen (HTTP $HTTP_CODE)"
+    echo "❌ InfluxDB nicht erreichbar (HTTP $HTTP_CODE)"
     exit 1
 fi
 echo "✅ InfluxDB ist erreichbar."
+
+# Schritt 9: Crontabs eintragen
+echo
+echo "=== 9. Crontabs eintragen ==="
+read -r -p "Sollen die Crontabs jetzt eingetragen werden? (y/n): " SET_CRON
+if [[ "$SET_CRON" =~ ^[Yy] ]]; then
+    echo "→ Traue Crontabs ein..."
+    cd "$PROJECT_ROOT" && python3 -m scripts.manage_crontabs
+fi
 
 echo
 echo "✅ Installation und Konfiguration abgeschlossen!"
