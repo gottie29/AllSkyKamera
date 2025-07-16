@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 import sys
 import os
+import json
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from askutils import config
@@ -38,6 +39,31 @@ def main():
             "hum": float(hum),
             "dewpoint": float(taupunkt),
         }, tags={"host": "host1"})
+
+        # Overlay schreiben, wenn aktiviert
+        if config.BME280_Overlay:
+            overlay_dir = os.path.join(config.ALLSKY_PATH, "config", "overlay", "extra")
+            os.makedirs(overlay_dir, exist_ok=True)
+            overlay_path = os.path.join(overlay_dir, "bme280_overlay.json")
+            overlay_data = {
+                "BME280_TEMP": {
+                    "value": f"{temp:.1f}",
+                    "format": "{:.1f}",
+                    "type": "number"
+                },
+                "BME280_PRESS": {
+                    "value": f"{pressure:.2f}",
+                    "format": "{:.2f}",
+                    "type": "number"
+                },
+                "BME280_HUM": {
+                    "value": f"{hum:.1f}",
+                    "format": "{:.1f}",
+                    "type": "number"
+                }
+            }
+            with open(overlay_path, "w") as f:
+                json.dump(overlay_data, f)
 
     except Exception as e:
         error(f"❌ Fehler beim Auslesen oder Schreiben der BME280-Daten: {e}")
