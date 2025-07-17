@@ -3,7 +3,8 @@
 # Marker, der in den Cron-Einträgen vorkommt
 CRON_MARKER="AllSkyKamera"
 
-# 1) Versuch: Verzeichnis, in dem dieses Script liegt (wenn das Script im Installations-Verzeichnis abgelegt ist)
+
+# 1) Versuch: Verzeichnis, in dem dieses Script liegt
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # 2) Fallback: aus dem ersten gefundenen Cron-Eintrag ableiten
@@ -30,16 +31,18 @@ fi
 
 echo "Gefundenes Installations-Verzeichnis: $INSTALL_DIR"
 echo "Achtung: Mit diesem Skript werden alle automatisch angelegten Crontabs"
-echo "mit dem Marker '$CRON_MARKER' entfernt und das Verzeichnis"
-echo "'$INSTALL_DIR' unwiderruflich gelöscht."
+echo "mit dem Marker '$CRON_MARKER' und alle '# AUTOCRON:'-Kommentare entfernt,"
+echo "und das Verzeichnis '$INSTALL_DIR' unwiderruflich gelöscht."
 read -p "Wirklich alle Daten löschen? [y/N] " answer
 
 case "$answer" in
   [Yy])
-    # Cron-Einträge mit Marker entfernen
+    # Cron-Einträge und AUTOCRON-Kommentare entfernen
     if crontab -l &>/dev/null; then
-      crontab -l | grep -v "$CRON_MARKER" | crontab -
-      echo "→ Cron-Einträge mit '$CRON_MARKER' wurden entfernt."
+      crontab -l \
+        | grep -v -E "$CRON_MARKER|^# AUTOCRON:" \
+        | crontab -
+      echo "→ Cron-Einträge mit '$CRON_MARKER' und alle '# AUTOCRON:'-Kommentare wurden entfernt."
     else
       echo "→ Keine Crontab gefunden oder leer."
     fi
