@@ -48,22 +48,19 @@ def main():
             overlay_data = {
                 "BME280_TEMP": {
                     "value": f"{temp:.1f}",
-                    "format": "{:.1f}",
-                    "type": "number"
+                    "format": "{:.1f}"
                 },
                 "BME280_PRESS": {
                     "value": f"{pressure:.2f}",
-                    "format": "{:.2f}",
-                    "type": "number"
+                    "format": "{:.2f}"
                 },
                 "BME280_HUM": {
                     "value": f"{hum:.1f}",
-                    "format": "{:.1f}",
-                    "type": "number"
+                    "format": "{:.1f}"
                 }
             }
             with open(overlay_path, "w") as f:
-                json.dump(overlay_data, f)
+                json.dump(overlay_data, f, indent=2)
 
     except Exception as e:
         error(f"❌ Fehler beim Auslesen oder Schreiben der BME280-Daten: {e}")
