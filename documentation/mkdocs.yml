@@ -1,0 +1,21 @@
+site_name: AllSkyKamera
+site_url: https://gottie29.github.io/AllSkyKamera/
+theme:
+  name: material
+  features:
+    - navigation.instant
+    - header.autohide
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Usage: usage.md
+  - FAQ: faq.md
+markdown_extensions:
+  - admonition
+  - toc:
+      permalink: true
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/gottie29/AllSkyKamera
+
