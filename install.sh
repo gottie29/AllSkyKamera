@@ -160,14 +160,17 @@ read -r -p "Nullpunkt Helligkeit ZP (Default: 6.0): " ZP_INPUT
 ZP=${ZP_INPUT:-6.0}
 read -r -p "SQM-Patchgröße in Pixeln (z.B. 100): " SQM_PATCH_SIZE
 
-# Sensorenauswahl
+# Sensorenauswahl mit Overlay-Abfrage
 read -r -p "BME280 verwenden? (y/n): " USE_BME
 if [[ "$USE_BME" =~ ^[Yy] ]]; then
   BME280_ENABLED=True
   read -r -p "I2C-Adresse BME280 (z.B. 0x76): " BME280_I2C_ADDRESS
+  read -r -p "BME280_Overlay anlegen? (y/n): " BME280_OVERLAY_ANSWER
+  BME280_OVERLAY=$([[ "$BME280_OVERLAY_ANSWER" =~ ^[Yy] ]] && echo True || echo False)
 else
   BME280_ENABLED=False
   BME280_I2C_ADDRESS=0x00
+  BME280_OVERLAY=False
 fi
 
 read -r -p "TSL2591 verwenden? (y/n): " USE_TSL
@@ -176,20 +179,27 @@ if [[ "$USE_TSL" =~ ^[Yy] ]]; then
   read -r -p "I2C-Adresse TSL2591 (z.B. 0x29): " TSL2591_I2C_ADDRESS
   read -r -p "SQM2-Limit (z.B. 6.0): " TSL2591_SQM2_LIMIT
   read -r -p "SQM-Korrekturwert (z.B. 0.0): " TSL2591_SQM_CORRECTION
+  read -r -p "TSL2591_Overlay anlegen? (y/n): " TSL2591_OVERLAY_ANSWER
+  TSL2591_OVERLAY=$([[ "$TSL2591_OVERLAY_ANSWER" =~ ^[Yy] ]] && echo True || echo False)
 else
   TSL2591_ENABLED=False
   TSL2591_I2C_ADDRESS=0x00
   TSL2591_SQM2_LIMIT=0.0
   TSL2591_SQM_CORRECTION=0.0
+  TSL2591_OVERLAY=False
 fi
 
 read -r -p "DS18B20 verwenden? (y/n): " USE_DS
 if [[ "$USE_DS" =~ ^[Yy] ]]; then
   DS18B20_ENABLED=True
+  read -r -p "DS18B20_Overlay anlegen? (y/n): " DS18B20_OVERLAY_ANSWER
+  DS18B20_OVERLAY=$([[ "$DS18B20_OVERLAY_ANSWER" =~ ^[Yy] ]] && echo True || echo False)
 else
   DS18B20_ENABLED=False
+  DS18B20_OVERLAY=False
 fi
 
+# write config.py
 cat > askutils/config.py <<EOF
 # config.py – automatisch generiert
 
@@ -224,13 +234,16 @@ SQM_PATCH_SIZE = ${SQM_PATCH_SIZE}
 # Sensoren
 BME280_ENABLED      = ${BME280_ENABLED}
 BME280_I2C_ADDRESS  = ${BME280_I2C_ADDRESS}
+BME280_OVERLAY      = ${BME280_OVERLAY}
 
 TSL2591_ENABLED         = ${TSL2591_ENABLED}
 TSL2591_I2C_ADDRESS     = ${TSL2591_I2C_ADDRESS}
 TSL2591_SQM2_LIMIT      = ${TSL2591_SQM2_LIMIT}
 TSL2591_SQM_CORRECTION  = ${TSL2591_SQM_CORRECTION}
+TSL2591_OVERLAY         = ${TSL2591_OVERLAY}
 
 DS18B20_ENABLED = ${DS18B20_ENABLED}
+DS18B20_OVERLAY = ${DS18B20_OVERLAY}
 
 # CRONTABS
 CRONTABS = [
@@ -268,11 +281,6 @@ cat <<'    EOF'
 else
 cat <<'    EOF'
     # TSL2591 deaktiviert
-	#{
-    #    "comment": "TSL2591 Sensor",
-    #    "schedule": "*/1 * * * *",
-    #    "command": "cd ${PROJECT_ROOT} && python3 -m scripts.tsl2591_logger"
-    #},
     EOF
 fi)
 $(if [ "${DS18B20_ENABLED}" = "True" ]; then
@@ -286,11 +294,6 @@ cat <<'    EOF'
 else
 cat <<'    EOF'
     # DS18B20 deaktiviert
-	#{
-    #    "comment": "DS18B20 Sensor",
-    #    "schedule": "*/1 * * * *",
-    #    "command": "cd ${PROJECT_ROOT} && python3 -m scripts.ds18b20_logger"
-    #},
     EOF
 fi)
     {
