@@ -89,7 +89,7 @@ python3 -m scripts.manage_crontabs
 Jetzt wird die config.py ausgelesen und alle dort definierten cronjobs werden in den crontab eingetragen.
 Hat dies funktioniert, sollte innerhalb einer Minute die Kamera die Daten an den Server senden und diese erscheinen dann auf der Netzwerk-Seite: https://allskykamera.space
 
-# Testen der Bibliothek
+# Testen der Sensoren und Skripte
 
 Um Unterverzeichnis AllSkyKamera/tests gibt es verschiedene Skripte zum Testen der Bibliothek. Dabei werden keine Daten auf den Server geschoben, sondern ausschließlich die Funktion gestetet.
 
@@ -163,7 +163,89 @@ Typische Ausgabe ist:<br>
 
 # Funktionen der Bibliothek
 
+An dieser Stelle werden die Funktionen der Bibliothek dokumentiert. 
+Alle Bibliotheksfunktionen sind über Cronjobs gesteuert und können daher auch einzeln aufgerufen werden.
+Der Aufruf der Funktion dient dem debugging und dem prüfen ob alle Funktionen funktionieren und die Daten auch an den Server gesendet werden.
 
+Alle Aufrufe der Bibliotheksfunktionen erfolgen aus dem Hauptverzeichnis.
+Man kann mit folgendem Befehl ins Hauptverzeichnis wechseln.
+<code>
+cd ~\AllSkyKamera
+</code>
 
+## manage_crontabs
+**Beschreibung:**
+Liest alle definierten cronjobs aus der **config.py** und trägt diese in die crontabs ein.
+Sollten gleichnamige crontabs schon existieren, werden diese gemäß der config geändert.
+Bestehende andere crontabs werden dabei nicht angefasst oder geändert.
+**Aufruf:**
+<code>
+python3 -m scripts.manage_crontabs
+</code>
+**Cronjob:**
+Es ist nicht nötig ständig diese Datei aufzurufen. Daher braucht es für diese Funktion keinen cronjob.
+Wurde in der config.py ein cronjob neu definiert oder geändert, reicht 1 Aufruf dieser Funktion. 
+
+## upload_config_json
+**Beschreibung:**
+Die config.py ist die zentrale Einstellungsdatei.
+Damit Änderungen auch auf der Webseite des Netzwerkes ankommen, wird die config.py übersetzt in eine minimale JSON-Datei und auf den Server übertragen, so das die Webseite Aktualisierungen beim Namen der Kamera oder bei Benutzereinstellungen anzeigen kann.
+**Aufruf:**
+<code>
+python3 -m scripts.upload_config_json
+</code>
+**Cronjob:**
+Diese Funktion sollte 1mal am Tag ausgeführt werden. Das gewährleistet die Aktualität der lokalen Kamera und der Webseite.
+**config.py:**
+Hier ein Beispiel aus der config.py:
+<code>
+    {
+        "comment": "Config Update",
+        "schedule": "0 12 * * *",
+        "command": "cd /home/pi/AllSkyKamera && python3 -m scripts.upload_config_json"
+    },
+</code>
+
+## run_image_upload
+**Beschreibung:**
+Dieses Module kümmert sich um den Upload des aktuellen Kamera-Bildes.
+Diese Funktion ist zwingend notwendig für die Teilnahme am Netzwerk.
+**Aufruf:**
+<code>
+python3 -m scripts.run_image_upload
+</code>
+**Cronjob:**
+Diese Funktion sollte 2x pro Minute aufgerufen werden, damit regelmäßig die aktuelle Ansicht auf der Webseite erscheint.
+**config.py:**
+Hier ein Beispiel aus der config.py:
+<code>
+   {
+       "comment": "Image FTP-Upload",
+       "schedule": "*/2 * * * *",
+       "command": "cd /home/pi/AllSkyKamera && python3 -m scripts.run_image_upload"
+   },
+</code>
+
+##run_nightly_upload
+**Beschreibung:**
+Dieses Module kümmert sich um den Upload der Sorucen aus der letzten Nacht.
+Hierbei werden das Zeitraffer-Video, das Keogram und das Startrail der letzten Nacht auf den Server geladen.
+Diese Funktion ist zwingend notwendig für die Teilnahme am Netzwerk.
+**Aufruf:**
+<code>
+python3 -m scripts.run_nightly_upload
+</code>
+**Cronjob:**
+Diese Funktion muss 1x am Tag aufgerufen werden.
+Der Aufruf sollte immer nach Sonnenaufgang erfolgen, da dann die entsprechenden Videos, Startrails und Keogramme erfolgreich erstellt wurden.
+**config.py:**
+Hier ein Beispiel aus der config.py:
+<code>
+   {
+       "comment": "Nightly FTP-Upload",
+        "schedule": "30 7 * * *",
+        "command": "cd /home/pi/AllSkyKamera && python3 -m scripts.run_nightly_upload"
+   },
+</code>
 
 
