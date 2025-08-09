@@ -38,10 +38,59 @@ Die Installation der Python-Bibliothek gestaltet sich einfach.
 Mit dem starten der Installation werden alle Pakete installiert, die zum Betrieb der Bibliothek nötig sind.
 Weiterhin werden alle nötigen Informationen abgefragt.
 
+Folgende Abfragen erfolgen mit der Installation:
+- Haben Sie bereits einen API-Key? (y/n)
+- API_KEY:
+  Der API-Key oder Secret-Key wird abgefragt und gleich auf dem Server getestet. Gibt es diesen nicht, bricht die Installation ab. 
+Existiert ein Key, gibt die Funktion die Kamera-ID (e.g. ASK001) zurück
+- Pfad zum Interface:
+  Hier gibt man den Pfad zum Allsky-Interface an. Meisten liegt dieser unter /home/<user>/allsky (e.g. /home/pi/allsky)
+- Name der Kamera (z.B. Meine AllskyCam):
+- Name des Standortes (z.B. Berliner Sternwarte):
+- Benutzername (z.B. Tom Mustermann):
+- E-Mailadresse:
+- Webseite (optional):
 
+<strong>ACHTUNG</strong> Gibt man die Standort-Daten sehr genau an, sieht man auf der Karte auch den sehr genauen Standort. Wer das nicht möchte, kann die Standort-Daten zu Länge und Breite einfach etwas verschieben. 
 
+- Breitengrad des Standortes (z.B. 52.1253):
+- Längengrad des Standortes (z.B. 13.1245):  
+- Pixelgröße des Kamerachips in mm (z.B. 0.00155):
+- Brennweite in mm (z.B. 1.85):
+- Nullpunkt Helligkeit ZP (Default: 6.0):
+
+ Falls Sensoren wie BME280, DS18b20 oder ein TSL2591 vorhanden ist, kann hier die Einstellungen vornehmen.
+ Ansonsten nicht, kann hier einfach ein n eingetragen werden:
+ - BME280 verwenden? (y/n):
+    - I2C-Adresse BME280 (z.B. 0x76):
+    - BME280_Overlay anlegen? (y/n):
+ - TSL2591 verwenden? (y/n):
+    - I2C-Adresse TSL2591 (z.B. 0x29):
+    - SQM2-Limit (z.B. 6.0):
+    - SQM-Korrekturwert (z.B. 0.0):
+    - TSL2591_Overlay anlegen? (y/n):
+  - DS18B20 verwenden? (y/n):
+    - DS18B20_Overlay anlegen? (y/n):
+
+Anschließend werden noch einige Tests durchgeführt und die Installation ist beendet.
+Nach der Installation befindet sich die generierte Konfigurationsdatei unter ~/AllSkyKamera/askutils/config.py
+
+# Cronjobs
+
+Die Bibliothek arbeitet mit cronjobs. Diese cronjobs werden in den crontab eingetragen und sind damit für den Usern auch jederzeit einsehbar oder auch änderbar.
+
+Die crontabs werden bei der Installation in der config.py eingetragen. Um diese zu aktivieren ist der folgende Aufruf nötig:
+<code>
+cd
+cd AllSkyKamera
+python3 -m scripts.manage_crontabs
+</code>
+
+Jetzt wird die config.py ausgelesen und alle dort definierten cronjobs werden in den crontab eingetragen.
+Hat dies funktioniert, sollte innerhalb einer Minute die Kamera die Daten an den Server senden und diese erscheinen dann auf der Netzwerk-Seite: https://allskykamera.space
 
 # Testen der Bibliothek
+
 
 
 # Funktionen der Bibliothek
