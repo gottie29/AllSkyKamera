@@ -91,6 +91,77 @@ Hat dies funktioniert, sollte innerhalb einer Minute die Kamera die Daten an den
 
 # Testen der Bibliothek
 
+Um Unterverzeichnis AllSkyKamera/tests gibt es verschiedene Skripte zum Testen der Bibliothek. Dabei werden keine Daten auf den Server geschoben, sondern ausschließlich die Funktion gestetet.
+
+Alle Skripte können direkt aufgerufen werden. Dazu wechselt man in das Verzeichnis tests und ruft mit python3 die Skripte auf. Die Ausgaben zeigen dann die Funktion der Skripte.
+
+<strong>bme280_test.py</strong><br>
+Testen des Sensor BME280.<br>
+Beschreibung: Sensor für Temperatur, Luftfeuchtigkeit, Luftdruck (i²c-Schnittstelle)<br>
+Aufruf: <code>python3 bme280_test.py</code><br>
+Typische Ausgabe ist:<br>
+<code>
+🌡️ Temperatur : 34.21 °C
+🧭 Druck      : 1015.20 hPa
+💧 Feuchte    : 32.15 %
+❄️ Taupunkt   : 15.23 °C
+</code>
+
+<strong>ds18b20_test.py</strong><br>
+Testen des Sensor DS18B20.<br>
+Beschreibung: Temperatursensor (1-Wire-Schnittstelle) für Aussentemperaturmessungen.<br>
+Aufruf: <code>python3 ds18b20_test.py</code><br>
+Typische Ausgabe ist:<br>
+<code>
+🌡️ Temperatur: 30.44 °C
+🌡️ Temperatur: 30.44 °C
+🌡️ Temperatur: 30.50 °C
+...
+</code>
+Das Skript muss mit STRG+C abgebrochen werden, sonst läuft es durchgängig weiter.
+
+<strong>tsl2591_test.py</strong><br>
+Testen des Sensor TSL2591.<br>
+Beschreibung: Lichtsensor zur Messung der Heligkeit<br>
+Aufruf: <code>python3 tsl2591_test.py</code><br>
+Typische Ausgabe ist:<br>
+<code>
+</code>
+Dieser Sensor wird aktuell in keiner meiner Kameras verwendet. Sobald ich diesen wieder verbaue, werde ich Dokumentation hier nachziehen.
+
+<strong>FTP-Test</strong>
+Die Bibliothek schiebt die Daten wie Bilder, Videos, Keogramme über die FTP-Schnittstelle.
+Diese kann man hier testen.
+Aufruf: <code>python3 ftp_upload_test.py</code><br>
+Typische Ausgabe ist:<br>
+<code>
+== 1. Teste Konfiguration ==
+✅ Konfigurationswerte sind vorhanden.
+
+== 2. Teste FTP-Verbindung ==
+✅ FTP-Login erfolgreich bei h2888788.stratoserver.net.
+✅ Wechsel ins Remote-Verzeichnis 'ASK005' erfolgreich.
+ℹ️ Aktueller Verzeichnisinhalt: ['config.json', 'image.jpg', 'keogram', 'sqm', 'startrails', 'videos']
+
+== 3. Teste image_upload-Funktion ==
+ℹ️ Testdatei erstellt: /home/pi/allsky/tmp/test_upload.txt
+✅ Upload abgeschlossen: test_upload.txt → /ASK005
+✅ upload_image() erfolgreich.
+ℹ️ Testdatei remote gelöscht: test_upload.txt
+
+✅ Alle FTP-Tests erfolgreich abgeschlossen.
+</code>
+
+<strong>SQM-Test</strong>
+Aktuelle teste ich die Möglichkeit aus den Bild-Daten die Himmelshelligkeit zu berechnen.
+Der SQM-Test greift dabei auf die Bilddaten zu und berechnet die aktuelle Helligkeit. Berücksichtig werden dabei auch Belichtungszeit (exposure-time) und Empfindlichkeit (Gain).<br>
+Aufruf: <code>python3 sqm_test.py</code><br>
+Typische Ausgabe ist:<br>
+<code>
+2025-08-09 13:36:25+02:00 -> μ = 1.77 mag/arcsec², Gain=1.379, Exptime=0.000142s gespeichert in 
+</code>
+
+
 
 
 # Funktionen der Bibliothek
