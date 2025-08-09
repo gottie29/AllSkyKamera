@@ -174,31 +174,31 @@ cd ~\AllSkyKamera
 </code>
 
 ## manage_crontabs
-**Beschreibung:**
-Liest alle definierten cronjobs aus der **config.py** und trägt diese in die crontabs ein.
+<br>**Beschreibung:**
+<br>Liest alle definierten cronjobs aus der **config.py** und trägt diese in die crontabs ein.
 Sollten gleichnamige crontabs schon existieren, werden diese gemäß der config geändert.
 Bestehende andere crontabs werden dabei nicht angefasst oder geändert.
-**Aufruf:**
-<code>
+<br>**Aufruf:**
+<br><code>
 python3 -m scripts.manage_crontabs
 </code>
-**Cronjob:**
-Es ist nicht nötig ständig diese Datei aufzurufen. Daher braucht es für diese Funktion keinen cronjob.
+<br>**Cronjob:**
+<br>Es ist nicht nötig ständig diese Datei aufzurufen. Daher braucht es für diese Funktion keinen cronjob.
 Wurde in der config.py ein cronjob neu definiert oder geändert, reicht 1 Aufruf dieser Funktion. 
 
 ## upload_config_json
-**Beschreibung:**
-Die config.py ist die zentrale Einstellungsdatei.
+<br>**Beschreibung:**
+<br>Die config.py ist die zentrale Einstellungsdatei.
 Damit Änderungen auch auf der Webseite des Netzwerkes ankommen, wird die config.py übersetzt in eine minimale JSON-Datei und auf den Server übertragen, so das die Webseite Aktualisierungen beim Namen der Kamera oder bei Benutzereinstellungen anzeigen kann.
-**Aufruf:**
-<code>
+<br>**Aufruf:**
+<br><code>
 python3 -m scripts.upload_config_json
 </code>
-**Cronjob:**
-Diese Funktion sollte 1mal am Tag ausgeführt werden. Das gewährleistet die Aktualität der lokalen Kamera und der Webseite.
-**config.py:**
-Hier ein Beispiel aus der config.py:
-<code>
+<br>**Cronjob:**
+<br>Diese Funktion sollte 1mal am Tag ausgeführt werden. Das gewährleistet die Aktualität der lokalen Kamera und der Webseite.
+<br>**config.py:**
+<br>Hier ein Beispiel aus der config.py:
+<br><code>
     {
         "comment": "Config Update",
         "schedule": "0 12 * * *",
@@ -207,18 +207,18 @@ Hier ein Beispiel aus der config.py:
 </code>
 
 ## run_image_upload
-**Beschreibung:**
-Dieses Module kümmert sich um den Upload des aktuellen Kamera-Bildes.
-Diese Funktion ist zwingend notwendig für die Teilnahme am Netzwerk.
-**Aufruf:**
-<code>
+<br>**Beschreibung:**
+<br>Dieses Module kümmert sich um den Upload des aktuellen Kamera-Bildes.
+<br>Diese Funktion ist zwingend notwendig für die Teilnahme am Netzwerk.
+<br>**Aufruf:**
+<br><code>
 python3 -m scripts.run_image_upload
 </code>
-**Cronjob:**
-Diese Funktion sollte 2x pro Minute aufgerufen werden, damit regelmäßig die aktuelle Ansicht auf der Webseite erscheint.
-**config.py:**
-Hier ein Beispiel aus der config.py:
-<code>
+<br>**Cronjob:**
+<br>Diese Funktion sollte 2x pro Minute aufgerufen werden, damit regelmäßig die aktuelle Ansicht auf der Webseite erscheint.
+<br>**config.py:**
+<br>Hier ein Beispiel aus der config.py:
+<br><code>
    {
        "comment": "Image FTP-Upload",
        "schedule": "*/2 * * * *",
@@ -227,24 +227,93 @@ Hier ein Beispiel aus der config.py:
 </code>
 
 ##run_nightly_upload
-**Beschreibung:**
-Dieses Module kümmert sich um den Upload der Sorucen aus der letzten Nacht.
+<br>**Beschreibung:**
+<br>Dieses Module kümmert sich um den Upload der Sorucen aus der letzten Nacht.
 Hierbei werden das Zeitraffer-Video, das Keogram und das Startrail der letzten Nacht auf den Server geladen.
 Diese Funktion ist zwingend notwendig für die Teilnahme am Netzwerk.
-**Aufruf:**
-<code>
+<br>**Aufruf:**
+<br><code>
 python3 -m scripts.run_nightly_upload
 </code>
-**Cronjob:**
-Diese Funktion muss 1x am Tag aufgerufen werden.
+<br>**Cronjob:**
+<br>Diese Funktion muss 1x am Tag aufgerufen werden.
 Der Aufruf sollte immer nach Sonnenaufgang erfolgen, da dann die entsprechenden Videos, Startrails und Keogramme erfolgreich erstellt wurden.
-**config.py:**
-Hier ein Beispiel aus der config.py:
-<code>
+<br>**config.py:**
+<br>Hier ein Beispiel aus der config.py:
+<br><code>
    {
        "comment": "Nightly FTP-Upload",
         "schedule": "30 7 * * *",
         "command": "cd /home/pi/AllSkyKamera && python3 -m scripts.run_nightly_upload"
+   },
+</code>
+
+##raspi_status
+<br>**Beschreibung:**
+<br>Dieses Modul überträgt den Status der Raspberry Pi. 
+Hierbei werden Werte wie Temperatur, Boottime, Speicherplatz frei/benutzt an die Datenbank gesendet und auf der Webseite dargestellt.
+Weiterhin gibt dieses Modul den Online-Status an die Datenbank weiter und sorgt dafür das die Kamera als Online oder Offline auf der Webseite angezeigt wird.
+Diese Funktion ist zwingend notwendig für die Teilnahme am Netzwerk.
+<br>**Aufruf:**
+<br><code>
+python3 -m scripts.raspi_status
+</code>
+<br>**Cronjob:**
+<br>Diese Funktion sollte in einem kurzen Intervall ausgeführt (1-2 Minuten) werden.
+<br>**config.py:**
+<br>Hier ein Beispiel aus der config.py:
+<br><code>
+   {
+       "comment": "Allsky Raspi-Status",
+       "schedule": "*/1 * * * *",
+       "command": "cd /home/pi/AllSkyKamera && python3 -m scripts.raspi_status"
+   },
+</code>
+
+# Sensorenfunktionen
+
+##bme280_logger
+<br>**Beschreibung:**
+<br>Dieses Modul liest den Sensor BME280 aus und überträgt die Daten in die Datenbank.
+Der Sensor selbst liefert:
+- Temperatur
+- Luftfeuchtigkeit
+- Luftdruck
+Weiterhin berechnet das Modul den Taupunkt und gibt diesen ebenfalls an die Datenbank weiter.
+<br>**Aufruf:**
+<br><code>
+python3 -m scripts.bme280_logger
+</code>
+<br>**Cronjob:**
+<br>Diese Funktion sollte in einem kurzen Intervall ausgeführt (1-2 Minuten) werden.
+<br>**config.py:**
+<br>Hier ein Beispiel aus der config.py:
+<br><code>
+   {
+       "comment": "BME280 Sensor",
+       "schedule": "*/1 * * * *",
+       "command": "cd /home/pi/AllSkyKamera && python3 -m scripts.bme280_logger"
+   },
+</code>
+
+##ds18b20_logger
+<br>**Beschreibung:**
+<br>Dieses Modul liest den Sensor DS18B20 aus und überträgt die Daten in die Datenbank.
+Der Sensor selbst liefert:
+- Temperatur
+<br>**Aufruf:**
+<br><code>
+python3 -m scripts.ds18b20_logger
+</code>
+<br>**Cronjob:**
+<br>Diese Funktion sollte in einem kurzen Intervall ausgeführt (1-2 Minuten) werden.
+<br>**config.py:**
+<br>Hier ein Beispiel aus der config.py:
+<br><code>
+   {
+       "comment": "DS18B20 Sensor",
+       "schedule": "*/1 * * * *",
+       "command": "cd /home/pi/AllSkyKamera && python3 -m scripts.ds18b20_logger"
    },
 </code>
 
