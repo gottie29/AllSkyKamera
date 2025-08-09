@@ -22,6 +22,30 @@ Um am Netzwerk teilzunehmen benötigt man einen Secret-Key. Diesen kann man im N
 Ohne diesen Secret-Key funktioniert die Bibliothek nicht und man kann seine Daten nicht hochladen.
 
 # Installation
+Die Installation der Python-Bibliothek gestaltet sich einfach.
+
+1. Download der Bibliothek
+   <code>
+   cd
+   git clone https://github.com/gottie29/AllSkyKamera.git
+   cd AllSkyKamera
+   </code>
+3. Aufruf der Installation
+   <code>
+   ./install.sh
+   </code>
+
+Mit dem starten der Installation werden alle Pakete installiert, die zum Betrieb der Bibliothek nötig sind.
+Weiterhin werden alle nötigen Informationen abgefragt.
+
+
+
+
+# Testen der Bibliothek
+
+
+# Funktionen der Bibliothek
+
 
 ## 📦 Benötigte Python-Module
 
