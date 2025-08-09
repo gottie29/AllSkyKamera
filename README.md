@@ -1,13 +1,27 @@
 # AllSkyKamera
-Bibliothek für Python Allsky Kamera auf Raspberry Pi
+Python-Bibliothek für Allsky-Kameras im Netzwerk AllSkyKamera-Netzwerk (https://allskykamera.space)
  
-- Raspberry Pi 4B mit 2-4 GB RAM
-- Version = Debian GNU/Linux 12 (bookworm)
-- Aktuell arbeite ich mit Python 3.9 oder höher
+# Beschreibung
+Das Netzwerk AllSkyKamera ist eine Sammlung von Allsky-Kameras.
+Es soll einen einfachen Zugang zu den Daten liefern um z.B. Auswertungen im schulischen Umwelt zu realisieren oder aber auch einfach nur den Sternenhimmel von unterschiedlichen Standorten zu zeigen.
 
----
+Die entstandene Python-Biblitohek ermöglicht es die Daten, Bilder, Videos der Kameras auf dem Server zu speichern und damit über die Seite https://allskykamera.space zur Verfügung zu stellen.
 
-# 🛠 Voraussetzungen & Installation
+Dabei greift diese Bibliothek nicht in die Standard-Software vom allskyteam (Thomas Jaquin) ein oder verändert Einstellungen oder eigene Programmierungen auf der Kamera. 
+Die Bibliothek zieht ausschließlich die Daten und speichert diese auf dem Server ab.
+
+# 🛠 Voraussetzungen
+Die Vorraussetzungen um am Netzwerk teilzunehmen sind denkbar einfach.
+Man benötigt eine eigene Allsky-Kamera auf Basis einer Raspberry Pi (empfohlen 4 oder höher).
+Das Interface sollte vom allskyteam (Thomas Jaquin) sein.
+
+Das INDI-Allsky-Interface wird in Zukunft auch in die Bibliothek eingebunden. 
+
+Um am Netzwerk teilzunehmen benötigt man einen Secret-Key. Diesen kann man im Netzwerk anmelden unter: https://www.allskykamera.space/machmit.php
+
+Ohne diesen Secret-Key funktioniert die Bibliothek nicht und man kann seine Daten nicht hochladen.
+
+# Installation
 
 ## 📦 Benötigte Python-Module
 
