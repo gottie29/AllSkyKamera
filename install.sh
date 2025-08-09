@@ -318,6 +318,14 @@ fi)
     }
 ]
 
+###################################################################
+# Nichts ändern !!!
+###################################################################
+FTP_VIDEO_DIR = "videos"
+FTP_KEOGRAM_DIR = "keogram"
+FTP_STARTRAIL_DIR = "startrails"
+FTP_SQM_DIR = "sqm"
+
 # Secrets laden
 from askutils.utils.load_secrets import load_remote_secrets
 _secrets = load_remote_secrets(API_KEY, API_URL)
