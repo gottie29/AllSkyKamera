@@ -199,12 +199,12 @@ else
   DS18B20_OVERLAY=False
 fi
 
-read -r -p "Analemma genrieren? (y/n): " USE_ANALEMMA
+read -r -p "Analemma generieren? (y/n): " USE_ANALEMMA
 if [[ "$USE_ANALEMMA" =~ ^[Yy] ]]; then
   ANALEMMA_ENABLED=True
 else
   ANALEMMA_ENABLED=False
-
+fi
 
 # write config.py
 cat > askutils/config.py <<EOF
@@ -260,7 +260,7 @@ A_GAIN = 1.0           # Kein Gain
 A_BRIGHTNESS = 0.0
 A_CONTRAST = 0.0
 A_SATURATION = 0.0
-A_PATH = "${PROJECT_ROOT}\tmp"
+A_PATH = "${PROJECT_ROOT}/tmp"
 
 # CRONTABS
 CRONTABS = [
