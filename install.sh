@@ -313,6 +313,19 @@ cat <<'    EOF'
     # DS18B20 deaktiviert
     EOF
 fi)
+$(if [ "${ANALEMMA_ENABLED}" = "True" ]; then
+cat <<'    EOF'
+    {
+        "comment": "Generiere Analemma",
+        "schedule": "54/11 * * * *",
+        "command": "cd ${PROJECT_ROOT} && python3 -m scripts.analemma"
+    },
+    EOF
+else
+cat <<'    EOF'
+    # Analemma ist deaktiviert
+    EOF
+fi)
     {
         "comment": "Image FTP-Upload",
         "schedule": "*/2 * * * *",
