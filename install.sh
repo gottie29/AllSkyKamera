@@ -199,6 +199,13 @@ else
   DS18B20_OVERLAY=False
 fi
 
+read -r -p "Analemma genrieren? (y/n): " USE_ANALEMMA
+if [[ "$USE_ANALEMMA" =~ ^[Yy] ]]; then
+  ANALEMMA_ENABLED=True
+else
+  ANALEMMA_ENABLED=False
+
+
 # write config.py
 cat > askutils/config.py <<EOF
 # config.py – automatisch generiert
@@ -244,6 +251,16 @@ TSL2591_OVERLAY         = ${TSL2591_OVERLAY}
 
 DS18B20_ENABLED = ${DS18B20_ENABLED}
 DS18B20_OVERLAY = ${DS18B20_OVERLAY}
+
+ANALEMMA_ENABLED = ${ANALEMMA_ENABLED}
+KAMER_WIDTH = 4056
+HEIGHT_HEIGHT = 3040
+A_SHUTTER = 10       # 1 ms – deutlich kürzer!
+A_GAIN = 1.0           # Kein Gain
+A_BRIGHTNESS = 0.0
+A_CONTRAST = 0.0
+A_SATURATION = 0.0
+A_PATH = "${PROJECT_ROOT}\tmp"
 
 # CRONTABS
 CRONTABS = [
@@ -325,6 +342,7 @@ FTP_VIDEO_DIR = "videos"
 FTP_KEOGRAM_DIR = "keogram"
 FTP_STARTRAIL_DIR = "startrails"
 FTP_SQM_DIR = "sqm"
+FTP_ANALEMMA_DIR = "analemma"
 
 # Secrets laden
 from askutils.utils.load_secrets import load_remote_secrets
