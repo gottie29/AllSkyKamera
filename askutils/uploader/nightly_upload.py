@@ -17,10 +17,13 @@ def upload_nightly_batch(date_str: str = None) -> bool:
 
     # Basis-Verzeichnis für Bild-Ordner
     images_base = os.path.join(config.ALLSKY_PATH, config.IMAGE_BASE_PATH)
+    analemma_base = os.path.join(config.A_PATH)
     files = [
         (os.path.join(images_base, date_str, f"allsky-{date_str}.mp4"), config.FTP_VIDEO_DIR),
         (os.path.join(images_base, date_str, "keogram",  f"keogram-{date_str}.jpg"), config.FTP_KEOGRAM_DIR),
         (os.path.join(images_base, date_str, "startrails", f"startrails-{date_str}.jpg"), config.FTP_STARTRAIL_DIR),
+        (os.path.join(analemma_base, f"analemma-{date_str}_used.jpg"), config.FTP_ANALEMMA_DIR),
+        (os.path.join(analemma_base, f"analemma-{date_str}_unused.jpg"), config.FTP_ANALEMMA_DIR),
     ]
 
     try:

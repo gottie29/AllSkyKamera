@@ -5,6 +5,7 @@ import sys
 import subprocess
 from PIL import Image, ImageDraw, ImageFont
 
+
 # config importieren
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from askutils import config
