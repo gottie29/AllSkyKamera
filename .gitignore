@@ -165,5 +165,6 @@ publish.sh
 askutils/config.py
 config.json
 tests/
-tmp/
+tmp/*
 askutils/utils/netstatus_state.json
+askutils/config.old.py

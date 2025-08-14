@@ -141,7 +141,7 @@ echo "=== 6. askutils/config.py anlegen ==="
 read -r -p "Name der Kamera (z.B. Meine AllskyCam): " KAMERA_NAME
 read -r -p "Name des Standortes (z.B. Berliner Sternwarte): " STANDORT_NAME
 read -r -p "Benutzername (z.B. Tom Mustermann): " BENUTZER_NAME
-read -r -p "E-Mailadresse: " KONTAKT_EMAIL
+read -r -p "E-Mailadresse (optional): " KONTAKT_EMAIL
 read -r -p "Webseite (optional): " WEBSITE
 
 # Standortkoordinaten
