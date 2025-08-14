@@ -164,3 +164,6 @@ askutils/ASKsecret.py
 publish.sh
 askutils/config.py
 config.json
+tests/
+tmp/
+askutils/utils/netstatus_state.json

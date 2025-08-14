@@ -160,8 +160,8 @@ def main():
     tmp_dir = os.path.join(base_dir, 'tmp')
     os.makedirs(tmp_dir, exist_ok=True)
 
-    date_str = local_now.strftime("%Y-%m-%d")
-    base_filename = f"analemma_{date_str}"
+    date_str = local_now.strftime("%Y%m%d")
+    base_filename = f"analemma-{date_str}"
     temp_image = os.path.join(tmp_dir, base_filename + ".jpg")
 
     try:
@@ -172,9 +172,6 @@ def main():
             '--height', str(height),
             '--shutter', str(getattr(config, 'A_SHUTTER', 1000)),
             '--gain', str(getattr(config, 'A_GAIN', 1.0)),
-            '--brightness', str(getattr(config, 'A_BRIGHTNESS', 0.0)),
-            '--contrast', str(getattr(config, 'A_CONTRAST', 0.0)),
-            '--saturation', str(getattr(config, 'A_SATURATION', 0.0)),
             '--metering', 'spot',            # fest im Skript
             '--exposure', 'normal',          # fest im Skript
             '--timeout', '1000',
