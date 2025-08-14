@@ -7,7 +7,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 
 # config importieren
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from askutils import config
 
 def get_true_solar_time(longitude, local_time):
@@ -138,7 +138,7 @@ def erzeuge_debugbild(image_path, output_path, threshold=240):
         print(f"❌ Fehler beim Erzeugen des Debugbilds: {e}")
 
 def main():
-    if not getattr(config, 'ANALEMMA_ENABLE', False):
+    if not getattr(config, 'ANALEMMA_ENABLED', False):
         print("❌ Analemma-Aufnahme ist deaktiviert (ANALEMMA_ENABLE=False)")
         return
 

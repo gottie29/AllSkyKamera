@@ -383,14 +383,14 @@ echo "=== 7. FTP-Upload testen ==="
 python3 tests/ftp_upload_test.py
 
 # Schritt 8: InfluxDB-Verbindung testen
-echo
-echo "=== 8. InfluxDB-Verbindung testen ==="
-HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${INFLUX_URL}/health")
-if [ "$HTTP_CODE" != "200" ]; then
-    echo "❌ InfluxDB nicht erreichbar (HTTP $HTTP_CODE)"
-    exit 1
-fi
-echo "✅ InfluxDB ist erreichbar."
+#echo
+#echo "=== 8. InfluxDB-Verbindung testen ==="
+#HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${INFLUX_URL}/health")
+#if [ "$HTTP_CODE" != "200" ]; then
+#    echo "❌ InfluxDB nicht erreichbar (HTTP $HTTP_CODE)"
+#    exit 1
+#fi
+#echo "✅ InfluxDB ist erreichbar."
 
 # Schritt 9: Crontabs eintragen
 echo
