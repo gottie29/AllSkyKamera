@@ -77,6 +77,9 @@ Nach der Installation befindet sich die generierte Konfigurationsdatei unter ~/A
 
 Der letzte Schritt ist die Übertragung der configuration an den Server. Sobald dies erfolgt ist, ist auf der Webseite die Kamera sichtbar.
 
+Nach der Installtion muss die Kamera, das Interface oder die Rapsberry Pi <strong>nicht</strong> neu gestartet werden. Sobald die Conjobs eingetragen sind, startet die Übertragung.
+Sollte auf der Webseite nichts erscheinen, wurde die configuration nicht übertragen oder die Cronjobs laufen noch nicht.
+
 # Cronjobs
 
 Die Bibliothek arbeitet mit cronjobs. Diese cronjobs werden in den crontab eingetragen und sind damit für den Usern auch jederzeit einsehbar oder auch änderbar.
@@ -90,6 +93,14 @@ python3 -m scripts.manage_crontabs
 
 Jetzt wird die config.py ausgelesen und alle dort definierten cronjobs werden in den crontab eingetragen.
 Hat dies funktioniert, sollte innerhalb einer Minute die Kamera die Daten an den Server senden und diese erscheinen dann auf der Netzwerk-Seite: https://allskykamera.space
+
+Sollte die Kamera noch nicht auf der Webseite stehen, muss die config.py noch an den Server übertragen werden. Das geht einfach mit:
+<code>
+cd ~/AllSkyKamera
+python3 -m scripts.upload_config_json
+</code>
+
+Anschließend ist die Kamera auf der Webseite zu sehen.
 
 # Testen der Sensoren und Skripte
 
