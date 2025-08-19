@@ -75,6 +75,8 @@ Existiert ein Key, gibt die Funktion die Kamera-ID (e.g. ASK001) zurück
 Anschließend werden noch einige Tests durchgeführt und die Installation ist beendet.
 Nach der Installation befindet sich die generierte Konfigurationsdatei unter ~/AllSkyKamera/askutils/config.py
 
+Der letzte Schritt ist die Übertragung der configuration an den Server. Sobald dies erfolgt ist, ist auf der Webseite die Kamera sichtbar.
+
 # Cronjobs
 
 Die Bibliothek arbeitet mit cronjobs. Diese cronjobs werden in den crontab eingetragen und sind damit für den Usern auch jederzeit einsehbar oder auch änderbar.
