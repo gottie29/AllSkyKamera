@@ -397,9 +397,14 @@ echo
 echo "=== 9. Crontabs eintragen ==="
 read -r -p "Sollen die Crontabs jetzt eingetragen werden? (y/n): " SET_CRON
 if [[ "$SET_CRON" =~ ^[Yy] ]]; then
-    echo "→ Traue Crontabs ein..."
+    echo "→ Trage Crontabs ein..."
     cd "$PROJECT_ROOT" && python3 -m scripts.manage_crontabs
 fi
 
+# Schritt 10: Uebertragung der config-Daten (config-json)
+echo "→ Upload der config.json..."
+cd "$PROJECT_ROOT" && python3 -m scripts.upload_config_json
+
 echo
 echo "✅ Installation und Konfiguration abgeschlossen!"
+echo "✅ Ab sofort sollten alle Daten auf der Webseite erscheinen."
