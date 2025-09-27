@@ -333,7 +333,7 @@ fi)
     },
     {
         "comment": "Nightly FTP-Upload",
-        "schedule": "30 7 * * *",
+        "schedule": "45 8 * * *",
         "command": "cd ${PROJECT_ROOT} && python3 -m scripts.run_nightly_upload"
     },
     {
