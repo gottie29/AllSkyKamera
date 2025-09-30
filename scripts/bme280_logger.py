@@ -41,7 +41,7 @@ def main():
         }, tags={"host": "host1"})
 
         # Overlay schreiben, wenn aktiviert
-        if config.BME280_Overlay:
+        if config.BME280_OVERLAY:
             overlay_dir = os.path.join(config.ALLSKY_PATH, "config", "overlay", "extra")
             os.makedirs(overlay_dir, exist_ok=True)
             overlay_path = os.path.join(overlay_dir, "bme280_overlay.json")
