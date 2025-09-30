@@ -3,7 +3,6 @@
 # Marker, der in den Cron-Einträgen vorkommt
 CRON_MARKER="AllSkyKamera"
 
-
 # 1) Versuch: Verzeichnis, in dem dieses Script liegt
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -56,6 +55,7 @@ case "$answer" in
     fi
 
     echo "Deinstallation abgeschlossen."
+    cd
     ;;
   *)
     echo "Abbruch: Es wurde nichts gelöscht."
