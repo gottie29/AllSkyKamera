@@ -26,8 +26,9 @@ OPTIONAL_FIELDS = [
 ]
 
 def get_version():
-    # Eine Ebene höher als das aktuelle Verzeichnis
-    version_file = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "version")
+    # Hole den Pfad zum Projektordner (eine Ebene über askutils)
+    project_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    version_file = os.path.join(project_dir, "version")
     try:
         with open(version_file, "r", encoding="utf-8") as vf:
             return vf.read().strip()
