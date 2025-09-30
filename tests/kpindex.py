@@ -12,4 +12,5 @@ data        = response.json()
 data        = {"kp_index": data["Kp"][-1]}
 
 with open("kpindex.json", 'w') as f:
-    json.dump(data, f)
+    print("KP Index: " + str(data))
+    #json.dump(data, f)
