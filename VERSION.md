@@ -8,7 +8,8 @@ Daten müssen neu eingegeben werde. Hier auch der Secret-Key.
 
 ## Neue Funktionen
 - KP-Index für Overlay eingebaut
-- Installation angepasst
+- Installation angepasst und stabilisiert
+- Testskript für Relaissteuerung eingebaut
 
 ## Bug fixing 
 - Installation angepasst
