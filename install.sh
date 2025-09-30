@@ -201,9 +201,9 @@ fi
 
 read -r -p "KP-Index als Overlay verwenden? (y/n): " USE_KP
 if [[ "$USE_KP" =~ ^[Yy] ]]; then
-  KP_INDEX_OVERLAY=$([[ "$USE_KP" =~ ^[Yy] ]] && echo True || echo False)
+  KPINDEX_OVERLAY=$([[ "$USE_KP" =~ ^[Yy] ]] && echo True || echo False)
 else
-  KP_INDEX_OVERLAY=False
+  KPINDEX_OVERLAY=False
 fi
 
 read -r -p "Analemma generieren? (y/n): " USE_ANALEMMA
