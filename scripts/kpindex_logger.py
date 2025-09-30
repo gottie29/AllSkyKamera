@@ -27,6 +27,10 @@ def main():
                 print("KP Index: " + str(data))
                 #json.dump(data, f)
 
+            influx_writer.log_metric("kpindex", {
+                "kp_index": float(data['kp_index']),
+            }, tags={"host": "host1"})
+
             overlay_dir = os.path.join(config.ALLSKY_PATH, "config", "overlay", "extra")
             os.makedirs(overlay_dir, exist_ok=True)
             overlay_path = os.path.join(overlay_dir, "kpindex_overlay.json")
