@@ -252,6 +252,18 @@ CRONTAB_BLOCKS="$CRONTAB_BLOCKS
     # DS18B20 deaktiviert"
 fi
 
+if [ "${KPINDEX_OVERLAY}" = "True" ]; then
+CRONTAB_BLOCKS="$CRONTAB_BLOCKS
+    {
+        \"comment\": \"Generiere KPIndex Overlay variable\",
+        \"schedule\": \"*/15 * * * *\",
+        \"command\": \"cd ${PROJECT_ROOT} && python3 -m scripts.kpindex_logger\"
+    },"
+else
+CRONTAB_BLOCKS="$CRONTAB_BLOCKS
+    # KPIndex Overlay ist deaktiviert"
+fi
+
 if [ "${ANALEMMA_ENABLED}" = "True" ]; then
 CRONTAB_BLOCKS="$CRONTAB_BLOCKS
     {
