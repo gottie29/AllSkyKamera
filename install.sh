@@ -213,6 +213,57 @@ else
   ANALEMMA_ENABLED=False
 fi
 
+# CRONTAB-Blöcke vorbereiten
+CRONTAB_BLOCKS=""
+
+if [ "${BME280_ENABLED}" = "True" ]; then
+CRONTAB_BLOCKS="$CRONTAB_BLOCKS
+    {
+        \"comment\": \"BME280 Sensor\",
+        \"schedule\": \"*/1 * * * *\",
+        \"command\": \"cd ${PROJECT_ROOT} && python3 -m scripts.bme280_logger\"
+    },"
+else
+CRONTAB_BLOCKS="$CRONTAB_BLOCKS
+    # BME280 deaktiviert"
+fi
+
+if [ "${TSL2591_ENABLED}" = "True" ]; then
+CRONTAB_BLOCKS="$CRONTAB_BLOCKS
+    {
+        \"comment\": \"TSL2591 Sensor\",
+        \"schedule\": \"*/1 * * * *\",
+        \"command\": \"cd ${PROJECT_ROOT} && python3 -m scripts.tsl2591_logger\"
+    },"
+else
+CRONTAB_BLOCKS="$CRONTAB_BLOCKS
+    # TSL2591 deaktiviert"
+fi
+
+if [ "${DS18B20_ENABLED}" = "True" ]; then
+CRONTAB_BLOCKS="$CRONTAB_BLOCKS
+    {
+        \"comment\": \"DS18B20 Sensor\",
+        \"schedule\": \"*/1 * * * *\",
+        \"command\": \"cd ${PROJECT_ROOT} && python3 -m scripts.ds18b20_logger\"
+    },"
+else
+CRONTAB_BLOCKS="$CRONTAB_BLOCKS
+    # DS18B20 deaktiviert"
+fi
+
+if [ "${ANALEMMA_ENABLED}" = "True" ]; then
+CRONTAB_BLOCKS="$CRONTAB_BLOCKS
+    {
+        \"comment\": \"Generiere Analemma\",
+        \"schedule\": \"54/11 * * * *\",
+        \"command\": \"cd ${PROJECT_ROOT} && python3 -m scripts.analemma\"
+    },"
+else
+CRONTAB_BLOCKS="$CRONTAB_BLOCKS
+    # Analemma ist deaktiviert"
+fi
+
 # write config.py
 cat > askutils/config.py <<EOF
 # config.py – automatisch generiert
@@ -260,8 +311,8 @@ DS18B20_ENABLED = ${DS18B20_ENABLED}
 DS18B20_OVERLAY = ${DS18B20_OVERLAY}
 
 ANALEMMA_ENABLED = ${ANALEMMA_ENABLED}
-KAMER_WIDTH = 4056
-HEIGHT_HEIGHT = 3040
+KAMERA_WIDTH = 4056
+KAMERA_HEIGHT = 3040
 A_SHUTTER = 10       # 1 ms – deutlich kürzer!
 A_GAIN = 1.0           # Kein Gain
 A_BRIGHTNESS = 0.0
@@ -280,59 +331,7 @@ CRONTABS = [
         "comment": "Config Update",
         "schedule": "0 12 * * *",
         "command": "cd ${PROJECT_ROOT} && python3 -m scripts.upload_config_json"
-    },
-$(if [ "${BME280_ENABLED}" = "True" ]; then
-cat <<EOF
-    {
-        "comment": "BME280 Sensor",
-        "schedule": "*/1 * * * *",
-        "command": "cd ${PROJECT_ROOT} && python3 -m scripts.bme280_logger"
-    },
-EOF
-else
-cat <<EOF
-    # BME280 deaktiviert
-EOF
-fi)
-$(if [ "${TSL2591_ENABLED}" = "True" ]; then
-cat <<EOF
-    {
-        "comment": "TSL2591 Sensor",
-        "schedule": "*/1 * * * *",
-        "command": "cd ${PROJECT_ROOT} && python3 -m scripts.tsl2591_logger"
-    },
-EOF
-else
-cat <<EOF
-    # TSL2591 deaktiviert
-EOF
-fi)
-$(if [ "${DS18B20_ENABLED}" = "True" ]; then
-cat <<EOF
-    {
-        "comment": "DS18B20 Sensor",
-        "schedule": "*/1 * * * *",
-        "command": "cd ${PROJECT_ROOT} && python3 -m scripts.ds18b20_logger"
-    },
-EOF
-else
-cat <<EOF
-    # DS18B20 deaktiviert
-EOF
-fi)
-$(if [ "${ANALEMMA_ENABLED}" = "True" ]; then
-cat <<EOF
-    {
-        "comment": "Generiere Analemma",
-        "schedule": "54/11 * * * *",
-        "command": "cd ${PROJECT_ROOT} && python3 -m scripts.analemma"
-    },
-EOF
-else
-cat <<EOF
-    # Analemma ist deaktiviert
-EOF
-fi)
+    },${CRONTAB_BLOCKS}
     {
         "comment": "Image FTP-Upload",
         "schedule": "*/2 * * * *",
