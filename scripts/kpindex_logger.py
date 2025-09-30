@@ -12,7 +12,7 @@ from askutils.utils import influx_writer
 
 def main():
     try:
-        if config.KPINDEX_Overlay:
+        if config.KPINDEX_OVERLAY:
             
             start       = datetime.now() - timedelta(hours = 10)
             end         = datetime.now()
