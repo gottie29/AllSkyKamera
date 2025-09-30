@@ -282,56 +282,56 @@ CRONTABS = [
         "command": "cd ${PROJECT_ROOT} && python3 -m scripts.upload_config_json"
     },
 $(if [ "${BME280_ENABLED}" = "True" ]; then
-cat <<'    EOF'
+cat <<EOF
     {
         "comment": "BME280 Sensor",
         "schedule": "*/1 * * * *",
         "command": "cd ${PROJECT_ROOT} && python3 -m scripts.bme280_logger"
     },
-    EOF
+EOF
 else
-cat <<'    EOF'
+cat <<EOF
     # BME280 deaktiviert
-    EOF
+EOF
 fi)
 $(if [ "${TSL2591_ENABLED}" = "True" ]; then
-cat <<'    EOF'
+cat <<EOF
     {
         "comment": "TSL2591 Sensor",
         "schedule": "*/1 * * * *",
         "command": "cd ${PROJECT_ROOT} && python3 -m scripts.tsl2591_logger"
     },
-    EOF
+EOF
 else
-cat <<'    EOF'
+cat <<EOF
     # TSL2591 deaktiviert
-    EOF
+EOF
 fi)
 $(if [ "${DS18B20_ENABLED}" = "True" ]; then
-cat <<'    EOF'
+cat <<EOF
     {
         "comment": "DS18B20 Sensor",
         "schedule": "*/1 * * * *",
         "command": "cd ${PROJECT_ROOT} && python3 -m scripts.ds18b20_logger"
     },
-    EOF
+EOF
 else
-cat <<'    EOF'
+cat <<EOF
     # DS18B20 deaktiviert
-    EOF
+EOF
 fi)
 $(if [ "${ANALEMMA_ENABLED}" = "True" ]; then
-cat <<'    EOF'
+cat <<EOF
     {
         "comment": "Generiere Analemma",
         "schedule": "54/11 * * * *",
         "command": "cd ${PROJECT_ROOT} && python3 -m scripts.analemma"
     },
-    EOF
+EOF
 else
-cat <<'    EOF'
+cat <<EOF
     # Analemma ist deaktiviert
-    EOF
+EOF
 fi)
     {
         "comment": "Image FTP-Upload",
