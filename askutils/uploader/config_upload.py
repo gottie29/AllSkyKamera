@@ -26,7 +26,8 @@ OPTIONAL_FIELDS = [
 ]
 
 def get_version():
-    version_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), "version")
+    # Eine Ebene höher als das aktuelle Verzeichnis
+    version_file = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "version")
     try:
         with open(version_file, "r", encoding="utf-8") as vf:
             return vf.read().strip()
