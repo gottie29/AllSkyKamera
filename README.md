@@ -21,6 +21,20 @@ Um am Netzwerk teilzunehmen benötigt man einen Secret-Key. Diesen kann man im N
 
 Ohne diesen Secret-Key funktioniert die Bibliothek nicht und man kann seine Daten nicht hochladen.
 
+# Update
+Für alle die meine Python-Bibliothek schon installiert haben, ist es sinnvoll ab und an die Bibliothek zu aktualisieren. Wir programmieren ständig an den Funktionalitäten.
+
+Der Update geht ebenso einfach wie die Installation.
+1. Man muss sich auf seiner Raspberry Pi einloggen.
+2. Im Terminal führt man folgende beiden Befehle aus:
+   <code>
+   cd AllSkyKamera
+   git pull
+   </code>
+
+Beim Update werden keine config-Einstellungen überschrieben. 
+Es werdenb lediglich die angepassten Funktionen aktualisiert.
+
 # Installation
 Die Installation der Python-Bibliothek gestaltet sich einfach.
 
