@@ -2,6 +2,7 @@
 
 import json
 import ftplib
+import os
 from askutils import config
 from askutils.utils.logger import log, error
 
@@ -24,6 +25,15 @@ OPTIONAL_FIELDS = [
 	"DS18B20_ENABLED"
 ]
 
+def get_version():
+    version_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), "version")
+    try:
+        with open(version_file, "r", encoding="utf-8") as vf:
+            return vf.read().strip()
+    except Exception as e:
+        error(f"Fehler beim Lesen der Version: {e}")
+        return None
+
 def extract_config_data():
     data = {
         key: getattr(config, key)
@@ -35,6 +45,11 @@ def extract_config_data():
     for opt in OPTIONAL_FIELDS:
         if hasattr(config, opt):
             data[opt] = getattr(config, opt)
+
+    # Version hinzufügen
+    version = get_version()
+    if version:
+        data["VERSION"] = version
 
     return data
 
