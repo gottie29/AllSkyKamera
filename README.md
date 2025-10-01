@@ -207,6 +207,7 @@ Sollten gleichnamige crontabs schon existieren, werden diese gemäß der config 
 Bestehende andere crontabs werden dabei nicht angefasst oder geändert.
 <br>**Aufruf:**
 <br><code>
+cd ~/AllSkyKamera
 python3 -m scripts.manage_crontabs
 </code>
 <br>**Cronjob:**
@@ -219,6 +220,7 @@ Wurde in der config.py ein cronjob neu definiert oder geändert, reicht 1 Aufruf
 Damit Änderungen auch auf der Webseite des Netzwerkes ankommen, wird die config.py übersetzt in eine minimale JSON-Datei und auf den Server übertragen, so das die Webseite Aktualisierungen beim Namen der Kamera oder bei Benutzereinstellungen anzeigen kann.
 <br>**Aufruf:**
 <br><code>
+cd ~/AllSkyKamera
 python3 -m scripts.upload_config_json
 </code>
 <br>**Cronjob:**
@@ -239,6 +241,7 @@ python3 -m scripts.upload_config_json
 <br>Diese Funktion ist zwingend notwendig für die Teilnahme am Netzwerk.
 <br>**Aufruf:**
 <br><code>
+cd ~/AllSkyKamera
 python3 -m scripts.run_image_upload
 </code>
 <br>**Cronjob:**
@@ -253,13 +256,14 @@ python3 -m scripts.run_image_upload
    },
 </code>
 
-##run_nightly_upload
+## run_nightly_upload
 <br>**Beschreibung:**
 <br>Dieses Module kümmert sich um den Upload der Sorucen aus der letzten Nacht.
 Hierbei werden das Zeitraffer-Video, das Keogram und das Startrail der letzten Nacht auf den Server geladen.
 Diese Funktion ist zwingend notwendig für die Teilnahme am Netzwerk.
 <br>**Aufruf:**
 <br><code>
+cd ~/AllSkyKamera
 python3 -m scripts.run_nightly_upload
 </code>
 <br>**Cronjob:**
@@ -275,7 +279,7 @@ Der Aufruf sollte immer nach Sonnenaufgang erfolgen, da dann die entsprechenden 
    },
 </code>
 
-##raspi_status
+## raspi_status
 <br>**Beschreibung:**
 <br>Dieses Modul überträgt den Status der Raspberry Pi. 
 Hierbei werden Werte wie Temperatur, Boottime, Speicherplatz frei/benutzt an die Datenbank gesendet und auf der Webseite dargestellt.
@@ -283,6 +287,7 @@ Weiterhin gibt dieses Modul den Online-Status an die Datenbank weiter und sorgt 
 Diese Funktion ist zwingend notwendig für die Teilnahme am Netzwerk.
 <br>**Aufruf:**
 <br><code>
+cd ~/AllSkyKamera
 python3 -m scripts.raspi_status
 </code>
 <br>**Cronjob:**
@@ -299,7 +304,7 @@ python3 -m scripts.raspi_status
 
 # Sensorenfunktionen
 
-##bme280_logger
+## bme280_logger
 <br>**Beschreibung:**
 <br>Dieses Modul liest den Sensor BME280 aus und überträgt die Daten in die Datenbank.
 Der Sensor selbst liefert:
@@ -309,6 +314,7 @@ Der Sensor selbst liefert:
 Weiterhin berechnet das Modul den Taupunkt und gibt diesen ebenfalls an die Datenbank weiter.
 <br>**Aufruf:**
 <br><code>
+cd ~/AllSkyKamera
 python3 -m scripts.bme280_logger
 </code>
 <br>**Cronjob:**
@@ -323,13 +329,14 @@ python3 -m scripts.bme280_logger
    },
 </code>
 
-##ds18b20_logger
+## ds18b20_logger
 <br>**Beschreibung:**
 <br>Dieses Modul liest den Sensor DS18B20 aus und überträgt die Daten in die Datenbank.
 Der Sensor selbst liefert:
 - Temperatur
 <br>**Aufruf:**
 <br><code>
+cd ~/AllSkyKamera
 python3 -m scripts.ds18b20_logger
 </code>
 <br>**Cronjob:**
