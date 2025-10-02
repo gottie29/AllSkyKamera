@@ -12,3 +12,16 @@ else
     echo "⚠️  Keine Versionsdatei gefunden unter: $VERSION_FILE"
     exit 1
 fi
+# 2. Version aus Git
+if [ -d "$PROJECT_DIR/.git" ]; then
+    cd "$PROJECT_DIR" || exit 1
+    if git describe --tags --always --dirty >/dev/null 2>&1; then
+        GIT_VERSION=$(git describe --tags --always --dirty)
+        echo "Git-Version   : $GIT_VERSION"
+    else
+        GIT_COMMIT=$(git rev-parse --short HEAD)
+        echo "Git-Commit    : $GIT_COMMIT"
+    fi
+else
+    echo "Git-Version   : (kein Git-Repo)"
+fi
