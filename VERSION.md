@@ -1,5 +1,10 @@
 Versionshistorie
 ----------------
+# v2025.10.01_01:
+
+## Neue Funktionen
+- Start-Stop-Skript für die Bibliothek integriert. Damit kann man die Übertragung an den Server stoppen und wieder starten
+
 # v2025.09.30_02:
 
 Für diese neue Version ist eine Neuinstallation erforderlich.
