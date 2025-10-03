@@ -35,8 +35,11 @@ Der Update geht ebenso einfach wie die Installation.
 Beim Update werden keine config-Einstellungen überschrieben. 
 Es werdenb lediglich die angepassten Funktionen aktualisiert.
 
-# Installation
+# Installation / Deinstallation
+
 Die Installation der Python-Bibliothek gestaltet sich einfach.
+
+## Installation
 
 1. Download der Bibliothek
    <code>
@@ -93,6 +96,19 @@ Der letzte Schritt ist die Übertragung der configuration an den Server. Sobald 
 
 Nach der Installtion muss die Kamera, das Interface oder die Rapsberry Pi <strong>nicht</strong> neu gestartet werden. Sobald die Conjobs eingetragen sind, startet die Übertragung.
 Sollte auf der Webseite nichts erscheinen, wurde die configuration nicht übertragen oder die Cronjobs laufen noch nicht.
+
+## Deinstallation
+
+Um die Bilbiothek von der Raspberry-Pi zu entfernen, reicht es aus das Skript uninstall.sh aufzurufen.
+
+ Aufruf der Deinstallation
+   <code>
+   cd ~/AllSkyKamera
+   ./uninstall.sh
+   </code>
+
+Dabei wird die Bibliothek gelöscht und ebenso alle Cronjobs auf der Cron-Tabelle entfernt.
+Um das zu überprüfen, kann man mit <code>crontab -l</code> sich die Tabelle anschauen.
 
 # Cronjobs
 
