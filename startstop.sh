@@ -10,7 +10,7 @@ set -euo pipefail
 
 # Muss im Projekt-Root (mit askutils/) ausgeführt werden.
 if [ ! -d "askutils" ]; then
-    echo "❌ Dieses Skript muss im Projekt-Root (mit askutils/) aufgerufen werden."
+    echo "❌ Dieses Skript muss im Projekt-Roo 'AllSkyKamera' (mit askutils/) aufgerufen werden."
     exit 1
 fi
 
