@@ -7,6 +7,10 @@ else
 fi
 
 set -euo pipefail
+export LANG=C.UTF-8
+export LC_ALL=C.UTF-8
+export PYTHONIOENCODING=UTF-8
+export PYTHONUTF8=1
 
 # Muss im Projekt-Root (mit askutils/) ausgeführt werden.
 if [ ! -d "askutils" ]; then
