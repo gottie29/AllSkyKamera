@@ -95,11 +95,11 @@ sudo apt-get install -y \
 
 # Schritt 3: Schnittstellen aktivieren
 echo
-echo "=== 3. I²C, 1-Wire und Kamera aktivieren ==="
+echo "=== 3. I2C, 1-Wire und Kamera aktivieren ==="
 if sudo raspi-config nonint do_i2c 0 &>/dev/null; then
-  echo "-> I²C aktiviert."
+  echo "-> I2C aktiviert."
 else
-  echo "-> I²C uebersprungen."
+  echo "-> I2C uebersprungen."
 fi
 if sudo raspi-config nonint do_1wire 0 &>/dev/null; then
   echo "-> 1-Wire aktiviert."
