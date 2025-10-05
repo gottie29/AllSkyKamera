@@ -14,14 +14,14 @@ export PYTHONUTF8=1
 
 # Muss im Projekt-Root (mit askutils/) ausgeführt werden.
 if [ ! -d "askutils" ]; then
-    echo "❌ Dieses Skript muss im Projekt-Root (mit askutils/) aufgerufen werden."
+    echo " Dieses Skript muss im Projekt-Root (mit askutils/) aufgerufen werden."
     exit 1
 fi
 
 PROJECT_ROOT="$(pwd)"
 echo "Arbeitsverzeichnis: $PROJECT_ROOT"
 
-# Sofortige Prüfung: existiert bereits eine askutils/config.py?
+# Sofortige Pruefung: existiert bereits eine askutils/config.py?
 if [ -f askutils/config.py ]; then
   read -r -p "askutils/config.py existiert bereits. Möchten Sie sie sichern und neu anlegen? (y/n): " OVERWRITE
   case "$OVERWRITE" in
@@ -56,13 +56,13 @@ API_URL=$(printf '%s' "$ENC_API_URL" | base64 -d)
 
 echo "> Teste API-Zugang..."
 if ! RESPONSE=$(curl -s --fail "${API_URL}?key=${API_KEY}"); then
-    echo "❌ API-URL oder Netzwerkfehler. Abbruch."
+    echo " API-URL oder Netzwerkfehler. Abbruch."
     exit 1
 fi
 
 if echo "$RESPONSE" | grep -q '"error"'; then
     ERRMSG=$(echo "$RESPONSE" | sed -n 's/.*"error"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
-    echo "❌ API-Fehler: ${ERRMSG:-unbekannt}. Abbruch."
+    echo " API-Fehler: ${ERRMSG:-unbekannt}. Abbruch."
     exit 1
 fi
 
@@ -70,11 +70,11 @@ INFLUX_URL=$(echo "$RESPONSE" | sed -n 's/.*"influx_url"[[:space:]]*:[[:space:]]
 KAMERA_ID=$(echo "$RESPONSE" | sed -n 's/.*"kamera_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
 
 if [ -z "$INFLUX_URL" ] || [ -z "$KAMERA_ID" ]; then
-    echo "❌ Ungültige API-Antwort. Abbruch."
+    echo " Unueltige API-Antwort. Abbruch."
     exit 1
 fi
 
-echo "✅ API-Zugang validiert."
+echo "AAPI-Zugang validiert."
 echo "→ Verbundene Kamera-ID: $KAMERA_ID"
 
 # Schritt 1: Pfad zum Thomas-Jaquin-Interface
@@ -83,7 +83,7 @@ echo "=== 1. Pfad zum Thomas-Jaquin-Interface ==="
 DEFAULT_ALLSKY_PATH="$HOME/allsky"
 read -r -p "Pfad zum Interface [Default: $DEFAULT_ALLSKY_PATH]: " ALLSKY_PATH
 ALLSKY_PATH=${ALLSKY_PATH:-$DEFAULT_ALLSKY_PATH}
-echo "→ Interface-Pfad: $ALLSKY_PATH"
+echo "-> Interface-Pfad: $ALLSKY_PATH"
 
 # Schritt 2: System-Pakete installieren
 echo
@@ -97,24 +97,24 @@ sudo apt-get install -y \
 echo
 echo "=== 3. I²C, 1-Wire und Kamera aktivieren ==="
 if sudo raspi-config nonint do_i2c 0 &>/dev/null; then
-  echo "→ I²C aktiviert."
+  echo "-> I²C aktiviert."
 else
-  echo "→ I²C übersprungen."
+  echo "-> I²C uebersprungen."
 fi
 if sudo raspi-config nonint do_1wire 0 &>/dev/null; then
-  echo "→ 1-Wire aktiviert."
+  echo "-> 1-Wire aktiviert."
 else
-  echo "→ 1-Wire übersprungen."
+  echo "-> 1-Wire uebersprungen."
 fi
 if sudo raspi-config nonint do_camera 0 &>/dev/null; then
-  echo "→ Kamera aktiviert."
+  echo "-> Kamera aktiviert."
 else
-  echo "→ Kamera übersprungen."
+  echo "-> Kamera uebersprungen."
 fi
 
 # Schritt 4: Python-Abhängigkeiten installieren
 echo
-echo "=== 4. Python-Abhängigkeiten installieren ==="
+echo "=== 4. Python-Abhaengigkeiten installieren ==="
 pip3 install --user \
     influxdb-client \
     adafruit-circuitpython-tsl2591 \
@@ -135,7 +135,7 @@ API_KEY = "${API_KEY}"
 ENC_API_URL = "${ENC_API_URL}"
 API_URL = base64.b64decode(ENC_API_URL).decode()
 EOF
-echo "→ askutils/ASKsecret.py erstellt"
+echo "-> askutils/ASKsecret.py erstellt"
 
 # Schritt 6: askutils/config.py anlegen
 echo
@@ -150,7 +150,7 @@ read -r -p "Webseite (optional): " WEBSITE
 
 # Standortkoordinaten
 read -r -p "Breitengrad des Standortes (z.B. 52.1253): " LATITUDE
-read -r -p "Längengrad des Standortes (z.B. 13.1245): " LONGITUDE
+read -r -p "Laengengrad des Standortes (z.B. 13.1245): " LONGITUDE
 
 # Image-Pfade (fest)
 IMAGE_BASE_PATH="images"
@@ -158,11 +158,11 @@ IMAGE_PATH="tmp"
 echo "→ IMAGE_BASE_PATH=$IMAGE_BASE_PATH, IMAGE_PATH=$IMAGE_PATH"
 
 # Objektiv- & SQM-Daten
-read -r -p "Pixelgröße des Kamerachips in mm (z.B. 0.00155): " PIX_SIZE_MM
+read -r -p "Pixelgroeße des Kamerachips in mm (z.B. 0.00155): " PIX_SIZE_MM
 read -r -p "Brennweite in mm (z.B. 1.85): " FOCAL_MM
 read -r -p "Nullpunkt Helligkeit ZP (Default: 6.0): " ZP_INPUT
 ZP=${ZP_INPUT:-6.0}
-read -r -p "SQM-Patchgröße in Pixeln (z.B. 100): " SQM_PATCH_SIZE
+read -r -p "SQM-Patchgroeße in Pixeln (z.B. 100): " SQM_PATCH_SIZE
 
 # Sensorenauswahl mit Overlay-Abfrage
 read -r -p "BME280 verwenden? (y/n): " USE_BME
@@ -373,7 +373,7 @@ CRONTABS = [
 ]
 
 ###################################################################
-# Nichts ändern !!!
+# Nichts aendern !!!
 ###################################################################
 FTP_VIDEO_DIR = "videos"
 FTP_KEOGRAM_DIR = "keogram"
@@ -399,7 +399,7 @@ else:
     FTP_USER = FTP_PASS = FTP_SERVER = FTP_REMOTE_DIR = None
 EOF
 
-echo "→ askutils/config.py erstellt"
+echo "-> askutils/config.py erstellt"
 
 # Schritt 7: FTP-Upload testen
 echo
@@ -426,9 +426,9 @@ if [[ "$SET_CRON" =~ ^[Yy] ]]; then
 fi
 
 # Schritt 10: Uebertragung der config-Daten (config-json)
-echo "→ Upload der config.json..."
+echo "-> Upload der config.json..."
 cd "$PROJECT_ROOT" && python3 -m scripts.upload_config_json
 
 echo
-echo "✅ Installation und Konfiguration abgeschlossen!"
-echo "✅ Ab sofort sollten alle Daten auf der Webseite erscheinen."
+echo " Installation und Konfiguration abgeschlossen!"
+echo " Ab sofort sollten alle Daten auf der Webseite erscheinen."
