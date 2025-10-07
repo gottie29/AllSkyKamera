@@ -203,6 +203,16 @@ else
   DS18B20_OVERLAY=False
 fi
 
+# Sensorenauswahl mit Overlay-Abfrage
+read -r -p "MLX90614 verwenden? (y/n): " USE_MLX
+if [[ "$USE_MLX" =~ ^[Yy] ]]; then
+  MLX90614_ENABLED=True
+  read -r -p "I2C-Adresse MLX90614 (z.B. 0x5A): " MLX90614_I2C_ADDRESS
+else
+  MLX90614_ENABLED=False
+  MLX90614_I2C_ADDRESS=0x00
+fi
+
 read -r -p "KP-Index als Overlay verwenden? (y/n): " USE_KP
 if [[ "$USE_KP" =~ ^[Yy] ]]; then
   KPINDEX_OVERLAY=$([[ "$USE_KP" =~ ^[Yy] ]] && echo True || echo False)
@@ -230,6 +240,18 @@ CRONTAB_BLOCKS="$CRONTAB_BLOCKS
 else
 CRONTAB_BLOCKS="$CRONTAB_BLOCKS
     # BME280 deaktiviert"
+fi
+
+if [ "${MLX90614_ENABLED}" = "True" ]; then
+CRONTAB_BLOCKS="$CRONTAB_BLOCKS
+    {
+        \"comment\": \"MLX90614 Sensor\",
+        \"schedule\": \"*/1 * * * *\",
+        \"command\": \"cd ${PROJECT_ROOT} && python3 -m scripts.mlx90614_logger\"
+    },"
+else
+CRONTAB_BLOCKS="$CRONTAB_BLOCKS
+    # MLX90614 deaktiviert"
 fi
 
 if [ "${TSL2591_ENABLED}" = "True" ]; then

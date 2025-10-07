@@ -15,7 +15,7 @@ def ensure_state_dir():
     try:
         os.makedirs(STATE_DIR, exist_ok=True)
     except PermissionError:
-        print(f"⚠️  Keine Schreibrechte für {STATE_DIR}. Starte mit sudo oder passe STATE_DIR an.", file=sys.stderr)
+        print(f"Keine Schreibrechte für {STATE_DIR}. Starte mit sudo oder passe STATE_DIR an.", file=sys.stderr)
         sys.exit(1)
 
 def read_state():
