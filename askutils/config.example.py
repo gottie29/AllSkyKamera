@@ -5,7 +5,7 @@
 try:
     from askutils.ASKsecret import API_KEY, API_URL
 except ImportError:
-    print("❌ Datei 'ASKsecret.py' fehlt oder ist ungültig!")
+    print("❌ Datei 'ASKsecret.py' fehlt oder ist ungueltig!")
     API_KEY = API_URL = None
 
 ####################################################################
@@ -26,8 +26,8 @@ LONGITUDE = 13.432869 # ACHTUNG sehr genau, am besten nicht auf den eigenen Stan
 # BME280-Konfiguration  
 ###########################################################
 # BME280 ist ein Umweltsensor, der Temperatur, Luftfeuchtigkeit und Luftdruck misst.
-# Er wird über I2C angesprochen und benötigt die Adresse 0x76
-# Standardmäßig ist der Sensor aktiviert, du kannst ihn aber deaktivieren, wenn du ihn nicht verwendest.
+# Er wird ueber I2C angesprochen und benoetigt die Adresse 0x76
+# Standardmaessig ist der Sensor aktiviert, du kannst ihn aber deaktivieren, wenn du ihn nicht verwendest.
 # Wenn du den Sensor deaktivierst, werden keine Messwerte in die Datenbank geschrieben
 # und die entsprechenden Grafiken werden nicht erstellt.
 BME280_ENABLED = True
@@ -37,8 +37,8 @@ BME280_I2C_ADDRESS = 0x76
 # TSL2591-Konfiguration
 ############################################################
 # TSL2591 ist ein Lichtsensor, der Helligkeit in Lux misst.
-# Er wird ebenfalls über I2C angesprochen und benötigt die Adresse 0x29
-# Standardmäßig ist der Sensor aktiviert, du kannst ihn aber deaktivieren, wenn du ihn nicht verwendest.
+# Er wird ebenfalls ueber I2C angesprochen und benoetigt die Adresse 0x29
+# Standardmaessig ist der Sensor aktiviert, du kannst ihn aber deaktivieren, wenn du ihn nicht verwendest.
 # Wenn du den Sensor deaktivierst, werden keine Messwerte in die Datenbank geschrieben
 TSL2591_ENABLED = True
 TSL2591_I2C_ADDRESS = 0x29  # Standardadresse
@@ -72,12 +72,12 @@ CRONTABS = [
         "schedule": "0 12 * * *",  #  12 Uhr Mittags
         "command": "cd /home/pi/AllSkyKamera && python3 -m scripts.upload_config_json"
     },
-    # Weitere Jobs kannst du einfach ergänzen
+    # Weitere Jobs kannst du einfach ergaenzen
 ]
 
 
 ###################################################################
-# Nichts ändern !!!
+# Nichts aendern !!!
 ###################################################################
 FTP_VIDEO_DIR = "videos"
 FTP_KEOGRAM_DIR = "keograms"

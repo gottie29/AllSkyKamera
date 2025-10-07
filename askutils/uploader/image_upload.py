@@ -26,7 +26,7 @@ def upload_image(image_path: str = None) -> bool:
             with open(image_path, "rb") as f:
                 remote_name = os.path.basename(image_path)
                 ftp.storbinary(f"STOR {remote_name}", f)
-            print(f"Upload abgeschlossen: {remote_name} → /{config.FTP_REMOTE_DIR}")
+            print(f"Upload abgeschlossen: {remote_name} -> /{config.FTP_REMOTE_DIR}")
         return True
 
     except Exception as e:

@@ -27,7 +27,7 @@ echo "Lokale Version : $LOCAL_VER"
 echo "Remote Version : $REMOTE_VER"
 
 if [ "$LOCAL_VER" = "$REMOTE_VER" ]; then
-    echo "✅ Versionen sind identisch"
+    echo "Versionen sind identisch"
 else
-    echo "⚠️  Versionen unterscheiden sich!"
+    echo "Versionen unterscheiden sich!"
 fi

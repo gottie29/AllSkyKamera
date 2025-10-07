@@ -48,7 +48,7 @@ def read_raw_pec(addr, reg, check_pec=False):
     return raw
 
 def raw_to_celsius(raw):
-    """ Umrechnung gemaeß Datenblatt: Grad-C = raw * 0.02 - 273.15 """
+    """ Umrechnung gemaess Datenblatt: Grad-C = raw * 0.02 - 273.15 """
     return (raw * 0.02) - 273.15
 
 def read_temperature(addr, reg, check_pec=False):

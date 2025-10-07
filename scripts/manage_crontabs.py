@@ -22,7 +22,7 @@ def update_crontab():
     existing_lines = get_existing_crontab().splitlines()
     filtered = []
 
-    # Entferne alte AUTOCRON-Einträge und alle zugehörigen Kommandozeilen
+    # Entferne alte AUTOCRON-Eintraege und alle zugehoerigen Kommandozeilen
     skip_next = False
     for line in existing_lines:
         stripped = line.strip()

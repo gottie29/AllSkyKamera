@@ -3,7 +3,7 @@ import os
 import sys
 import ftplib
 
-# Damit wir askutils aus dem Parent-Verzeichnis importieren können:
+# Damit wir askutils aus dem Parent-Verzeichnis importieren koennen:
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
 sys.path.insert(0, PROJECT_ROOT)
@@ -57,16 +57,16 @@ def test_image_upload():
         sys.exit(1)
     print(" upload_image() erfolgreich.")
 
-    # Testdatei remote wieder löschen
+    # Testdatei remote wieder loeschen
     try:
         ftp = ftplib.FTP(config.FTP_SERVER, timeout=10)
         ftp.login(config.FTP_USER, config.FTP_PASS)
         ftp.cwd(config.FTP_REMOTE_DIR)
         ftp.delete(os.path.basename(test_file))
-        print(f"Testdatei remote gelöscht: {os.path.basename(test_file)}")
+        print(f"Testdatei remote geloescht: {os.path.basename(test_file)}")
         ftp.quit()
     except Exception as e:
-        print(f"Konnte Testdatei remote nicht löschen: {e}")
+        print(f"Konnte Testdatei remote nicht loeschen: {e}")
 
 if __name__ == "__main__":
     print("== 1. Teste Konfiguration ==")

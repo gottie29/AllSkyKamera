@@ -21,7 +21,7 @@ def _get_bus():
 def _read_raw(reg: int) -> int:
     """
     Liest 3 Bytes (LSB, MSB, PEC) und kombiniert LSB/MSB zum 16-bit Wert.
-    Wir ignorieren hier bewusst den PEC. Bei Bedarf könnte man ihn prüfen.
+    Wir ignorieren hier bewusst den PEC. Bei Bedarf koennte man ihn pruefen.
     """
     bus = _get_bus()
     data = bus.read_i2c_block_data(I2C_ADDR, reg, 3)  # [lsb, msb, pec]
@@ -36,7 +36,7 @@ def _read_temp_celsius(reg: int) -> float:
     raw = _read_raw(reg)
     t = _raw_to_celsius(raw)
 
-    # Plausibilitätscheck; bei Byte-Order-Issue einmal tauschen
+    # Plausibilitaetscheck; bei Byte-Order-Issue einmal tauschen
     if not (-70.0 <= t <= 380.0):
         swapped = ((raw & 0xFF) << 8) | (raw >> 8)
         t_swapped = _raw_to_celsius(swapped)
@@ -46,7 +46,7 @@ def _read_temp_celsius(reg: int) -> float:
 
 def is_connected() -> bool:
     """
-    Schneller Check: einmal Ambient lesen und auf plausiblen Bereich prüfen.
+    Schneller Check: einmal Ambient lesen und auf plausiblen Bereich pruefen.
     """
     try:
         t_amb = _read_temp_celsius(REG_TA)
@@ -62,7 +62,7 @@ def read_mlx90614() -> dict:
     obj = _read_temp_celsius(REG_TOBJ1)
 
     # Minimale Entprellung / Stabilisierung (optional)
-    # kurz warten und zweiten Messwert mitteln, um Ausreißer zu dämpfen
+    # kurz warten und zweiten Messwert mitteln, um Ausreisser zu daempfen
     time.sleep(0.05)
     amb2 = _read_temp_celsius(REG_TA)
     obj2 = _read_temp_celsius(REG_TOBJ1)

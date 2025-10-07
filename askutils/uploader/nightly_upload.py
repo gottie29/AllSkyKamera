@@ -8,14 +8,14 @@ from askutils import config
 def upload_nightly_batch(date_str: str = None) -> bool:
     """
     Laedt Video, Keogram und Startrail des angegebenen Tages per FTP hoch.
-    Wenn kein Datum uebergeben wird, wird standardmäßig der Vortag verwendet.
+    Wenn kein Datum uebergeben wird, wird standardmaessig der Vortag verwendet.
     Pfade basieren auf ALLSKY_PATH und IMAGE_BASE_PATH aus der Config.
     """
     # Datum bestimmen
     if date_str is None:
         date_str = (datetime.now() - timedelta(days=1)).strftime("%Y%m%d")
 
-    # Basis-Verzeichnis für Bild-Ordner
+    # Basis-Verzeichnis fuer Bild-Ordner
     images_base = os.path.join(config.ALLSKY_PATH, config.IMAGE_BASE_PATH)
     analemma_base = os.path.join(config.A_PATH)
     files = [
@@ -49,7 +49,7 @@ def upload_nightly_batch(date_str: str = None) -> bool:
                     ftp.storbinary(f"STOR {os.path.basename(local_path)}", f)
                 print(f"Hochgeladen: {os.path.basename(local_path)} -> /{remote_subdir}")
 
-                # zurück ins Kamera-ID-Hauptverzeichnis
+                # zurueck ins Kamera-ID-Hauptverzeichnis
                 ftp.cwd("..")
 
         return True

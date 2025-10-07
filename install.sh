@@ -27,10 +27,10 @@ if [ -f askutils/config.py ]; then
   case "$OVERWRITE" in
     [Yy]* )
       mv askutils/config.py askutils/config.old.py
-      echo "→ Alte config.py wurde in askutils/config.old.py umbenannt."
+      echo "-> Alte config.py wurde in askutils/config.old.py umbenannt."
       ;;
     * )
-      echo "→ Bestehende askutils/config.py bleibt erhalten. Installation abgebrochen."
+      echo "-> Bestehende askutils/config.py bleibt erhalten. Installation abgebrochen."
       exit 0
       ;;
   esac
@@ -75,7 +75,7 @@ if [ -z "$INFLUX_URL" ] || [ -z "$KAMERA_ID" ]; then
 fi
 
 echo "AAPI-Zugang validiert."
-echo "→ Verbundene Kamera-ID: $KAMERA_ID"
+echo "-> Verbundene Kamera-ID: $KAMERA_ID"
 
 # Schritt 1: Pfad zum Thomas-Jaquin-Interface
 echo
@@ -155,14 +155,14 @@ read -r -p "Laengengrad des Standortes (z.B. 13.1245): " LONGITUDE
 # Image-Pfade (fest)
 IMAGE_BASE_PATH="images"
 IMAGE_PATH="tmp"
-echo "→ IMAGE_BASE_PATH=$IMAGE_BASE_PATH, IMAGE_PATH=$IMAGE_PATH"
+echo "-> IMAGE_BASE_PATH=$IMAGE_BASE_PATH, IMAGE_PATH=$IMAGE_PATH"
 
 # Objektiv- & SQM-Daten
 read -r -p "Pixelgroesse des Kamerachips in mm (z.B. 0.00155): " PIX_SIZE_MM
 read -r -p "Brennweite in mm (z.B. 1.85): " FOCAL_MM
 read -r -p "Nullpunkt Helligkeit ZP (Default: 6.0): " ZP_INPUT
 ZP=${ZP_INPUT:-6.0}
-read -r -p "SQM-Patchgroeße in Pixeln (z.B. 100): " SQM_PATCH_SIZE
+read -r -p "SQM-Patchgroesse in Pixeln (z.B. 100): " SQM_PATCH_SIZE
 
 # Sensorenauswahl mit Overlay-Abfrage
 read -r -p "BME280 verwenden? (y/n): " USE_BME
@@ -304,7 +304,7 @@ fi
 
 # write config.py
 cat > askutils/config.py <<EOF
-# config.py – automatisch generiert
+# config.py - automatisch generiert
 
 try:
     from askutils.ASKsecret import API_KEY, API_URL
@@ -443,7 +443,7 @@ echo
 echo "=== 9. Crontabs eintragen ==="
 read -r -p "Sollen die Crontabs jetzt eingetragen werden? (y/n): " SET_CRON
 if [[ "$SET_CRON" =~ ^[Yy] ]]; then
-    echo "→ Trage Crontabs ein..."
+    echo "-> Trage Crontabs ein..."
     cd "$PROJECT_ROOT" && python3 -m scripts.manage_crontabs
 fi
 

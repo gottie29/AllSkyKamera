@@ -7,12 +7,12 @@ from .. import config
 
 def read_ds18b20():
     if not config.DS18B20_ENABLED:
-        raise RuntimeError(" DS18B20 ist in config.py deaktiviert!")
+        raise RuntimeError("DS18B20 ist in config.py deaktiviert!")
 
     base_dir = '/sys/bus/w1/devices/'
     device_folders = glob.glob(base_dir + '28-*')
     if not device_folders:
-        raise RuntimeError(" Kein DS18B20-Sensor gefunden")
+        raise RuntimeError("Kein DS18B20-Sensor gefunden")
 
     device_file = device_folders[0] + '/w1_slave'
     try:
@@ -21,7 +21,7 @@ def read_ds18b20():
 
         # CRC pruefen
         if lines[0].strip()[-3:] != 'YES':
-            raise RuntimeError(" CRC-Fehler beim Lesen")
+            raise RuntimeError("CRC-Fehler beim Lesen")
 
         # Temperatur extrahieren
         equals_pos = lines[1].find('t=')
@@ -31,7 +31,7 @@ def read_ds18b20():
             return round(temperature_c, 2)
 
         # Unerwartetes Format
-        raise RuntimeError(" Unerwartetes Fehlerformat")
+        raise RuntimeError("Unerwartetes Fehlerformat")
 
     except Exception as e:
         # Weiterreichen als RuntimeError, damit Logger es auffaengt

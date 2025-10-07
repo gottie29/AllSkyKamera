@@ -6,7 +6,7 @@ import os
 from askutils import config
 from askutils.utils.logger import log, error
 
-# Nur diese Felder werden öffentlich exportiert
+# Nur diese Felder werden oeffentlich exportiert
 EXPORT_FIELDS = [
     "KAMERA_ID",
     "KAMERA_NAME",
@@ -18,7 +18,7 @@ EXPORT_FIELDS = [
     "LONGITUDE"
 ]
 
-# Optional exportierte Felder – nur wenn vorhanden
+# Optional exportierte Felder - nur wenn vorhanden
 OPTIONAL_FIELDS = [
     "BME280_ENABLED",
     "TSL2591_ENABLED",
@@ -26,7 +26,7 @@ OPTIONAL_FIELDS = [
 ]
 
 def get_version():
-    # Hole den Pfad zum Projektordner (eine Ebene über askutils)
+    # Hole den Pfad zum Projektordner (eine Ebene ueber askutils)
     version_file = os.path.join("version")
     try:
         with open(version_file, "r", encoding="utf-8") as vf:
@@ -42,12 +42,12 @@ def extract_config_data():
         if hasattr(config, key)
     }
 
-    # Füge optionale Felder hinzu, wenn sie existieren
+    # Fuege optionale Felder hinzu, wenn sie existieren
     for opt in OPTIONAL_FIELDS:
         if hasattr(config, opt):
             data[opt] = getattr(config, opt)
 
-    # Version hinzufügen
+    # Version hinzufuegen
     version = get_version()
     if version:
         data["VERSION"] = version

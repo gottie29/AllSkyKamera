@@ -4,7 +4,7 @@ import os
 
 # State-Datei direkt neben diesem Modul
 STATE_FILE = os.path.join(os.path.dirname(__file__), "netstatus_state.json")
-# Interfaces, die wir überwachen wollen
+# Interfaces, die wir ueberwachen wollen
 INTERFACES = ["eth0", "wlan0"]
 
 def _read_last_state():
@@ -13,7 +13,7 @@ def _read_last_state():
             data = json.load(f)
         return data.get("bytes_sent", 0), data.get("bytes_recv", 0)
     except Exception:
-        # z.B. Datei nicht vorhanden → Erster Lauf
+        # z.B. Datei nicht vorhanden -> Erster Lauf
         return None, None
 
 def _write_state(sent, recv):
@@ -23,7 +23,7 @@ def _write_state(sent, recv):
     os.replace(tmp, STATE_FILE)
 
 def get_net_io():
-    """Liefert kumulierte Bytes (sent, recv) über eth0 + wlan0 seit Boot."""
+    """Liefert kumulierte Bytes (sent, recv) ueber eth0 + wlan0 seit Boot."""
     counters = psutil.net_io_counters(pernic=True)
     total_sent = 0
     total_recv = 0
@@ -36,9 +36,9 @@ def get_net_io():
 def get_net_usage_mb():
     """
     Liest den letzten Lauf aus STATE_FILE, berechnet die Differenz
-    und schreibt den aktuellen Stand zurück.
-    Rückgabe: (sent_mb, recv_mb) seit letztem Aufruf.
-    Beim ersten Lauf (keine STATE_FILE) wird (0.0, 0.0) zurückgegeben.
+    und schreibt den aktuellen Stand zurueck.
+    Rueckgabe: (sent_mb, recv_mb) seit letztem Aufruf.
+    Beim ersten Lauf (keine STATE_FILE) wird (0.0, 0.0) zurueckgegeben.
     """
     last_sent, last_recv = _read_last_state()
     curr_sent, curr_recv = get_net_io()
@@ -54,7 +54,7 @@ def get_net_usage_mb():
     # State aktualisieren
     _write_state(curr_sent, curr_recv)
 
-    # Bytes → MB
+    # Bytes -> MB
     sent_mb = delta_sent / (1024**2)
     recv_mb = delta_recv / (1024**2)
     return sent_mb, recv_mb
