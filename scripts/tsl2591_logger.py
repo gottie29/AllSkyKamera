@@ -10,11 +10,11 @@ from askutils.sensors import tsl2591
 
 def main():
     if not getattr(config, "TSL2591_ENABLED", False):
-        print("ℹ️ TSL2591 ist deaktiviert. Test wird übersprungen.")
+        print("TSL2591 ist deaktiviert. Test wird übersprungen.")
         return
 
     if not tsl2591.is_connected():
-        error("❌ TSL2591 ist nicht verbunden oder liefert keine Werte.")
+        error("TSL2591 ist nicht verbunden oder liefert keine Werte.")
         return
 
     try:
@@ -23,13 +23,13 @@ def main():
         error(f"❌ Fehler beim Auslesen des TSL2591: {e}")
         return
 
-    print(f"📍 Standort: {config.STANDORT_NAME} ({config.KAMERA_ID})")
-    print(f"💡 Lux-Wert      : {data['lux']:.2f} lx")
-    print(f"🔆 Sichtbar      : {data['visible']}")
-    print(f"🌌 Infrarot      : {data['infrared']}")
-    print(f"🌈 Vollspektrum  : {data['full']}")
-    print(f"🌌 SQM (gesamt)  : {data['sqm']:.2f}")
-    print(f"🌌 SQM (sichtbar): {data['sqm2']:.2f}")
+    print(f"Standort: {config.STANDORT_NAME} ({config.KAMERA_ID})")
+    print(f"Lux-Wert      : {data['lux']:.2f} lx")
+    print(f"Sichtbar      : {data['visible']}")
+    print(f"Infrarot      : {data['infrared']}")
+    print(f"Vollspektrum  : {data['full']}")
+    print(f"SQM (gesamt)  : {data['sqm']:.2f}")
+    print(f"SQM (sichtbar): {data['sqm2']:.2f}")
 
     influx_writer.log_metric("tsl2591", {
         "Lux": data["lux"],

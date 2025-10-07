@@ -411,10 +411,10 @@ python3 tests/ftp_upload_test.py
 #echo "=== 8. InfluxDB-Verbindung testen ==="
 #HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${INFLUX_URL}/health")
 #if [ "$HTTP_CODE" != "200" ]; then
-#    echo "❌ InfluxDB nicht erreichbar (HTTP $HTTP_CODE)"
+#    echo " InfluxDB nicht erreichbar (HTTP $HTTP_CODE)"
 #    exit 1
 #fi
-#echo "✅ InfluxDB ist erreichbar."
+#echo "InfluxDB ist erreichbar."
 
 # Schritt 9: Crontabs eintragen
 echo
@@ -430,5 +430,5 @@ echo "-> Upload der config.json..."
 cd "$PROJECT_ROOT" && python3 -m scripts.upload_config_json
 
 echo
-echo " Installation und Konfiguration abgeschlossen!"
-echo " Ab sofort sollten alle Daten auf der Webseite erscheinen."
+echo "Installation und Konfiguration abgeschlossen!"
+echo "Ab sofort sollten alle Daten auf der Webseite https://allskykamera.space erscheinen."

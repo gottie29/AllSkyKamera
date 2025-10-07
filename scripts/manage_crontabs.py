@@ -47,7 +47,7 @@ def update_crontab():
 
     new_crontab = "\n".join(filtered) + "\n"
     write_new_crontab(new_crontab)
-    log("✅ Crontab wurde aktualisiert.")
+    log("Crontab wurde aktualisiert.")
 
 if __name__ == "__main__":
     update_crontab()

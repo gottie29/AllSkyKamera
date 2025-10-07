@@ -22,5 +22,5 @@ def load_remote_secrets(api_key, api_url):
         }
 
     except Exception as e:
-        print("❌ Fehler beim Laden der Secrets:", e)
+        print(" Fehler beim Laden der Secrets:", e)
         return None

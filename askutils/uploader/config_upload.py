@@ -60,7 +60,7 @@ def create_config_json(filename="config.json"):
     try:
         with open(filename, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
-        log(f"📄 config.json wurde erstellt: {filename}")
+        log(f" config.json wurde erstellt: {filename}")
         return filename
     except Exception as e:
         error(f"Fehler beim Schreiben der config.json: {e}")
@@ -73,6 +73,6 @@ def upload_to_ftp(filepath):
             ftp.cwd(config.FTP_REMOTE_DIR)
             with open(filepath, "rb") as f:
                 ftp.storbinary(f"STOR {filepath}", f)
-            log(f"✅ Datei {filepath} erfolgreich per FTP hochgeladen.")
+            log(f"Datei {filepath} erfolgreich per FTP hochgeladen.")
     except Exception as e:
-        error(f"❌ FTP-Upload fehlgeschlagen: {e}")
+        error(f" FTP-Upload fehlgeschlagen: {e}")

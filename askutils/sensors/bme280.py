@@ -16,7 +16,7 @@ def get_chip_id(addr=DEVICE):
 
 def read_bme280(addr=DEVICE):
     if not config.BME280_ENABLED:
-        raise RuntimeError("❌ BME280 ist in config.py deaktiviert!")
+        raise RuntimeError(" BME280 ist in config.py deaktiviert!")
 
 def getShort(data, index):
     return c_short((data[index+1] << 8) + data[index]).value

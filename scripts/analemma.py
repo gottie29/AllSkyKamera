@@ -22,7 +22,7 @@ def overlay_text_on_image(image_path, text_lines, output_path):
     try:
         image = Image.open(image_path).convert("RGB")
     except FileNotFoundError:
-        print(f"❌ Bild nicht gefunden: {image_path}")
+        print(f" Bild nicht gefunden: {image_path}")
         return
 
     draw = ImageDraw.Draw(image)
@@ -37,7 +37,7 @@ def overlay_text_on_image(image_path, text_lines, output_path):
         y += 45
 
     image.save(output_path)
-    print(f"✅ Bild gespeichert: {output_path}")
+    print(f" Bild gespeichert: {output_path}")
 
 def bewertung_sonne_zu_sehen(image_path, threshold=240, min_percent_above=0.001):
     """
@@ -53,11 +53,11 @@ def bewertung_sonne_zu_sehen(image_path, threshold=240, min_percent_above=0.001)
         above = sum(1 for p in pixels if p >= threshold)
         percent_above = above / total
 
-        print(f"🔍 Max. Helligkeit: {max_pixel}, Pixel ≥ {threshold}: {percent_above:.4%}")
+        print(f"Max. Helligkeit: {max_pixel}, Pixel ≥ {threshold}: {percent_above:.4%}")
 
         return (max_pixel >= threshold) and (percent_above >= min_percent_above)
     except Exception as e:
-        print(f"❌ Fehler bei Bildanalyse: {e}")
+        print(f" Fehler bei Bildanalyse: {e}")
         return False
 
 def bewertung_sonne_konzentriert(image_path, threshold=240, max_blob_size=1000):
@@ -92,12 +92,12 @@ def bewertung_sonne_konzentriert(image_path, threshold=240, max_blob_size=1000):
                     if pixels[nx, ny] >= threshold:
                         bright_count += 1
 
-        print(f"🔍 Max-Helligkeit: {max_val} bei {max_pos}, Helle Pixel im Umkreis: {bright_count}")
+        print(f"Max-Helligkeit: {max_val} bei {max_pos}, Helle Pixel im Umkreis: {bright_count}")
 
         return (max_val >= threshold) and (bright_count <= max_blob_size)
 
     except Exception as e:
-        print(f"❌ Fehler bei Bildbewertung: {e}")
+        print(f" Fehler bei Bildbewertung: {e}")
         return False
 
 def erzeuge_debugbild(image_path, output_path, threshold=240):
@@ -132,14 +132,14 @@ def erzeuge_debugbild(image_path, output_path, threshold=240):
         )
 
         original.save(output_path)
-        print(f"🛠️ Debugbild gespeichert: {output_path}")
+        print(f"Debugbild gespeichert: {output_path}")
 
     except Exception as e:
-        print(f"❌ Fehler beim Erzeugen des Debugbilds: {e}")
+        print(f" Fehler beim Erzeugen des Debugbilds: {e}")
 
 def main():
     if not getattr(config, 'ANALEMMA_ENABLED', False):
-        print("❌ Analemma-Aufnahme ist deaktiviert (ANALEMMA_ENABLE=False)")
+        print(" Analemma-Aufnahme ist deaktiviert (ANALEMMA_ENABLE=False)")
         return
 
     latitude = config.LATITUDE
@@ -178,9 +178,9 @@ def main():
             '--timeout', '1000',
             '--nopreview'
         ], check=True)
-        print(f"📸 Bild aufgenommen: {temp_image}")
+        print(f"Bild aufgenommen: {temp_image}")
     except subprocess.CalledProcessError:
-        print("❌ Fehler beim Aufnehmen des Bildes mit libcamera-still")
+        print(" Fehler beim Aufnehmen des Bildes mit libcamera-still")
         return
 
     #overlay_text_on_image(temp_image, text_lines, temp_image)
@@ -194,7 +194,7 @@ def main():
     final_image = os.path.join(tmp_dir, base_filename + status + ".jpg")
 
     os.rename(temp_image, final_image)
-    print(f"📁 Bild gespeichert als: {final_image}")
+    print(f"Bild gespeichert als: {final_image}")
 
 if __name__ == "__main__":
     main()

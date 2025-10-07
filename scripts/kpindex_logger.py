@@ -44,7 +44,7 @@ def main():
                 json.dump(overlay_data, f, indent=2)
             
     except Exception as e:
-        error(f"❌ Fehler beim Auslesen oder Schreiben der KPIndex-Daten: {e}")
+        error(f"Fehler beim Auslesen oder Schreiben der KPIndex-Daten: {e}")
 
 if __name__ == "__main__":
     main()

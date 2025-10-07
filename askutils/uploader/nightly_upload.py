@@ -7,8 +7,8 @@ from askutils import config
 
 def upload_nightly_batch(date_str: str = None) -> bool:
     """
-    Lädt Video, Keogram und Startrail des angegebenen Tages per FTP hoch.
-    Wenn kein Datum übergeben wird, wird standardmäßig der Vortag verwendet.
+    Laedt Video, Keogram und Startrail des angegebenen Tages per FTP hoch.
+    Wenn kein Datum uebergeben wird, wird standardmäßig der Vortag verwendet.
     Pfade basieren auf ALLSKY_PATH und IMAGE_BASE_PATH aus der Config.
     """
     # Datum bestimmen
@@ -33,21 +33,21 @@ def upload_nightly_batch(date_str: str = None) -> bool:
 
             for local_path, remote_subdir in files:
                 if not os.path.isfile(local_path):
-                    print(f"⚠️ Datei fehlt: {local_path}")
+                    print(f"Datei fehlt: {local_path}")
                     continue
 
                 # in Unterverzeichnis wechseln (oder anlegen)
                 try:
                     ftp.cwd(remote_subdir)
                 except ftplib.error_perm:
-                    print(f"🚧 Remote-Verzeichnis erstellen: {remote_subdir}")
+                    print(f"Remote-Verzeichnis erstellen: {remote_subdir}")
                     ftp.mkd(remote_subdir)
                     ftp.cwd(remote_subdir)
 
-                print(f"📤 Hochladen: {local_path} → /{config.FTP_REMOTE_DIR}/{remote_subdir}")
+                print(f"Hochladen: {local_path} -> /{config.FTP_REMOTE_DIR}/{remote_subdir}")
                 with open(local_path, "rb") as f:
                     ftp.storbinary(f"STOR {os.path.basename(local_path)}", f)
-                print(f"✅ Hochgeladen: {os.path.basename(local_path)} → /{remote_subdir}")
+                print(f"Hochgeladen: {os.path.basename(local_path)} -> /{remote_subdir}")
 
                 # zurück ins Kamera-ID-Hauptverzeichnis
                 ftp.cwd("..")
@@ -55,5 +55,5 @@ def upload_nightly_batch(date_str: str = None) -> bool:
         return True
 
     except Exception as e:
-        print(f"❌ Batch-FTP-Upload fehlgeschlagen: {e}")
+        print(f" Batch-FTP-Upload fehlgeschlagen: {e}")
         return False

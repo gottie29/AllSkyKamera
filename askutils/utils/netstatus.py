@@ -36,7 +36,7 @@ def get_net_io():
 def get_net_usage_mb():
     """
     Liest den letzten Lauf aus STATE_FILE, berechnet die Differenz
-    und schreibt den aktuellen Stand zurück. 
+    und schreibt den aktuellen Stand zurück.
     Rückgabe: (sent_mb, recv_mb) seit letztem Aufruf.
     Beim ersten Lauf (keine STATE_FILE) wird (0.0, 0.0) zurückgegeben.
     """
