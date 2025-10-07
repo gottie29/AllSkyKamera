@@ -163,6 +163,7 @@ cython_debug/
 askutils/ASKsecret.py
 publish.sh
 askutils/config.py
+askutils/config.*
 config.json
 tmp/*
 askutils/utils/netstatus_state.json

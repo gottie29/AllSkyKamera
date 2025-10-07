@@ -487,7 +487,7 @@ if [[ "${1:-}" == "set" && $# -ge 3 ]]; then
   key="$2"; shift 2
   rhs="$*"
   echo "Setze ${key} = ${rhs}"
-  backup_cfg
+  #backup_cfg
   py_set_kv "$key" "$rhs"
   apply_crontabs_prompt
   exit 0
