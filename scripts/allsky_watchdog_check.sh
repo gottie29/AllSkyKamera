@@ -28,7 +28,7 @@ else
   fi
   down_since=$(cat "$LAST_OK")
   if [ $(( now - down_since )) -gt $MAX_AGE ]; then
-    # länger als 30 Minuten down → Reboot
+    # laenger als 30 Minuten down → Reboot
     exit 1
   fi
 fi

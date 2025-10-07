@@ -21,7 +21,7 @@ voltage = statusinfo.get_voltage()
 uptime = statusinfo.get_boot_time_seconds()
 
 # Debug-Ausgabe
-print(f"Temp: {temp:.2f} °C, Disk: {disk['used_mb']:.1f} MB used, Voltage: {voltage:.2f} V")
+print(f"Temp: {temp:.2f} C, Disk: {disk['used_mb']:.1f} MB used, Voltage: {voltage:.2f} V")
 
 # Daten an Influx senden
 influx_writer.log_metric("raspistatus", {

@@ -19,7 +19,7 @@ def read_ds18b20():
         with open(device_file, 'r') as f:
             lines = f.readlines()
 
-        # CRC prüfen
+        # CRC pruefen
         if lines[0].strip()[-3:] != 'YES':
             raise RuntimeError(" CRC-Fehler beim Lesen")
 
@@ -34,5 +34,5 @@ def read_ds18b20():
         raise RuntimeError(" Unerwartetes Fehlerformat")
 
     except Exception as e:
-        # Weiterreichen als RuntimeError, damit Logger es auffängt
+        # Weiterreichen als RuntimeError, damit Logger es auffaengt
         raise RuntimeError(f"Fehler: {e}")

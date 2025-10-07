@@ -48,7 +48,7 @@ def read_raw_pec(addr, reg, check_pec=False):
     return raw
 
 def raw_to_celsius(raw):
-    """ Umrechnung gemäß Datenblatt: °C = raw * 0.02 - 273.15 """
+    """ Umrechnung gemaeß Datenblatt: Grad-C = raw * 0.02 - 273.15 """
     return (raw * 0.02) - 273.15
 
 def read_temperature(addr, reg, check_pec=False):
@@ -58,7 +58,7 @@ def read_temperature(addr, reg, check_pec=False):
     raw = read_raw_pec(addr, reg, check_pec=check_pec)
     t = raw_to_celsius(raw)
 
-    # Plausibilitätscheck: Ambient meist -40..125°C, Objekt sinnvoll -70..380°C
+    # Plausibilitaetscheck: Ambient meist -40..125°C, Objekt sinnvoll -70..380°C
     if not (-70.0 <= t <= 380.0):
         # Fallback: Byte-Order tauschen (falls Treiber die Bytes schon gedreht hat)
         swapped = ((raw & 0xFF) << 8) | (raw >> 8)

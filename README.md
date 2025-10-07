@@ -1,5 +1,6 @@
 # AllSkyKamera
 Python-Bibliothek für Allsky-Kameras im Netzwerk AllSkyKamera-Netzwerk (https://allskykamera.space)
+
 Version: v2025.10.01_07-pre
  
 # Beschreibung
