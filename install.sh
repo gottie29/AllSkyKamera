@@ -122,6 +122,7 @@ pip3 install --user \
     pillow \
     numpy \
     matplotlib \
+    adafruit-circuitpython-dht \
     --break-system-packages
 
 # Schritt 5: askutils/ASKsecret.py anlegen
