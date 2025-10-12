@@ -22,12 +22,12 @@ def main():
 
 
 
-    print(f"💡 Lux-Wert      : {lux:.2f} lx")
-    print(f"🔆 Sichtbar      : {visible}")
-    print(f"🌌 Infrarot      : {infrared}")
-    print(f"🌈 Vollspektrum  : {full}")
-    print(f"🌌 Himmelshelligkeit (mag/arcsec²): {skybright:.2f}")
-    print(f"🌌 Himmelshelligkeit Vis (mag/arcsec²): {skybright2:.2f}")
+    print(f"Lux-Wert      : {lux:.2f} lx")
+    print(f"Sichtbar      : {visible}")
+    print(f"Infrarot      : {infrared}")
+    print(f"Vollspektrum  : {full}")
+    print(f"Himmelshelligkeit (mag/arcsec²): {skybright:.2f}")
+    print(f"Himmelshelligkeit Vis (mag/arcsec²): {skybright2:.2f}")
 
 if __name__ == "__main__":
     main()

@@ -147,24 +147,24 @@ if __name__ == '__main__':
 
     # Define events with German labels and colors
     events = [
-        (civil_dawn, 'Bürgerliche Dämmerung Beginn'),
+        (civil_dawn, 'Bürgerliche Daemmerung Beginn'),
         (sunrise, 'Sonnenaufgang'),
         (sunset, 'Sonnenuntergang'),
-        (civil_dusk, 'Bürgerliche Dämmerung Ende'),
-        (nautical_dawn, 'Nautische Dämmerung Beginn'),
-        (nautical_dusk, 'Nautische Dämmerung Ende'),
-        (astro_dawn, 'Astronomische Dämmerung Beginn'),
-        (astro_dusk, 'Astronomische Dämmerung Ende')
+        (civil_dusk, 'Bürgerliche Daemmerung Ende'),
+        (nautical_dawn, 'Nautische Daemmerung Beginn'),
+        (nautical_dusk, 'Nautische Daemmerung Ende'),
+        (astro_dawn, 'Astronomische Daemmerung Beginn'),
+        (astro_dusk, 'Astronomische Daemmerung Ende')
     ]
     color_map = {
-        'Bürgerliche Dämmerung Beginn': 'gold',
+        'Bürgerliche Daemmerung Beginn': 'gold',
         'Sonnenaufgang': 'yellowgreen',
         'Sonnenuntergang': 'orangered',
-        'Bürgerliche Dämmerung Ende': 'goldenrod',
-        'Nautische Dämmerung Beginn': 'deepskyblue',
-        'Nautische Dämmerung Ende': 'dodgerblue',
-        'Astronomische Dämmerung Beginn': 'midnightblue',
-        'Astronomische Dämmerung Ende': 'navy'
+        'Bürgerliche Daemmerung Ende': 'goldenrod',
+        'Nautische Daemmerung Beginn': 'deepskyblue',
+        'Nautische Daemmerung Ende': 'dodgerblue',
+        'Astronomische Daemmerung Beginn': 'midnightblue',
+        'Astronomische Daemmerung Ende': 'navy'
     }
 
     # Determine plot window: heute 12:00 bis morgen 12:00 with timezone

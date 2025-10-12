@@ -12,7 +12,7 @@ export LC_ALL=C.UTF-8
 export PYTHONIOENCODING=UTF-8
 export PYTHONUTF8=1
 
-# Muss im Projekt-Root (mit askutils/) ausgeführt werden.
+# Muss im Projekt-Root (mit askutils/) ausgefuehrt werden.
 if [ ! -d "askutils" ]; then
     echo " Dieses Skript muss im Projekt-Root (mit askutils/) aufgerufen werden."
     exit 1
@@ -23,14 +23,14 @@ echo "Arbeitsverzeichnis: $PROJECT_ROOT"
 
 # Sofortige Pruefung: existiert bereits eine askutils/config.py?
 if [ -f askutils/config.py ]; then
-  read -r -p "askutils/config.py existiert bereits. Möchten Sie sie sichern und neu anlegen? (y/n): " OVERWRITE
+  read -r -p "askutils/config.py existiert bereits. Moechten Sie sie sichern und neu anlegen? (y/n): " OVERWRITE
   case "$OVERWRITE" in
     [Yy]* )
       mv askutils/config.py askutils/config.old.py
-      echo "→ Alte config.py wurde in askutils/config.old.py umbenannt."
+      echo "-> Alte config.py wurde in askutils/config.old.py umbenannt."
       ;;
     * )
-      echo "→ Bestehende askutils/config.py bleibt erhalten. Installation abgebrochen."
+      echo "-> Bestehende askutils/config.py bleibt erhalten. Installation abgebrochen."
       exit 0
       ;;
   esac
@@ -43,7 +43,7 @@ read -r -p "Haben Sie bereits einen API-Key? (y/n): " HAS_KEY
 case "$HAS_KEY" in
   [Yy]* ) ;;
   * )
-    echo "Bitte beantragen Sie einen API-Key auf https://allskykamera.space und führen Sie das Skript erneut aus."
+    echo "Bitte beantragen Sie einen API-Key auf https://allskykamera.space und fuehren Sie das Skript erneut aus."
     exit 1
     ;;
 esac
@@ -75,7 +75,7 @@ if [ -z "$INFLUX_URL" ] || [ -z "$KAMERA_ID" ]; then
 fi
 
 echo "AAPI-Zugang validiert."
-echo "→ Verbundene Kamera-ID: $KAMERA_ID"
+echo "-> Verbundene Kamera-ID: $KAMERA_ID"
 
 # Schritt 1: Pfad zum Thomas-Jaquin-Interface
 echo
@@ -112,7 +112,7 @@ else
   echo "-> Kamera uebersprungen."
 fi
 
-# Schritt 4: Python-Abhängigkeiten installieren
+# Schritt 4: Python-Abhaengigkeiten installieren
 echo
 echo "=== 4. Python-Abhaengigkeiten installieren ==="
 pip3 install --user \
@@ -122,6 +122,7 @@ pip3 install --user \
     pillow \
     numpy \
     matplotlib \
+    adafruit-circuitpython-dht \
     --break-system-packages
 
 # Schritt 5: askutils/ASKsecret.py anlegen
@@ -130,7 +131,7 @@ echo "=== 5. askutils/ASKsecret.py anlegen ==="
 cat > askutils/ASKsecret.py <<EOF
 import base64
 
-# Automatisch generierte Datei – nicht ins Repo committen!
+# Automatisch generierte Datei - nicht ins Repo committen!
 API_KEY = "${API_KEY}"
 ENC_API_URL = "${ENC_API_URL}"
 API_URL = base64.b64decode(ENC_API_URL).decode()
@@ -155,14 +156,14 @@ read -r -p "Laengengrad des Standortes (z.B. 13.1245): " LONGITUDE
 # Image-Pfade (fest)
 IMAGE_BASE_PATH="images"
 IMAGE_PATH="tmp"
-echo "→ IMAGE_BASE_PATH=$IMAGE_BASE_PATH, IMAGE_PATH=$IMAGE_PATH"
+echo "-> IMAGE_BASE_PATH=$IMAGE_BASE_PATH, IMAGE_PATH=$IMAGE_PATH"
 
 # Objektiv- & SQM-Daten
-read -r -p "Pixelgroeße des Kamerachips in mm (z.B. 0.00155): " PIX_SIZE_MM
+read -r -p "Pixelgroesse des Kamerachips in mm (z.B. 0.00155): " PIX_SIZE_MM
 read -r -p "Brennweite in mm (z.B. 1.85): " FOCAL_MM
 read -r -p "Nullpunkt Helligkeit ZP (Default: 6.0): " ZP_INPUT
 ZP=${ZP_INPUT:-6.0}
-read -r -p "SQM-Patchgroeße in Pixeln (z.B. 100): " SQM_PATCH_SIZE
+read -r -p "SQM-Patchgroesse in Pixeln (z.B. 100): " SQM_PATCH_SIZE
 
 # Sensorenauswahl mit Overlay-Abfrage
 read -r -p "BME280 verwenden? (y/n): " USE_BME
@@ -203,6 +204,16 @@ else
   DS18B20_OVERLAY=False
 fi
 
+# Sensorenauswahl mit Overlay-Abfrage
+read -r -p "MLX90614 verwenden? (y/n): " USE_MLX
+if [[ "$USE_MLX" =~ ^[Yy] ]]; then
+  MLX90614_ENABLED=True
+  read -r -p "I2C-Adresse MLX90614 (z.B. 0x5A): " MLX90614_I2C_ADDRESS
+else
+  MLX90614_ENABLED=False
+  MLX90614_I2C_ADDRESS=0x00
+fi
+
 read -r -p "KP-Index als Overlay verwenden? (y/n): " USE_KP
 if [[ "$USE_KP" =~ ^[Yy] ]]; then
   KPINDEX_OVERLAY=$([[ "$USE_KP" =~ ^[Yy] ]] && echo True || echo False)
@@ -217,7 +228,7 @@ else
   ANALEMMA_ENABLED=False
 fi
 
-# CRONTAB-Blöcke vorbereiten
+# CRONTAB-Bloecke vorbereiten
 CRONTAB_BLOCKS=""
 
 if [ "${BME280_ENABLED}" = "True" ]; then
@@ -230,6 +241,18 @@ CRONTAB_BLOCKS="$CRONTAB_BLOCKS
 else
 CRONTAB_BLOCKS="$CRONTAB_BLOCKS
     # BME280 deaktiviert"
+fi
+
+if [ "${MLX90614_ENABLED}" = "True" ]; then
+CRONTAB_BLOCKS="$CRONTAB_BLOCKS
+    {
+        \"comment\": \"MLX90614 Sensor\",
+        \"schedule\": \"*/1 * * * *\",
+        \"command\": \"cd ${PROJECT_ROOT} && python3 -m scripts.mlx90614_logger\"
+    },"
+else
+CRONTAB_BLOCKS="$CRONTAB_BLOCKS
+    # MLX90614 deaktiviert"
 fi
 
 if [ "${TSL2591_ENABLED}" = "True" ]; then
@@ -282,7 +305,7 @@ fi
 
 # write config.py
 cat > askutils/config.py <<EOF
-# config.py – automatisch generiert
+# config.py - automatisch generiert
 
 try:
     from askutils.ASKsecret import API_KEY, API_URL
@@ -331,7 +354,7 @@ KPINDEX_OVERLAY = ${KPINDEX_OVERLAY}
 ANALEMMA_ENABLED = ${ANALEMMA_ENABLED}
 KAMERA_WIDTH = 4056
 KAMERA_HEIGHT = 3040
-A_SHUTTER = 10       # 1 ms – deutlich kürzer!
+A_SHUTTER = 10       # 1 ms - deutlich kuerzer!
 A_GAIN = 1.0           # Kein Gain
 A_BRIGHTNESS = 0.0
 A_CONTRAST = 0.0
@@ -411,17 +434,17 @@ python3 tests/ftp_upload_test.py
 #echo "=== 8. InfluxDB-Verbindung testen ==="
 #HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${INFLUX_URL}/health")
 #if [ "$HTTP_CODE" != "200" ]; then
-#    echo "❌ InfluxDB nicht erreichbar (HTTP $HTTP_CODE)"
+#    echo " InfluxDB nicht erreichbar (HTTP $HTTP_CODE)"
 #    exit 1
 #fi
-#echo "✅ InfluxDB ist erreichbar."
+#echo "InfluxDB ist erreichbar."
 
 # Schritt 9: Crontabs eintragen
 echo
 echo "=== 9. Crontabs eintragen ==="
 read -r -p "Sollen die Crontabs jetzt eingetragen werden? (y/n): " SET_CRON
 if [[ "$SET_CRON" =~ ^[Yy] ]]; then
-    echo "→ Trage Crontabs ein..."
+    echo "-> Trage Crontabs ein..."
     cd "$PROJECT_ROOT" && python3 -m scripts.manage_crontabs
 fi
 
@@ -430,5 +453,5 @@ echo "-> Upload der config.json..."
 cd "$PROJECT_ROOT" && python3 -m scripts.upload_config_json
 
 echo
-echo " Installation und Konfiguration abgeschlossen!"
-echo " Ab sofort sollten alle Daten auf der Webseite erscheinen."
+echo "Installation und Konfiguration abgeschlossen!"
+echo "Ab sofort sollten alle Daten auf der Webseite https://allskykamera.space erscheinen."

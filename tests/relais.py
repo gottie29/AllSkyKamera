@@ -15,7 +15,7 @@ def ensure_state_dir():
     try:
         os.makedirs(STATE_DIR, exist_ok=True)
     except PermissionError:
-        print(f"⚠️  Keine Schreibrechte für {STATE_DIR}. Starte mit sudo oder passe STATE_DIR an.", file=sys.stderr)
+        print(f"Keine Schreibrechte für {STATE_DIR}. Starte mit sudo oder passe STATE_DIR an.", file=sys.stderr)
         sys.exit(1)
 
 def read_state():
@@ -33,7 +33,7 @@ def write_state(state):
         f.write("ON" if state == "ON" else "OFF")
 
 def gpio_level_for(state):
-    # High-aktiv bzw. NC/NO vertauscht: ON -> HIGH (zieht an), OFF -> LOW (fällt ab)
+    # High-aktiv bzw. NC/NO vertauscht: ON -> HIGH (zieht an), OFF -> LOW (faellt ab)
     return GPIO.HIGH if state == "ON" else GPIO.LOW
 
 def apply_state(state):

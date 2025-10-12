@@ -8,7 +8,7 @@ fi
 
 set -euo pipefail
 
-# Muss im Projekt-Root (mit askutils/) ausgeführt werden.
+# Muss im Projekt-Root (mit askutils/) ausgefuehrt werden.
 if [ ! -d "askutils" ]; then
     echo "❌ Dieses Skript muss im Projekt-Roo 'AllSkyKamera' (mit askutils/) aufgerufen werden."
     exit 1
@@ -20,9 +20,9 @@ echo "Arbeitsverzeichnis: $PROJECT_ROOT"
 CONFIG="$PROJECT_ROOT/askutils/config.py"
 CONFIG_STOP="$PROJECT_ROOT/askutils/config_stop.py"
 
-# --- Parameter prüfen ---
+# --- Parameter pruefen ---
 if [ $# -ne 1 ]; then
-    echo "⚠️  Nutzung: $0 [start|stop]"
+    echo "Nutzung: $0 [start|stop]"
     exit 1
 fi
 
@@ -30,21 +30,21 @@ case "$1" in
     stop)
         if [ -f "$CONFIG" ]; then
             mv "$CONFIG" "$CONFIG_STOP"
-            echo "✅ config.py wurde in config_stop.py umbenannt."
+            echo "config.py wurde in config_stop.py umbenannt."
         else
-            echo "⚠️ config.py existiert nicht (evtl. schon gestoppt?)."
+            echo "config.py existiert nicht (evtl. schon gestoppt?)."
         fi
         ;;
     start)
         if [ -f "$CONFIG_STOP" ]; then
             mv "$CONFIG_STOP" "$CONFIG"
-            echo "✅ config_stop.py wurde in config.py umbenannt."
+            echo "config_stop.py wurde in config.py umbenannt."
         else
-            echo "⚠️ config_stop.py existiert nicht (evtl. schon gestartet?)."
+            echo "config_stop.py existiert nicht (evtl. schon gestartet?)."
         fi
         ;;
     *)
-        echo "❌ Ungültiger Parameter: $1"
+        echo "❌ Ungueltiger Parameter: $1"
         echo "Nutzung: $0 [start|stop]"
         exit 1
         ;;

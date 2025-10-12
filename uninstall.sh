@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Marker, der in den Cron-Einträgen vorkommt
+# Marker, der in den Cron-Eintraegen vorkommt
 CRON_MARKER="AllSkyKamera"
 
 # 1) Versuch: Verzeichnis, in dem dieses Script liegt
@@ -23,7 +23,7 @@ elif [ -d "$SCRIPT_DIR" ] && [[ "$(basename "$SCRIPT_DIR")" == "AllSkyKamera" ]]
 elif [ -n "$CRON_DIR" ] && [ -d "$CRON_DIR" ]; then
   INSTALL_DIR="$CRON_DIR"
 else
-  echo "⚠️ Konnte Installationsverzeichnis nicht automatisch ermitteln."
+  echo "Konnte Installationsverzeichnis nicht automatisch ermitteln."
   echo "Bitte Pfad manuell eingeben (z.B. /home/pi/AllSkyKamera):"
   read -r INSTALL_DIR
 fi
@@ -31,33 +31,33 @@ fi
 echo "Gefundenes Installations-Verzeichnis: $INSTALL_DIR"
 echo "Achtung: Mit diesem Skript werden alle automatisch angelegten Crontabs"
 echo "mit dem Marker '$CRON_MARKER' und alle '# AUTOCRON:'-Kommentare entfernt,"
-echo "und das Verzeichnis '$INSTALL_DIR' unwiderruflich gelöscht."
-read -p "Wirklich alle Daten löschen? [y/N] " answer
+echo "und das Verzeichnis '$INSTALL_DIR' unwiderruflich geloescht."
+read -p "Wirklich alle Daten loeschen? [y/N] " answer
 
 case "$answer" in
   [Yy])
-    # Cron-Einträge und AUTOCRON-Kommentare entfernen
+    # Cron-Eintraege und AUTOCRON-Kommentare entfernen
     if crontab -l &>/dev/null; then
       crontab -l \
         | grep -v -E "$CRON_MARKER|^# AUTOCRON:" \
         | crontab -
-      echo "→ Cron-Einträge mit '$CRON_MARKER' und alle '# AUTOCRON:'-Kommentare wurden entfernt."
+      echo "-> Cron-Eintraege mit '$CRON_MARKER' und alle '# AUTOCRON:'-Kommentare wurden entfernt."
     else
-      echo "→ Keine Crontab gefunden oder leer."
+      echo "-> Keine Crontab gefunden oder leer."
     fi
 
-    # Verzeichnis löschen
+    # Verzeichnis loeschen
     if [ -d "$INSTALL_DIR" ]; then
       rm -rf "$INSTALL_DIR"
-      echo "→ Verzeichnis '$INSTALL_DIR' wurde gelöscht."
+      echo "-> Verzeichnis '$INSTALL_DIR' wurde geloescht."
     else
-      echo "→ Verzeichnis '$INSTALL_DIR' existiert nicht."
+      echo "-> Verzeichnis '$INSTALL_DIR' existiert nicht."
     fi
 
     echo "Deinstallation abgeschlossen."
     cd
     ;;
   *)
-    echo "Abbruch: Es wurde nichts gelöscht."
+    echo "Abbruch: Es wurde nichts geloescht."
     ;;
 esac

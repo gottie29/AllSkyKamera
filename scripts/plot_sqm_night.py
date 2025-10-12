@@ -2,7 +2,7 @@
 #!/usr/bin/env python3
 
 """
-Erstellt um 08:00 Uhr ein Plot der SQM-Werte der letzten Nacht (12:00–12:00).
+Erstellt um 08:00 Uhr ein Plot der SQM-Werte der letzten Nacht (12:00-12:00).
 """
 
 import os

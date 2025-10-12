@@ -13,14 +13,14 @@ from askutils import config
 
 # Sicherheit: API-Key muss gesetzt sein
 if not config.API_KEY or config.API_KEY.strip() == "":
-    error("❌ Kein API-Key gesetzt – Skript wird abgebrochen.")
+    error("Kein API-Key gesetzt - Skript wird abgebrochen.")
     exit(1)
 
 # Traffic seit letztem Lauf ermitteln (in MB)
 sent_mb, recv_mb = get_net_usage_mb()
 
 # Debug-Ausgabe
-log(f"📡 Net Sent: {sent_mb:.2f} MB, Recv: {recv_mb:.2f} MB")
+log(f"Net Sent: {sent_mb:.2f} MB, Recv: {recv_mb:.2f} MB")
 
 # Daten an Influx senden
 influx_writer.log_metric(

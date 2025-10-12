@@ -1,5 +1,7 @@
 # AllSkyKamera
 Python-Bibliothek für Allsky-Kameras im Netzwerk AllSkyKamera-Netzwerk (https://allskykamera.space)
+
+Version: v2025.10.01_07-pre
  
 # Beschreibung
 Das Netzwerk AllSkyKamera ist eine Sammlung von Allsky-Kameras.
@@ -144,10 +146,10 @@ Beschreibung: Sensor für Temperatur, Luftfeuchtigkeit, Luftdruck (i²c-Schnitts
 Aufruf: <code>python3 bme280_test.py</code><br>
 Typische Ausgabe ist:<br>
 <code>
-🌡️ Temperatur : 34.21 °C
-🧭 Druck      : 1015.20 hPa
-💧 Feuchte    : 32.15 %
-❄️ Taupunkt   : 15.23 °C
+Temperatur : 34.21 °C
+Druck      : 1015.20 hPa
+Feuchte    : 32.15 %
+Taupunkt   : 15.23 °C
 </code>
 
 <strong>ds18b20_test.py</strong><br>
@@ -156,9 +158,9 @@ Beschreibung: Temperatursensor (1-Wire-Schnittstelle) für Aussentemperaturmessu
 Aufruf: <code>python3 ds18b20_test.py</code><br>
 Typische Ausgabe ist:<br>
 <code>
-🌡️ Temperatur: 30.44 °C
-🌡️ Temperatur: 30.44 °C
-🌡️ Temperatur: 30.50 °C
+Temperatur: 30.44 °C
+Temperatur: 30.44 °C
+Temperatur: 30.50 °C
 ...
 </code>
 Das Skript muss mit STRG+C abgebrochen werden, sonst läuft es durchgängig weiter.
@@ -169,8 +171,29 @@ Beschreibung: Lichtsensor zur Messung der Heligkeit<br>
 Aufruf: <code>python3 tsl2591_test.py</code><br>
 Typische Ausgabe ist:<br>
 <code>
+Lux-Wert      : 5.62 lx
+Sichtbar      : 1900597
+Infrarot      : 29
+Vollspektrum  : 1900626
+Himmelshelligkeit (mag/arcsec²): 20.13
+Himmelshelligkeit Vis (mag/arcsec²): 6.30
 </code>
-Dieser Sensor wird aktuell in keiner meiner Kameras verwendet. Sobald ich diesen wieder verbaue, werde ich Dokumentation hier nachziehen.
+
+<strong>mlx90614_test.py</strong><br>
+Testen des Sensor MLX90614.<br>
+Beschreibung: IR-Temperatursensor Ambient (Umgebung) und Object (Himmel) zur Wolkenerkennung<br>
+Aufruf: <code>python3 mlx90614_test.py</code><br>
+Typische Ausgabe ist:<br>
+<code>
+=== MLX90614 Temperatursensor Test ===
+[2025-10-07 10:58:46] Umgebung: 21.95 °C | Objekt: 22.07 °C
+[2025-10-07 10:58:48] Umgebung: 21.91 °C | Objekt: 22.11 °C
+[2025-10-07 10:58:50] Umgebung: 21.91 °C | Objekt: 22.01 °C
+[2025-10-07 10:58:52] Umgebung: 21.91 °C | Objekt: 22.07 °C
+[2025-10-07 10:58:54] Umgebung: 21.93 °C | Objekt: 22.11 °C
+...
+</code>
+Das Skript muss mit STRG+C abgebrochen werden, sonst läuft es durchgängig weiter.
 
 <strong>FTP-Test</strong><br>
 Die Bibliothek schiebt die Daten wie Bilder, Videos, Keogramme über die FTP-Schnittstelle.
