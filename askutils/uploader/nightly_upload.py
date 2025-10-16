@@ -153,4 +153,13 @@ def upload_nightly_batch(date_str: str = None) -> bool:
                 if attempt <= MAX_RETRIES and _file_ready(local_path):
                     log("Datei bereit, starte Upload ...")
                     try:
-                        _upload_file(ftp, local_path, remote_subdir, conf
+                        _upload_file(ftp, local_path, remote_subdir, config.FTP_REMOTE_DIR)
+                    except Exception as e:
+                        log(f"Upload-Fehler fuer {local_path}: {e}")
+
+            log("Nightly Upload abgeschlossen.")
+        return True
+
+    except Exception as e:
+        log(f"Batch-FTP-Upload fehlgeschlagen: {e}")
+        return False

@@ -300,6 +300,9 @@ python3 -m scripts.run_image_upload
 <br>Dieses Module kümmert sich um den Upload der Sorucen aus der letzten Nacht.
 Hierbei werden das Zeitraffer-Video, das Keogram und das Startrail der letzten Nacht auf den Server geladen.
 Diese Funktion ist zwingend notwendig für die Teilnahme am Netzwerk.
+
+Upload der Videos und Bilder wird nun mit einem Altercheck und einem Größencheck durchgeführt. Damit wird sichergestellt, dass der Upload erst erfolgt, wenn die Dateien auch vorliegen und nicht kaputt auf den Server geladen werden.
+
 <br>**Aufruf:**
 <br><code>
 cd ~/AllSkyKamera
@@ -313,7 +316,7 @@ Der Aufruf sollte immer nach Sonnenaufgang erfolgen, da dann die entsprechenden 
 <br><code>
    {
        "comment": "Nightly FTP-Upload",
-        "schedule": "30 7 * * *",
+        "schedule": "45 8 * * *",
         "command": "cd /home/pi/AllSkyKamera && python3 -m scripts.run_nightly_upload"
    },
 </code>
