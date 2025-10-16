@@ -24,3 +24,16 @@ def get_voltage():
         return float(result.stdout.strip().replace("volt=", "").replace("V", ""))
     except Exception:
         return 0.0
+
+def get_cpu_usage():
+    """Aktuelle CPU-Auslastung in Prozent"""
+    return psutil.cpu_percent(interval=1)
+
+def get_memory_usage():
+    """Aktueller Arbeitsspeicher-Verbrauch"""
+    mem = psutil.virtual_memory()
+    return {
+        "used_mb": mem.used / 1048576,
+        "total_mb": mem.total / 1048576,
+        "percent": mem.percent
+    }
