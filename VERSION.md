@@ -1,5 +1,12 @@
 Versionshistorie
 ----------------
+
+# vXXXX
+
+- DHT11 und DHT22 eingebaut
+- Upload-Prüfung geändert - Dateien werden erst hochgeladen, wenn die Bearbeitung fertig ist
+- sensor-config.sh angepasst an DHT11 und DHT22
+
 # v2025.10.01_01:
 
 ## Neue Funktionen

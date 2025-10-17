@@ -8,8 +8,8 @@ from askutils import config
 # === Konfigurierbare Defaults ===
 MIN_FILE_AGE_MINUTES   = getattr(config, "NIGHTLY_MIN_FILE_AGE_MINUTES", 5)
 STABLE_WINDOW_SECONDS  = getattr(config, "NIGHTLY_STABLE_WINDOW_SECONDS", 90)
-MAX_RETRIES            = getattr(config, "NIGHTLY_MAX_RETRIES", 2)
-RETRY_SLEEP_SECONDS    = getattr(config, "NIGHTLY_RETRY_SLEEP_SECONDS", 180)
+MAX_RETRIES            = getattr(config, "NIGHTLY_MAX_RETRIES", 5)
+RETRY_SLEEP_SECONDS    = getattr(config, "NIGHTLY_RETRY_SLEEP_SECONDS", 600)
 
 def log(msg: str):
     """Einfache Logfunktion mit Zeitstempel, ohne Farben."""
