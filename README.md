@@ -346,7 +346,7 @@ python3 -m scripts.raspi_status
 
 # Sensorenfunktionen
 
-## bme280_logger
+## BME280
 <br>**Beschreibung:**
 <br>Dieses Modul liest den Sensor BME280 aus und überträgt die Daten in die Datenbank.
 Der Sensor selbst liefert:
@@ -371,7 +371,7 @@ python3 -m scripts.bme280_logger
    },
 </code>
 
-## ds18b20_logger
+## DS18B20
 <br>**Beschreibung:**
 <br>Dieses Modul liest den Sensor DS18B20 aus und überträgt die Daten in die Datenbank.
 Der Sensor selbst liefert:
@@ -393,4 +393,104 @@ python3 -m scripts.ds18b20_logger
    },
 </code>
 
+## TSL2591
+<br>**Beschreibung:**
+<br>Dieses Modul liest den Sensor TSL2591 aus und überträgt die Daten in die Datenbank.
+Der Sensor selbst liefert:
+- Helligkeit in LUX
+- Helligkeit im sichtbaren Bereich
+- Helligkeit im Infrarot-Bereich
+- Helligkeit (Vollspektrum sichtbar + IR)
 
+Berechnet werden:
+- SQM (gesamt)
+- SQM im sichtbaren
+
+<br>**Aufruf:**
+<br><code>
+cd ~/AllSkyKamera
+python3 -m scripts.tsl2591_logger
+</code>
+<br>**Cronjob:**
+<br>Diese Funktion sollte in einem kurzen Intervall ausgeführt (1-2 Minuten) werden.
+<br>**config.py:**
+<br>Hier ein Beispiel aus der config.py:
+<br><code>
+   {
+       "comment": "TSL2591 Sensor",
+       "schedule": "*/1 * * * *",
+       "command": "cd /home/pi/AllSkyKamera && python3 -m scripts.tsl2591_logger"
+   },
+</code>
+
+## MLX90614
+<br>**Beschreibung:**
+<br>Dieses Modul liest den Sensor MLX90614 aus und überträgt die Daten in die Datenbank.
+Der Sensor selbst liefert:
+- Ambient-Temperatur
+- Object-Temperatur
+
+<br>**Aufruf:**
+<br><code>
+cd ~/AllSkyKamera
+python3 -m scripts.mlx90614_logger
+</code>
+<br>**Cronjob:**
+<br>Diese Funktion sollte in einem kurzen Intervall ausgeführt (1-2 Minuten) werden.
+<br>**config.py:**
+<br>Hier ein Beispiel aus der config.py:
+<br><code>
+   {
+       "comment": "MLX90614 Sensor",
+       "schedule": "*/1 * * * *",
+       "command": "cd /home/pi/AllSkyKamera && python3 -m scripts.mlx90614_logger"
+   },
+</code>
+
+## DHT11
+<br>**Beschreibung:**
+<br>Dieses Modul liest den Sensor DHT11 aus und überträgt die Daten in die Datenbank.
+Der Sensor selbst liefert:
+- Temperatur
+- Luftfeuchtigkeit
+
+<br>**Aufruf:**
+<br><code>
+cd ~/AllSkyKamera
+python3 -m scripts.dht11_logger
+</code>
+<br>**Cronjob:**
+<br>Diese Funktion sollte in einem kurzen Intervall ausgeführt (1-2 Minuten) werden.
+<br>**config.py:**
+<br>Hier ein Beispiel aus der config.py:
+<br><code>
+   {
+       "comment": "DHT11 Sensor",
+       "schedule": "*/1 * * * *",
+       "command": "cd /home/pi/AllSkyKamera && python3 -m scripts.dht11_logger"
+   },
+</code>
+
+## DHT22
+<br>**Beschreibung:**
+<br>Dieses Modul liest den Sensor DHT22 aus und überträgt die Daten in die Datenbank.
+Der Sensor selbst liefert:
+- Temperatur
+- Luftfeuchtigkeit
+
+<br>**Aufruf:**
+<br><code>
+cd ~/AllSkyKamera
+python3 -m scripts.dht22_logger
+</code>
+<br>**Cronjob:**
+<br>Diese Funktion sollte in einem kurzen Intervall ausgeführt (1-2 Minuten) werden.
+<br>**config.py:**
+<br>Hier ein Beispiel aus der config.py:
+<br><code>
+   {
+       "comment": "DHT22 Sensor",
+       "schedule": "*/1 * * * *",
+       "command": "cd /home/pi/AllSkyKamera && python3 -m scripts.dht22_logger"
+   },
+</code>
