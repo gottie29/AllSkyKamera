@@ -19,9 +19,19 @@ temp = statusinfo.get_temp()
 disk = statusinfo.get_disk_usage()
 voltage = statusinfo.get_voltage()
 uptime = statusinfo.get_boot_time_seconds()
+cpu_pct  = statusinfo.get_cpu_usage()
+mem      = statusinfo.get_memory_usage()
 
 # Debug-Ausgabe
-print(f"Temp: {temp:.2f} C, Disk: {disk['used_mb']:.1f} MB used, Voltage: {voltage:.2f} V")
+print("\n=== 📊 Raspberry Pi Status ===")
+print(f"Temperatur : {temp:6.2f} °C")
+print(f"CPU        : {cpu_pct:6.1f} %")
+print(f"RAM        : {mem['percent']:6.1f} % ({mem['used_mb']:.0f}/{mem['total_mb']:.0f} MB)")
+print(f"Speicher   : {disk['percent']:6.1f} % ({disk['free_mb']:.0f} MB frei)")
+print(f"Laufzeit   : {uptime:>6d} s")
+print(f"Spannung   : {voltage:6.2f} V")
+print("==============================\n")
+
 
 # Daten an Influx senden
 influx_writer.log_metric("raspistatus", {
@@ -30,5 +40,9 @@ influx_writer.log_metric("raspistatus", {
     "raspiDiskFree": float(disk["free_mb"]),
     "raspiBootime": float(uptime),
     "voltage": float(voltage),
+    "raspiCpuPercent":  float(cpu_pct),
+    "raspiMemPercent":  float(mem["percent"]),
+    "raspiMemUsedMB":   float(mem["used_mb"]),
+    "raspiMemTotalMB":  float(mem["total_mb"]),
     "online": 1.0
 }, tags={"host": "host1"})

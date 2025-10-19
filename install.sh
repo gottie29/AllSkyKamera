@@ -70,11 +70,11 @@ INFLUX_URL=$(echo "$RESPONSE" | sed -n 's/.*"influx_url"[[:space:]]*:[[:space:]]
 KAMERA_ID=$(echo "$RESPONSE" | sed -n 's/.*"kamera_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
 
 if [ -z "$INFLUX_URL" ] || [ -z "$KAMERA_ID" ]; then
-    echo " Unueltige API-Antwort. Abbruch."
+    echo " UnGueltige API-Antwort. Abbruch."
     exit 1
 fi
 
-echo "AAPI-Zugang validiert."
+echo "API-Zugang validiert."
 echo "-> Verbundene Kamera-ID: $KAMERA_ID"
 
 # Schritt 1: Pfad zum Thomas-Jaquin-Interface
@@ -91,7 +91,8 @@ echo "=== 2. System-Pakete installieren ==="
 sudo apt-get update
 sudo apt-get install -y \
     python3-pip python3-venv python3-smbus i2c-tools raspi-config \
-    python3-psutil libatlas-base-dev python3-pil curl dos2unix
+    python3-psutil libatlas-base-dev python3-pil curl dos2unix \
+    python3-libgpiod
 
 # Schritt 3: Schnittstellen aktivieren
 echo
@@ -118,11 +119,11 @@ echo "=== 4. Python-Abhaengigkeiten installieren ==="
 pip3 install --user \
     influxdb-client \
     adafruit-circuitpython-tsl2591 \
+    adafruit-circuitpython-dht \
     requests \
     pillow \
     numpy \
     matplotlib \
-    adafruit-circuitpython-dht \
     --break-system-packages
 
 # Schritt 5: askutils/ASKsecret.py anlegen
@@ -204,7 +205,47 @@ else
   DS18B20_OVERLAY=False
 fi
 
-# Sensorenauswahl mit Overlay-Abfrage
+# DHT11
+read -r -p "DHT11 verwenden? (y/n): " USE_DHT11
+if [[ "$USE_DHT11" =~ ^[Yy] ]]; then
+  DHT11_ENABLED=True
+  read -r -p "DHT11 GPIO (BCM-Nummer, z.B. 6): " DHT11_GPIO_BCM
+  DHT11_GPIO_BCM=${DHT11_GPIO_BCM:-6}
+  read -r -p "DHT11 Retries pro Messung (z.B. 10): " DHT11_RETRIES
+  DHT11_RETRIES=${DHT11_RETRIES:-10}
+  read -r -p "DHT11 Retry-Delay in Sekunden (z.B. 0.3): " DHT11_RETRY_DELAY
+  DHT11_RETRY_DELAY=${DHT11_RETRY_DELAY:-0.3}
+  read -r -p "DHT11 Overlay anlegen? (y/n): " DHT11_OVERLAY_ANSWER
+  DHT11_OVERLAY=$([[ "$DHT11_OVERLAY_ANSWER" =~ ^[Yy] ]] && echo True || echo False)
+else
+  DHT11_ENABLED=False
+  DHT11_GPIO_BCM=6
+  DHT11_RETRIES=10
+  DHT11_RETRY_DELAY=0.3
+  DHT11_OVERLAY=False
+fi
+
+# DHT22
+read -r -p "DHT22 verwenden? (y/n): " USE_DHT22
+if [[ "$USE_DHT22" =~ ^[Yy] ]]; then
+  DHT22_ENABLED=True
+  read -r -p "DHT22 GPIO (BCM-Nummer, z.B. 6): " DHT22_GPIO_BCM
+  DHT22_GPIO_BCM=${DHT22_GPIO_BCM:-6}
+  read -r -p "DHT22 Retries pro Messung (z.B. 10): " DHT22_RETRIES
+  DHT22_RETRIES=${DHT22_RETRIES:-10}
+  read -r -p "DHT22 Retry-Delay in Sekunden (z.B. 0.3): " DHT22_RETRY_DELAY
+  DHT22_RETRY_DELAY=${DHT22_RETRY_DELAY:-0.3}
+  read -r -p "DHT22 Overlay anlegen? (y/n): " DHT22_OVERLAY_ANSWER
+  DHT22_OVERLAY=$([[ "$DHT22_OVERLAY_ANSWER" =~ ^[Yy] ]] && echo True || echo False)
+else
+  DHT22_ENABLED=False
+  DHT22_GPIO_BCM=6
+  DHT22_RETRIES=10
+  DHT22_RETRY_DELAY=0.3
+  DHT22_OVERLAY=False
+fi
+
+# MLX90614
 read -r -p "MLX90614 verwenden? (y/n): " USE_MLX
 if [[ "$USE_MLX" =~ ^[Yy] ]]; then
   MLX90614_ENABLED=True
@@ -214,9 +255,10 @@ else
   MLX90614_I2C_ADDRESS=0x00
 fi
 
+# KP-Index & Analemma
 read -r -p "KP-Index als Overlay verwenden? (y/n): " USE_KP
 if [[ "$USE_KP" =~ ^[Yy] ]]; then
-  KPINDEX_OVERLAY=$([[ "$USE_KP" =~ ^[Yy] ]] && echo True || echo False)
+  KPINDEX_OVERLAY=True
 else
   KPINDEX_OVERLAY=False
 fi
@@ -277,6 +319,32 @@ CRONTAB_BLOCKS="$CRONTAB_BLOCKS
 else
 CRONTAB_BLOCKS="$CRONTAB_BLOCKS
     # DS18B20 deaktiviert"
+fi
+
+# DHT11 Cron
+if [ "${DHT11_ENABLED}" = "True" ]; then
+CRONTAB_BLOCKS="$CRONTAB_BLOCKS
+    {
+        \"comment\": \"DHT11 Sensor\",
+        \"schedule\": \"*/1 * * * *\",
+        \"command\": \"cd ${PROJECT_ROOT} && python3 -m scripts.dht11_logger\"
+    },"
+else
+CRONTAB_BLOCKS="$CRONTAB_BLOCKS
+    # DHT11 deaktiviert"
+fi
+
+# DHT22 Cron
+if [ "${DHT22_ENABLED}" = "True" ]; then
+CRONTAB_BLOCKS="$CRONTAB_BLOCKS
+    {
+        \"comment\": \"DHT22 Sensor\",
+        \"schedule\": \"*/1 * * * *\",
+        \"command\": \"cd ${PROJECT_ROOT} && python3 -m scripts.dht22_logger\"
+    },"
+else
+CRONTAB_BLOCKS="$CRONTAB_BLOCKS
+    # DHT22 deaktiviert"
 fi
 
 if [ "${KPINDEX_OVERLAY}" = "True" ]; then
@@ -348,6 +416,20 @@ TSL2591_OVERLAY         = ${TSL2591_OVERLAY}
 
 DS18B20_ENABLED = ${DS18B20_ENABLED}
 DS18B20_OVERLAY = ${DS18B20_OVERLAY}
+
+# DHT11
+DHT11_ENABLED      = ${DHT11_ENABLED}
+DHT11_GPIO_BCM     = ${DHT11_GPIO_BCM}
+DHT11_RETRIES      = ${DHT11_RETRIES}
+DHT11_RETRY_DELAY  = ${DHT11_RETRY_DELAY}
+DHT11_OVERLAY      = ${DHT11_OVERLAY}
+
+# DHT22
+DHT22_ENABLED      = ${DHT22_ENABLED}
+DHT22_GPIO_BCM     = ${DHT22_GPIO_BCM}
+DHT22_RETRIES      = ${DHT22_RETRIES}
+DHT22_RETRY_DELAY  = ${DHT22_RETRY_DELAY}
+DHT22_OVERLAY      = ${DHT22_OVERLAY}
 
 MLX90614_ENABLED=${MLX90614_ENABLED}
 MLX90614_I2C_ADDRESS=${MLX90614_I2C_ADDRESS}
@@ -432,19 +514,9 @@ echo
 echo "=== 7. FTP-Upload testen ==="
 python3 tests/ftp_upload_test.py
 
-# Schritt 8: InfluxDB-Verbindung testen
-#echo
-#echo "=== 8. InfluxDB-Verbindung testen ==="
-#HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${INFLUX_URL}/health")
-#if [ "$HTTP_CODE" != "200" ]; then
-#    echo " InfluxDB nicht erreichbar (HTTP $HTTP_CODE)"
-#    exit 1
-#fi
-#echo "InfluxDB ist erreichbar."
-
-# Schritt 9: Crontabs eintragen
+# Schritt 8: Crontabs eintragen
 echo
-echo "=== 9. Crontabs eintragen ==="
+echo "=== 8. Crontabs eintragen ==="
 read -r -p "Sollen die Crontabs jetzt eingetragen werden? (y/n): " SET_CRON
 if [[ "$SET_CRON" =~ ^[Yy] ]]; then
     echo "-> Trage Crontabs ein..."

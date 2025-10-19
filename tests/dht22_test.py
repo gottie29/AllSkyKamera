@@ -6,15 +6,14 @@ import adafruit_dht
 
 # DHT22 (AM2302) an GPIO6 (Pin 31)
 GPIO = board.D6
-
-# Wichtiger Hinweis:
-# Wenn du VCC auf 5V legst, muss der Pull-Up des DATA-Signals nach 3V3 gehen.
-
-# Sensor initialisieren und kurze Wartezeit
 dht = adafruit_dht.DHT22(GPIO, use_pulseio=False)
 time.sleep(2.0)
 
+SAMPLE_INTERVAL = 10
+SAMPLES_PER_BLOCK = 5
+
 def read_dht22(retries=10, delay=0.3):
+    """Mehrfaches Lesen und Medianbildung pro Einzelmessung."""
     temps, hums = [], []
     for _ in range(retries):
         try:
@@ -24,20 +23,34 @@ def read_dht22(retries=10, delay=0.3):
                 temps.append(float(t))
                 hums.append(float(h))
         except RuntimeError:
-            # typische DHT-Lesefehler ignorieren und erneut versuchen
             pass
         time.sleep(delay)
     if temps and hums:
         return statistics.median(temps), statistics.median(hums)
     return None, None
 
-print("DHT22 Test auf GPIO6")
-MEASURE_INTERVAL = 3.0  # nicht schneller als ca. alle 2 Sekunden
+print("DHT22 average measurement ("+str(SAMPLES_PER_BLOCK)+" values every "+str(SAMPLE_INTERVAL)+" seconds)")
+
+temp_values = []
+hum_values = []
 
 while True:
     t, h = read_dht22()
     if t is not None:
-        print(f"{time.strftime('%Y-%m-%d %H:%M:%S')}  Temperatur: {t:.1f} C  Luftfeuchte: {h:.1f} %")
+        temp_values.append(t)
+        hum_values.append(h)
+        print(f"{time.strftime('%Y-%m-%d %H:%M:%S')}  Single: {t:.1f} C  {h:.1f} %  ({len(temp_values)}/{SAMPLES_PER_BLOCK})")
     else:
-        print(f"{time.strftime('%Y-%m-%d %H:%M:%S')}  Keine gueltigen Werte")
-    time.sleep(MEASURE_INTERVAL)
+        print(f"{time.strftime('%Y-%m-%d %H:%M:%S')}  No valid values")
+
+    if len(temp_values) >= SAMPLES_PER_BLOCK:
+        avg_temp = statistics.mean(temp_values)
+        avg_hum = statistics.mean(hum_values)
+        print("-----------------------------------------------")
+        print(f"{time.strftime('%Y-%m-%d %H:%M:%S')}  Average of {SAMPLES_PER_BLOCK} samples")
+        print(f"Temperature: {avg_temp:.2f} C  Humidity: {avg_hum:.2f} %")
+        print("-----------------------------------------------")
+        temp_values.clear()
+        hum_values.clear()
+
+    time.sleep(SAMPLE_INTERVAL)
