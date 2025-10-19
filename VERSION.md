@@ -1,11 +1,13 @@
 Versionshistorie
 ----------------
 
-# vXXXX
+# v2025.10.19_02
 
 - DHT11 und DHT22 eingebaut
 - Upload-Prüfung geändert - Dateien werden erst hochgeladen, wenn die Bearbeitung fertig ist
 - sensor-config.sh angepasst an DHT11 und DHT22
+- TSL-Sensor mit Gain und Exposure erweitert. Wird autoamtisch ermittelt
+  
 # v2025.10.12_01:
 
 ## Neue Funktionen
