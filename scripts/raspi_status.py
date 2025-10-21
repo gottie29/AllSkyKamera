@@ -23,7 +23,7 @@ cpu_pct  = statusinfo.get_cpu_usage()
 mem      = statusinfo.get_memory_usage()
 
 # Debug-Ausgabe
-print("\n=== 📊 Raspberry Pi Status ===")
+print("\n=== Raspberry Pi Status ===")
 print(f"Temperatur : {temp:6.2f} °C")
 print(f"CPU        : {cpu_pct:6.1f} %")
 print(f"RAM        : {mem['percent']:6.1f} % ({mem['used_mb']:.0f}/{mem['total_mb']:.0f} MB)")
