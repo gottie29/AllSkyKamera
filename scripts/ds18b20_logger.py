@@ -23,6 +23,10 @@ def main():
     print(f"Standort: {config.STANDORT_NAME} ({config.KAMERA_ID})")
     print(f"Temperatur: {temp:.2f} °C")
 
+    if float(temp) < -35.0 or float(temp) > 75.0:
+        warn(f"Ungültiger Temperaturwert: {temp:.2f} °C")
+        return
+    
     influx_writer.log_metric("ds18b20", {
         "temp": float(temp)
     }, tags={"host": "host1"})
