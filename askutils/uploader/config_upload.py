@@ -15,13 +15,17 @@ EXPORT_FIELDS = [
     "KONTAKT_EMAIL",
 	"WEBSEITE",
     "LATITUDE",
-    "LONGITUDE"
+    "LONGITUDE",
+    "INDI"
 ]
 
 # Optional exportierte Felder - nur wenn vorhanden
 OPTIONAL_FIELDS = [
     "BME280_ENABLED",
     "TSL2591_ENABLED",
+    "DHT11_ENABLED",
+    "DHT22_ENABLED",
+    "MLX90614_ENABLED",
 	"DS18B20_ENABLED"
 ]
 
