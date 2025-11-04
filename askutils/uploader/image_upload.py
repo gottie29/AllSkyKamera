@@ -13,7 +13,10 @@ def upload_image(image_path: str = None) -> bool:
     """
 
     # --- Lokaler Pfad bestimmen ---
-    if config.INDI is None:
+    indi_flag = getattr(config, "INDI", 0)
+
+    # Alles, was "falsey" ist (None, 0, "", False, "0") => Jaquin-Standard
+    if not indi_flag:
         # Jaquin (Standard)
         if image_path is None:
             image_path = os.path.join(config.ALLSKY_PATH, config.IMAGE_PATH, "image.jpg")

@@ -110,7 +110,9 @@ LONGITUDE="$(get_val "LONGITUDE")"
 ALLSKY_PATH="$(get_val "ALLSKY_PATH")"
 IMAGE_BASE_PATH="$(get_val "IMAGE_BASE_PATH")"
 IMAGE_PATH="$(get_val "IMAGE_PATH")"
+
 INDI="$(get_val "INDI")"
+
 CAMERAID="$(get_val "CAMERAID")"
 
 # Sensor-Status
@@ -197,7 +199,7 @@ KPINDEX_LOG_INTERVAL_MIN="$(get_val "KPINDEX_LOG_INTERVAL_MIN")"
 [ -z "$ALLSKY_PATH" ] && ALLSKY_PATH="/var/www/html/allsky"
 [ -z "$IMAGE_BASE_PATH" ] && IMAGE_BASE_PATH="images"
 [ -z "$IMAGE_PATH" ] && IMAGE_PATH="tmp"
-[ -z "$INDI" ] && INDI="1"
+[ -z "$INDI" ] && INDI="0"
 [ -z "$CAMERAID" ] && CAMERAID="ccd_002f6961-ba9f-4387-8c2e-09ec5c72f55d"
 
 [ -z "$BME280_ENABLED" ] && BME280_ENABLED="True"
