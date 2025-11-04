@@ -1551,39 +1551,39 @@ A_GAIN = ${A_GAIN}             # Kein Gain
 A_BRIGHTNESS = ${A_BRIGHTNESS}
 A_CONTRAST = ${A_CONTRAST}
 A_SATURATION = ${A_SATURATION}
-A_PATH = "/home/pi/AllSkyKamera/tmp"
+A_PATH = "${ROOT_DIR}/tmp"
 
 # CRONTABS – Basisjobs
 CRONTABS = [
     {
         "comment": "Allsky Raspi-Status",
         "schedule": "*/1 * * * *",
-        "command": "cd /home/pi/AllSkyKamera && python3 -m scripts.raspi_status",
+        "command": "cd ${ROOT_DIR} && python3 -m scripts.raspi_status",
     },
     {
         "comment": "Allsky Image-Upload",
         "schedule": "*/2 * * * *",
-        "command": "cd /home/pi/AllSkyKamera && python3 -m scripts.run_image_upload",
+        "command": "cd ${ROOT_DIR} && python3 -m scripts.run_image_upload",
     },
     {
         "comment": "Config Update",
         "schedule": "0 12 * * *",
-        "command": "cd /home/pi/AllSkyKamera && python3 -m scripts.upload_config_json",
+        "command": "cd ${ROOT_DIR} && python3 -m scripts.upload_config_json",
     },
     {
         "comment": "Nightly FTP-Upload",
         "schedule": "45 8 * * *",
-        "command": "cd /home/pi/AllSkyKamera && python3 -m scripts.run_nightly_upload",
+        "command": "cd ${ROOT_DIR} && python3 -m scripts.run_nightly_upload",
     },
     {
         "comment": "SQM Messung",
         "schedule": "*/5 * * * *",
-        "command": "cd /home/pi/AllSkyKamera && python3 -m scripts.sqm_camera_logger",
+        "command": "cd ${ROOT_DIR} && python3 -m scripts.sqm_camera_logger",
     },
     {
         "comment": "SQM Plot Generierung",
         "schedule": "0 8 * * *",
-        "command": "cd /home/pi/AllSkyKamera && python3 -m scripts.plot_sqm_night",
+        "command": "cd ${ROOT_DIR} && python3 -m scripts.plot_sqm_night",
     },
 ]
 
@@ -1592,50 +1592,51 @@ if BME280_ENABLED:
     CRONTABS.append({
         "comment": "BME280 Sensor",
         "schedule": f"*/{BME280_LOG_INTERVAL_MIN} * * * *",
-        "command": "cd /home/pi/AllSkyKamera && python3 -m scripts.bme280_logger",
+        "command": "cd ${ROOT_DIR} && python3 -m scripts.bme280_logger",
     })
 
 if DS18B20_ENABLED:
     CRONTABS.append({
         "comment": "DS18B20 Sensor",
         "schedule": f"*/{DS18B20_LOG_INTERVAL_MIN} * * * *",
-        "command": "cd /home/pi/AllSkyKamera && python3 -m scripts.ds18b20_logger",
+        "command": "cd ${ROOT_DIR} && python3 -m scripts.ds18b20_logger",
     })
 
 if TSL2591_ENABLED:
     CRONTABS.append({
         "comment": "TSL2591 Sensor",
         "schedule": f"*/{TSL2591_LOG_INTERVAL_MIN} * * * *",
-        "command": "cd /home/pi/AllSkyKamera && python3 -m scripts.tsl2591_logger",
+        "command": "cd ${ROOT_DIR} && python3 -m scripts.tsl2591_logger",
     })
 
 if MLX90614_ENABLED:
     CRONTABS.append({
         "comment": "MLX90614 Sensor",
         "schedule": f"*/{MLX90614_LOG_INTERVAL_MIN} * * * *",
-        "command": "cd /home/pi/AllSkyKamera && python3 -m scripts.mlx90614_logger",
+        "command": "cd ${ROOT_DIR} && python3 -m scripts.mlx90614_logger",
     })
 
 if DHT11_ENABLED:
     CRONTABS.append({
         "comment": "DHT11 Sensor",
         "schedule": f"*/{DHT11_LOG_INTERVAL_MIN} * * * *",
-        "command": "cd /home/pi/AllSkyKamera && python3 -m scripts.dht11_logger",
+        "command": "cd ${ROOT_DIR} && python3 -m scripts.dht11_logger",
     })
 
 if DHT22_ENABLED:
     CRONTABS.append({
         "comment": "DHT22 Sensor",
         "schedule": f"*/{DHT22_LOG_INTERVAL_MIN} * * * *",
-        "command": "cd /home/pi/AllSkyKamera && python3 -m scripts.dht22_logger",
+        "command": "cd ${ROOT_DIR} && python3 -m scripts.dht22_logger",
     })
 
 if KPINDEX_ENABLED:
     CRONTABS.append({
         "comment": "KpIndex Logger",
         "schedule": f"*/{KPINDEX_LOG_INTERVAL_MIN} * * * *",
-        "command": "cd /home/pi/AllSkyKamera && python3 -m scripts.kpindex_logger",
+        "command": "cd ${ROOT_DIR} && python3 -m scripts.kpindex_logger",
     })
+
 
 ###################################################################
 # Nichts aendern !!!
