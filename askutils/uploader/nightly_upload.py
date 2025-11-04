@@ -139,7 +139,9 @@ def upload_nightly_batch(date_str: str = None) -> bool:
     images_base   = os.path.join(config.ALLSKY_PATH, config.IMAGE_BASE_PATH)
     analemma_base = os.path.join(config.A_PATH)
 
-    if config.INDI is None:
+    indi_flag = getattr(config, "INDI", 0)
+
+    if not indi_flag:
         files = [
             (os.path.join(images_base, date_str, f"allsky-{date_str}.mp4"),           config.FTP_VIDEO_DIR),
             (os.path.join(images_base, date_str, "keogram",    f"keogram-{date_str}.jpg"),    config.FTP_KEOGRAM_DIR),
