@@ -16,18 +16,34 @@ EXPORT_FIELDS = [
 	"WEBSEITE",
     "LATITUDE",
     "LONGITUDE",
-    "INDI"
+    "INDI",
 ]
 
-# Optional exportierte Felder - nur wenn vorhanden
 OPTIONAL_FIELDS = [
+    # Sensor-Flags, Namen, Intervalle, Overlays
     "BME280_ENABLED",
+    "BME280_NAME",
+
     "TSL2591_ENABLED",
+    "TSL2591_NAME",
+
+    "DS18B20_ENABLED",
+    "DS18B20_NAME",
+
     "DHT11_ENABLED",
+    "DHT11_NAME",
+
     "DHT22_ENABLED",
+    "DHT22_NAME",
+
     "MLX90614_ENABLED",
-	"DS18B20_ENABLED"
+    "MLX90614_NAME",
+
+    # KpIndex / Analemma
+    "KPINDEX_ENABLED",
+    "ANALEMMA_ENABLED",
 ]
+
 
 def get_version():
     # Hole den Pfad zum Projektordner (eine Ebene ueber askutils)
