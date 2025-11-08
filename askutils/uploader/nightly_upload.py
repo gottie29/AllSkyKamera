@@ -5,6 +5,7 @@ import glob
 import ftplib
 from datetime import datetime, timedelta
 from askutils import config
+from typing import Optional
 
 # === Konfigurierbare Defaults ===
 MIN_FILE_AGE_MINUTES   = getattr(config, "NIGHTLY_MIN_FILE_AGE_MINUTES", 5)
@@ -106,7 +107,7 @@ def _upload_file(ftp: ftplib.FTP, local_path: str, remote_subdir: str, root_dir:
     log(f"Upload abgeschlossen: {base} -> /{remote_subdir}")
     ftp.cwd("..")
 
-def _latest(glob_pattern: str) -> str | None:
+def _latest(glob_pattern: str) -> Optional[str]:
     """Neueste Datei zum Muster."""
     cand = glob.glob(glob_pattern)
     if not cand:
@@ -114,7 +115,8 @@ def _latest(glob_pattern: str) -> str | None:
     cand.sort(key=lambda p: os.path.getmtime(p))
     return cand[-1]
 
-def _remote_name_for(local_path: str, date_str: str) -> str | None:
+
+def _remote_name_for(local_path: str, date_str: str) -> Optional[str]:
     """Zielname nach Typ-Regel."""
     name = os.path.basename(local_path).lower()
     if name.endswith(".jpg") and "startrail" in name:
@@ -124,6 +126,7 @@ def _remote_name_for(local_path: str, date_str: str) -> str | None:
     if name.endswith(".mp4") and ("timelapse" in name or "allsky" in name):
         return f"allsky-{date_str}.mp4"
     return None
+
 
 def upload_nightly_batch(date_str: str = None) -> bool:
     """
