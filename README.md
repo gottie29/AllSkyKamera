@@ -149,10 +149,8 @@ Am Ende des Tests erhält man ein Summary mit Informationen ob die Sensoren lauf
 Aufruf: <code>python3 all_sensors_test.py</code><br>
 Typische Ausgabe ist:<br>
 <code>
-===================================================
-  AllSkyKamera – Gesamttest aller Sensoren
-  Zeit:  2025-11-24 14:07:58
-===================================================
+AllSkyKamera – Gesamttest aller Sensoren
+Zeit:  2025-11-24 14:07:58
 
 === I2C-Bus Test ===
 /dev/i2c-1 vorhanden, smbus.SMBus(1) konnte geöffnet werden.
@@ -186,9 +184,7 @@ Vollspektrum  : 9831126
 Himmelshelligkeit (mag/arcsec²)     : 17.27
 Himmelshelligkeit Vis (mag/arcsec²): 0.00
 
-===================================================
-  Zusammenfassung
-===================================================
+Zusammenfassung
 
 Bus-Schnittstellen:
 - I2C: OK – /dev/i2c-1 vorhanden, smbus.SMBus(1) konnte geöffnet werden.
