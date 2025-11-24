@@ -140,6 +140,74 @@ Um Unterverzeichnis AllSkyKamera/tests gibt es verschiedene Skripte zum Testen d
 
 Alle Skripte können direkt aufgerufen werden. Dazu wechselt man in das Verzeichnis tests und ruft mit python3 die Skripte auf. Die Ausgaben zeigen dann die Funktion der Skripte.
 
+<strong>Alle Sensoren testen</strong><br>
+Ab Version: v2025.11.24_01
+
+Mit dem Skript kann man alle definierten Sensoren wie DS18B20, TSL2591, MLX90614, BME280 testen. Hier werden auch die Schnittstellen wie i²c und 1-Wire gestetet, da diese für die Sensoren wichtig sind.
+Am Ende des Tests erhält man ein Summary mit Informationen ob die Sensoren laufen oder nicht.
+
+Aufruf: <code>python3 all_sensors_test.py</code><br>
+Typische Ausgabe ist:<br>
+<code>
+===================================================
+  AllSkyKamera – Gesamttest aller Sensoren
+  Zeit:  2025-11-24 14:07:58
+===================================================
+
+=== I2C-Bus Test ===
+/dev/i2c-1 vorhanden, smbus.SMBus(1) konnte geöffnet werden.
+
+=== 1-Wire-Bus Test ===
+1-Wire Master gefunden: w1_bus_master1
+Angeschlossene 1-Wire-Devices: 28-0121138cf3d6
+
+=== DHT22 / DHT11 Test ===
+Versuche zuerst DHT22 an D6 ...
+DHT22 OK: 21.3 °C, 54.0 % rF
+
+=== DS18B20 Test ===
+Temperatur: 21.75 °C
+
+=== BME280 Test ===
+Temperatur : 21.29 °C
+Druck      : 993.75 hPa
+Feuchte    : 42.50 %
+Taupunkt   : 8.02 °C
+
+=== MLX90614 Test ===
+Umgebung: 21.93 °C
+Objekt  : 21.27 °C
+
+=== TSL2591 Test ===
+Lux-Wert      : 78.34 lx
+Sichtbar      : 9830976
+Infrarot      : 150
+Vollspektrum  : 9831126
+Himmelshelligkeit (mag/arcsec²)     : 17.27
+Himmelshelligkeit Vis (mag/arcsec²): 0.00
+
+===================================================
+  Zusammenfassung
+===================================================
+
+Bus-Schnittstellen:
+- I2C: OK – /dev/i2c-1 vorhanden, smbus.SMBus(1) konnte geöffnet werden.
+- 1-Wire: OK – 1-Wire Master gefunden: w1_bus_master1; Angeschlossene 1-Wire-Devices: 28-0121138cf3d6
+
+Sensoren:
+- DHT22/DHT11: OK – DHT22 OK: 21.3 °C, 54.0 % rF
+- DS18B20: OK – Temperatur: 21.75 °C
+- BME280: OK – Temperatur : 21.29 °C; Druck      : 993.75 hPa; Feuchte    : 42.50 %; Taupunkt   : 8.02 °C
+- MLX90614: OK – Umgebung: 21.93 °C; Objekt  : 21.27 °C
+- TSL2591: OK – Lux-Wert      : 78.34 lx; Sichtbar      : 9830976; Infrarot      : 150; Vollspektrum  : 9831126; Himmelshelligkeit (mag/arcsec²)     : 17.27; Himmelshelligkeit Vis (mag/arcsec²): 0.00
+
+Gesamt:
+- OK-Sensoren       : 5 (DHT, DS18B20, BME280, MLX90614, TSL2591)
+- Problem-Sensoren  : 0 (-)
+
+Fertig. Alle verfügbaren Sensoren wurden getestet.
+</code>
+
 <strong>bme280_test.py</strong><br>
 Testen des Sensor BME280.<br>
 Beschreibung: Sensor für Temperatur, Luftfeuchtigkeit, Luftdruck (i²c-Schnittstelle)<br>
@@ -320,6 +388,22 @@ Der Aufruf sollte immer nach Sonnenaufgang erfolgen, da dann die entsprechenden 
         "command": "cd /home/pi/AllSkyKamera && python3 -m scripts.run_nightly_upload"
    },
 </code>
+
+## run_manual_upload
+<br>**Beschreibung:**
+<br>Ab Version: v2025.11.24_01
+<br>Das Modul erlaubt den Upload von älteren Daten. 
+
+<br>**Aufruf:**
+<br><code>
+cd ~/AllSkyKamera
+python3 -m scripts.run_manual_upload <Datum>
+</code>
+Das Datum wird hierbei angeben mit: >YYYYmmdd>, also 20251124 für die Nacht vom 24.11.2025 auf den 25.11.2025
+Es sucht sich dabei alle Daten wie Videos, Keogramm, Startrail heraus. Sind diese Daten nicht vorhanden, werden diese übersprungen.
+
+<br>**Cronjob:**
+<br>Dieses Modul wird nicht in einem Cronjob ausgeführt.
 
 ## raspi_status
 <br>**Beschreibung:**
