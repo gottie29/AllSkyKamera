@@ -9,6 +9,8 @@ from ctypes import c_short, c_byte, c_ubyte
 
 import smbus
 import RPi.GPIO as GPIO
+GPIO.setwarnings(False)
+
 
 # ==========================
 # Konfiguration
