@@ -151,31 +151,24 @@ Typische Ausgabe ist:<br>
 <code>
 AllSkyKamera – Gesamttest aller Sensoren
 Zeit:  2025-11-24 14:07:58
-
 === I2C-Bus Test ===
 /dev/i2c-1 vorhanden, smbus.SMBus(1) konnte geöffnet werden.
-
 === 1-Wire-Bus Test ===
 1-Wire Master gefunden: w1_bus_master1
 Angeschlossene 1-Wire-Devices: 28-0121138cf3d6
-
 === DHT22 / DHT11 Test ===
 Versuche zuerst DHT22 an D6 ...
 DHT22 OK: 21.3 °C, 54.0 % rF
-
 === DS18B20 Test ===
 Temperatur: 21.75 °C
-
 === BME280 Test ===
 Temperatur : 21.29 °C
 Druck      : 993.75 hPa
 Feuchte    : 42.50 %
 Taupunkt   : 8.02 °C
-
 === MLX90614 Test ===
 Umgebung: 21.93 °C
 Objekt  : 21.27 °C
-
 === TSL2591 Test ===
 Lux-Wert      : 78.34 lx
 Sichtbar      : 9830976
@@ -184,7 +177,7 @@ Vollspektrum  : 9831126
 Himmelshelligkeit (mag/arcsec²)     : 17.27
 Himmelshelligkeit Vis (mag/arcsec²): 0.00
 
-Zusammenfassung
+Zusammenfassung:
 
 Bus-Schnittstellen:
 - I2C: OK – /dev/i2c-1 vorhanden, smbus.SMBus(1) konnte geöffnet werden.
@@ -200,7 +193,6 @@ Sensoren:
 Gesamt:
 - OK-Sensoren       : 5 (DHT, DS18B20, BME280, MLX90614, TSL2591)
 - Problem-Sensoren  : 0 (-)
-
 Fertig. Alle verfügbaren Sensoren wurden getestet.
 </code>
 
