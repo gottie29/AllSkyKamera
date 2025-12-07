@@ -17,11 +17,11 @@ if [ ! -f "$CFG_FILE" ]; then
 fi
 
 # ---------------------------------------------------
-# Sprache wählen (de / en) – Deutsch ist Standard
+# Sprache waehlen (de / en) – Deutsch ist Standard
 # ---------------------------------------------------
 LANG_CODE="de"
 LANG_CHOICE=$(whiptail --title "Sprache / Language" \
-  --menu "Bitte Sprache wählen / Please choose language:" 15 60 2 \
+  --menu "Bitte Sprache waehlen / Please choose language:" 15 60 2 \
   "de" "Deutsch" \
   "en" "English" 3>&1 1>&2 2>&3) || true
 
@@ -54,15 +54,15 @@ print(val if val is not None else "")
 EOF
 }
 
-# Strings für Python escapen (für Strings in config.py)
+# Strings fuer Python escapen (fuer Strings in config.py)
 esc_py_str() {
     local s="$1"
     s="${s//\\/\\\\}"   # Backslashes
-    s="${s//\"/\\\"}"   # Doppelte Anführungszeichen
+    s="${s//\"/\\\"}"   # Doppelte Anfuehrungszeichen
     echo "$s"
 }
 
-# Zahl wie "118" wieder in "0x76" umwandeln (für I2C-Adressen)
+# Zahl wie "118" wieder in "0x76" umwandeln (fuer I2C-Adressen)
 normalize_hex_literal() {
     local val="$1"
     if [[ "$val" =~ ^0x[0-9a-fA-F]+$ ]]; then
@@ -74,7 +74,7 @@ normalize_hex_literal() {
     fi
 }
 
-# bool -> Status-Text für Menü
+# bool -> Status-Text fuer Menue
 bool_to_status() {
   local val="$1"
   local on off
@@ -246,7 +246,7 @@ KPINDEX_LOG_INTERVAL_MIN="$(get_val "KPINDEX_LOG_INTERVAL_MIN")"
 [ -z "$DHT22_LOG_INTERVAL_MIN" ]    && DHT22_LOG_INTERVAL_MIN="1"
 [ -z "$MLX90614_LOG_INTERVAL_MIN" ] && MLX90614_LOG_INTERVAL_MIN="1"
 
-# Defaults für Kamera / Objektiv / SQM / Analemma / KpIndex
+# Defaults fuer Kamera / Objektiv / SQM / Analemma / KpIndex
 [ -z "$PIX_SIZE_MM" ] && PIX_SIZE_MM="0.00155"
 [ -z "$FOCAL_MM" ] && FOCAL_MM="1.85"
 [ -z "$ZP" ] && ZP="6.0"
@@ -267,7 +267,7 @@ KPINDEX_LOG_INTERVAL_MIN="$(get_val "KPINDEX_LOG_INTERVAL_MIN")"
 [ -z "$KPINDEX_LOG_INTERVAL_MIN" ] && KPINDEX_LOG_INTERVAL_MIN="15"
 
 
-# I2C-Adressen in schöne Hex-Notation bringen
+# I2C-Adressen in schoene Hex-Notation bringen
 BME280_I2C_ADDRESS="$(normalize_hex_literal "$BME280_I2C_ADDRESS")"
 TSL2591_I2C_ADDRESS="$(normalize_hex_literal "$TSL2591_I2C_ADDRESS")"
 MLX90614_I2C_ADDRESS="$(normalize_hex_literal "$MLX90614_I2C_ADDRESS")"
@@ -287,7 +287,7 @@ edit_location() {
     lbl_mail="Kontakt-E-Mail (optional)"
     lbl_web="Webseite (optional, https://...)"
     lbl_lat="Breitengrad (LATITUDE, z.B. 52.1234)"
-    lbl_lon="Längengrad (LONGITUDE, z.B. 13.1234)"
+    lbl_lon="Laengengrad (LONGITUDE, z.B. 13.1234)"
   else
     title="Location data"
     lbl_cam="Camera name (shown on website)"
@@ -299,7 +299,7 @@ edit_location() {
     lbl_lon="Longitude (e.g. 13.1234)"
   fi
 
-  # Alte Werte sichern (für Rollback)
+  # Alte Werte sichern (fuer Rollback)
   local OLD_KAMERA_NAME="$KAMERA_NAME"
   local OLD_STANDORT_NAME="$STANDORT_NAME"
   local OLD_BENUTZER_NAME="$BENUTZER_NAME"
@@ -383,7 +383,7 @@ edit_location() {
   fi
   LATITUDE="$tmp"
 
-  # Längengrad
+  # Laengengrad
   tmp=$(whiptail --title "$title" --inputbox "$lbl_lon" 10 70 "$LONGITUDE" 3>&1 1>&2 2>&3)
   rc=$?; if [ $rc -ne 0 ]; then
     KAMERA_NAME="$OLD_KAMERA_NAME"
@@ -409,7 +409,7 @@ edit_camera() {
   if [ "$LANG_CODE" = "de" ]; then
     title="Kamera"
     q_w="Sensorbreite in Pixel (KAMERA_WIDTH):"
-    q_h="Sensorhöhe in Pixel (KAMERA_HEIGHT):"
+    q_h="Sensorhoehe in Pixel (KAMERA_HEIGHT):"
   else
     title="Camera"
     q_w="Sensor width in pixels (KAMERA_WIDTH):"
@@ -437,7 +437,7 @@ edit_lens() {
   local title q_pix q_foc rc tmp
   if [ "$LANG_CODE" = "de" ]; then
     title="Objektiv"
-    q_pix="Pixelgröße in mm (PIX_SIZE_MM, z.B. 0.00155):"
+    q_pix="Pixelgroeße in mm (PIX_SIZE_MM, z.B. 0.00155):"
     q_foc="Brennweite in mm (FOCAL_MM, z.B. 1.85):"
   else
     title="Lens"
@@ -466,10 +466,10 @@ camera_lens_menu() {
   local tb mp back_label o_cam o_lens
   if [ "$LANG_CODE" = "de" ]; then
     tb="Kamera und Objektiv"
-    mp="Bitte einen Bereich wählen:"
-    back_label="Zurück"
-    o_cam="Kamera (Sensorgröße)"
-    o_lens="Objektiv (Pixelgröße/Brennweite)"
+    mp="Bitte einen Bereich waehlen:"
+    back_label="Zurueck"
+    o_cam="Kamera (Sensorgroeße)"
+    o_lens="Objektiv (Pixelgroeße/Brennweite)"
   else
     tb="Camera & optics"
     mp="Please choose:"
@@ -494,7 +494,7 @@ camera_lens_menu() {
 }
 
 # ---------------------------------------------------
-# Sensor-Untermenüs
+# Sensor-Untermenues
 # ---------------------------------------------------
 
 edit_bme280() {
@@ -502,7 +502,7 @@ edit_bme280() {
   if [ "$LANG_CODE" = "de" ]; then
     title="Sensor BME280"
     q_enable="BME280 (Temp/Feuchte/Druck) aktivieren?"
-    q_name="Name für BME280:"
+    q_name="Name fuer BME280:"
     q_i2c="I2C-Adresse des BME280 (z.B. 0x76):"
     q_int="Logger-Intervall in Minuten (Cronjob-Frequenz):"
     q_ov="Overlay (Werte im Bild anzeigen)?"
@@ -591,7 +591,7 @@ edit_ds18b20() {
   if [ "$LANG_CODE" = "de" ]; then
     title="Sensor DS18B20"
     q_enable="DS18B20 (Temperatur) aktivieren?"
-    q_name="Name für DS18B20:"
+    q_name="Name fuer DS18B20:"
     q_ov="Overlay (Werte im Bild anzeigen)?"
     q_int="Logger-Intervall in Minuten (Cronjob-Frequenz):"
   else
@@ -662,7 +662,7 @@ edit_mlx90614() {
   if [ "$LANG_CODE" = "de" ]; then
     title="Sensor MLX90614"
     q_enable="MLX90614 (IR-Temperatur) aktivieren?"
-    q_name="Name für MLX90614:"
+    q_name="Name fuer MLX90614:"
     q_i2c="I2C-Adresse des MLX90614 (z.B. 0x5a):"
     q_int="Logger-Intervall in Minuten (Cronjob-Frequenz):"
   else
@@ -730,7 +730,7 @@ edit_tsl2591() {
   if [ "$LANG_CODE" = "de" ]; then
     title="Sensor TSL2591"
     q_enable="TSL2591 (SQM / Himmelshelligkeit) aktivieren?"
-    q_name="Name für TSL2591:"
+    q_name="Name fuer TSL2591:"
     q_i2c="I2C-Adresse des TSL2591 (z.B. 0x29):"
     q_lmt="SQM2 Grenzwert (TSL2591_SQM2_LIMIT, z.B. 0.0):"
     q_corr="SQM Korrektur (TSL2591_SQM_CORRECTION, z.B. 0.0):"
@@ -861,7 +861,7 @@ edit_dht11() {
   if [ "$LANG_CODE" = "de" ]; then
     title="Sensor DHT11"
     q_enable="DHT11 aktivieren?"
-    q_name="Name für DHT11:"
+    q_name="Name fuer DHT11:"
     q_gpio="GPIO (BCM-Nummer, z.B. 6):"
     q_ret="Anzahl Wiederholungen (DHT11_RETRIES):"
     q_delay="Retry-Delay in Sekunden (DHT11_RETRY_DELAY, z.B. 0.3):"
@@ -992,7 +992,7 @@ edit_dht22() {
   if [ "$LANG_CODE" = "de" ]; then
     title="Sensor DHT22"
     q_enable="DHT22 aktivieren?"
-    q_name="Name für DHT22:"
+    q_name="Name fuer DHT22:"
     q_gpio="GPIO (BCM-Nummer, z.B. 6):"
     q_ret="Anzahl Wiederholungen (DHT22_RETRIES):"
     q_delay="Retry-Delay in Sekunden (DHT22_RETRY_DELAY, z.B. 12):"
@@ -1122,8 +1122,8 @@ sensors_menu() {
   local tb mp back_label
   if [ "$LANG_CODE" = "de" ]; then
     tb="Sensoren"
-    mp="Bitte einen Sensor wählen:"
-    back_label="Zurück"
+    mp="Bitte einen Sensor waehlen:"
+    back_label="Zurueck"
   else
     tb="Sensors"
     mp="Please choose a sensor:"
@@ -1234,7 +1234,7 @@ edit_analemma() {
     q_gain="Gain A_GAIN (z.B. 1.0):"
     q_bri="Helligkeit A_BRIGHTNESS (z.B. 0.0):"
     q_con="Kontrast A_CONTRAST (z.B. 0.0):"
-    q_sat="Sättigung A_SATURATION (z.B. 0.0):"
+    q_sat="Saettigung A_SATURATION (z.B. 0.0):"
   else
     title="Analemma"
     q_enable="Enable analemma mode?"
@@ -1306,7 +1306,7 @@ edit_sqm() {
   if [ "$LANG_CODE" = "de" ]; then
     title="SQM / Photometrie"
     q_zp="Zero-Point ZP (z.B. 6.0):"
-    q_patch="SQM_PATCH_SIZE (Pixelgröße des Patches, z.B. 100):"
+    q_patch="SQM_PATCH_SIZE (Pixelgroeße des Patches, z.B. 100):"
   else
     title="SQM / photometry"
     q_zp="Zero point ZP (e.g. 6.0):"
@@ -1334,8 +1334,8 @@ other_options_menu() {
   local tb mp back_label s_kp s_an s_sqm
   if [ "$LANG_CODE" = "de" ]; then
     tb="Andere Optionen"
-    mp="Bitte eine Option wählen:"
-    back_label="Zurück"
+    mp="Bitte eine Option waehlen:"
+    back_label="Zurueck"
   else
     tb="Other options"
     mp="Please choose an option:"
@@ -1373,11 +1373,11 @@ show_processes() {
     msg="Die Sensor-Logger-Cronjobs werden automatisch nach Sensor-Status und Intervall erzeugt.\n\n\
 Basisjobs:\n\
 - Allsky Raspi-Status (*/1 Min)\n\
-- Config Update (täglich 12:00)\n\
-- Nightly FTP-Upload (täglich 08:45)\n\
+- Config Update (taeglich 12:00)\n\
+- Nightly FTP-Upload (taeglich 08:45)\n\
 - SQM Messung (alle 5 Min)\n\
-- SQM Plot Generierung (täglich 08:00)\n\n\
-Sensor-Logger hängen von den *_ENABLED-Flags und *_LOG_INTERVAL_MIN in config.py ab."
+- SQM Plot Generierung (taeglich 08:00)\n\n\
+Sensor-Logger haengen von den *_ENABLED-Flags und *_LOG_INTERVAL_MIN in config.py ab."
   else
     title="Processes (cronjobs)"
     msg="Sensor logger cronjobs are generated automatically based on sensor status and interval.\n\n\
@@ -1393,12 +1393,12 @@ Sensor loggers depend on *_ENABLED flags and *_LOG_INTERVAL_MIN in config.py."
 }
 
 # ---------------------------------------------------
-# Hauptmenü
+# Hauptmenue
 # ---------------------------------------------------
 while true; do
   if [ "$LANG_CODE" = "de" ]; then
     MTITLE="AllSkyKamera Konfiguration"
-    MPROMPT="Bitte einen Bereich wählen:"
+    MPROMPT="Bitte einen Bereich waehlen:"
     o1="Standortdaten"
     o2="Sensoren"
     o3="Prozesse (Cronjobs)"
@@ -1680,20 +1680,20 @@ cd "$ROOT_DIR" || exit 1
 
 if python3 -m scripts.upload_config_json; then
   if [ "$LANG_CODE" = "de" ]; then
-    whiptail --title "Upload erfolgreich" --msgbox "Die Konfiguration wurde erfolgreich auf den Server übertragen." 8 70
+    whiptail --title "Upload erfolgreich" --msgbox "Die Konfiguration wurde erfolgreich auf den Server uebertragen." 8 70
   else
     whiptail --title "Upload successful" --msgbox "Configuration has been successfully uploaded to the server." 8 70
   fi
 
   if python3 -m scripts.manage_crontabs; then
     if [ "$LANG_CODE" = "de" ]; then
-      whiptail --title "Cronjobs aktualisiert" --msgbox "Die Crontab-Einträge für die Sensor-Logger wurden erfolgreich aktualisiert." 8 70
+      whiptail --title "Cronjobs aktualisiert" --msgbox "Die Crontab-Eintraege fuer die Sensor-Logger wurden erfolgreich aktualisiert." 8 70
     else
       whiptail --title "Cronjobs updated" --msgbox "Crontab entries for sensor loggers have been updated successfully." 8 70
     fi
   else
     if [ "$LANG_CODE" = "de" ]; then
-      whiptail --title "Fehler bei Cronjobs" --msgbox "Die Crontab-Einträge konnten nicht automatisch aktualisiert werden.\nBitte prüfen Sie die Logs oder führen Sie den Befehl manuell aus:\n\npython3 -m scripts.manage_crontabs" 12 80
+      whiptail --title "Fehler bei Cronjobs" --msgbox "Die Crontab-Eintraege konnten nicht automatisch aktualisiert werden.\nBitte pruefen Sie die Logs oder fuehren Sie den Befehl manuell aus:\n\npython3 -m scripts.manage_crontabs" 12 80
     else
       whiptail --title "Cronjob update failed" --msgbox "Crontab entries could not be updated automatically.\nPlease check the logs or run manually:\n\npython3 -m scripts.manage_crontabs" 12 80
     fi
@@ -1701,7 +1701,7 @@ if python3 -m scripts.upload_config_json; then
 
 else
   if [ "$LANG_CODE" = "de" ]; then
-    whiptail --title "Fehler beim Upload" --msgbox "Das Python-Skript konnte nicht erfolgreich ausgeführt werden.\nBitte prüfen Sie die Logs oder führen Sie den Upload manuell aus:\n\npython3 -m scripts.upload_config_json" 12 80
+    whiptail --title "Fehler beim Upload" --msgbox "Das Python-Skript konnte nicht erfolgreich ausgefuehrt werden.\nBitte pruefen Sie die Logs oder fuehren Sie den Upload manuell aus:\n\npython3 -m scripts.upload_config_json" 12 80
   else
     whiptail --title "Upload failed" --msgbox "The Python script failed to run.\nPlease check the logs or run manually:\n\npython3 -m scripts.upload_config_json" 12 80
   fi
