@@ -1,6 +1,12 @@
 Versionshistorie
 ----------------
 
+# xxxxx
+
+- Testen aller Sensoren eingebaut
+- Manueller Upload für ältere Daten eingebaut
+- setup.sh mit grafischer Oberfläche (Command line) eingebaut
+
 # v2025.10.19_02
 
 - DHT11 und DHT22 eingebaut

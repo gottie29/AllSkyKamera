@@ -1,5 +1,9 @@
 # Module fuer den Status der Raspi
-import psutil, datetime, subprocess
+import os
+import psutil
+import datetime
+import subprocess
+from askutils import config
 
 def get_temp():
     sensors = psutil.sensors_temperatures()
@@ -37,3 +41,36 @@ def get_memory_usage():
         "total_mb": mem.total / 1048576,
         "percent": mem.percent
     }
+    
+def get_camera_sensor_temperature():
+    """
+    Lies die SensorTemperature aus metadata.txt im tmp-Verzeichnis
+    unterhalb von config.ALLSKY_PATH.
+
+    Erwartetes Format der Datei (Ausschnitt):
+        ...
+        SensorTemperature=19.000000
+
+    Rueckgabewert:
+        float: Temperatur in °C, falls vorhanden
+        None : falls Datei nicht existiert oder kein Wert gelesen werden kann
+    """
+    meta_path = os.path.join(config.ALLSKY_PATH, "tmp", "metadata.txt")
+
+    if not os.path.isfile(meta_path):
+        return None
+
+    try:
+        with open(meta_path, "r", encoding="utf-8", errors="ignore") as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith("SensorTemperature="):
+                    value_str = line.split("=", 1)[1].strip()
+                    # "19.000000" -> 19.0
+                    return float(value_str)
+    except Exception:
+        # Bei allen Fehlern einfach None zurueckgeben,
+        # damit der Aufrufer damit umgehen kann.
+        return None
+
+    return None

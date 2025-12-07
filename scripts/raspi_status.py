@@ -21,6 +21,7 @@ voltage = statusinfo.get_voltage()
 uptime = statusinfo.get_boot_time_seconds()
 cpu_pct  = statusinfo.get_cpu_usage()
 mem      = statusinfo.get_memory_usage()
+raspiCamTemp = statusinfo.get_camera_sensor_temperature()
 
 # Debug-Ausgabe
 print("\n=== Raspberry Pi Status ===")
@@ -30,6 +31,7 @@ print(f"RAM        : {mem['percent']:6.1f} Prozent ({mem['used_mb']:.0f}/{mem['t
 print(f"Speicher   : {disk['percent']:6.1f} Prozent ({disk['free_mb']:.0f} MB frei)")
 print(f"Laufzeit   : {uptime:>6d} s")
 print(f"Spannung   : {voltage:6.2f} V")
+print(f"Kamera-Temperatur: {raspiCamTemp if raspiCamTemp is not None else 'n/a'} Grad Celsius")
 print("==============================\n")
 
 
@@ -44,5 +46,6 @@ influx_writer.log_metric("raspistatus", {
     "raspiMemPercent":  float(mem["percent"]),
     "raspiMemUsedMB":   float(mem["used_mb"]),
     "raspiMemTotalMB":  float(mem["total_mb"]),
+    "cameraSensorTemp": float(raspiCamTemp) if raspiCamTemp is not None else 0.0,
     "online": 1.0
 }, tags={"host": "host1"})
