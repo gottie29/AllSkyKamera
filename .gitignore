@@ -162,6 +162,7 @@ cython_debug/
 # sensitive secrets
 askutils/ASKsecret.py
 publish.sh
+kpindex.json
 askutils/config.py
 config.json
 tmp/*
@@ -169,3 +170,4 @@ askutils/utils/netstatus_state.json
 askutils/config.old.py
 askutils/ASKsecret.py.bak
 askutils/config.py.bak
+
