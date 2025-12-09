@@ -1,41 +1,61 @@
 # AllSkyKamera
-Python-Bibliothek für Allsky-Kameras im Netzwerk AllSkyKamera-Netzwerk (https://allskykamera.space)
 
-Version: v2025.10.19_02
- 
-# Beschreibung
-Das Netzwerk AllSkyKamera ist eine Sammlung von Allsky-Kameras.
-Es soll einen einfachen Zugang zu den Daten liefern um z.B. Auswertungen im schulischen Umwelt zu realisieren oder aber auch einfach nur den Sternenhimmel von unterschiedlichen Standorten zu zeigen.
+Python library for all-sky cameras in the **AllSkyKamera** network  
+(<https://allskykamera.space>)
 
-Die entstandene Python-Biblitohek ermöglicht es die Daten, Bilder, Videos der Kameras auf dem Server zu speichern und damit über die Seite https://allskykamera.space zur Verfügung zu stellen.
+Version: v2025.12.09_01
 
-Dabei greift diese Bibliothek nicht in die Standard-Software vom allskyteam (Thomas Jaquin) ein oder verändert Einstellungen oder eigene Programmierungen auf der Kamera. 
-Die Bibliothek zieht ausschließlich die Daten und speichert diese auf dem Server ab.
+## Description
 
-# 🛠 Voraussetzungen
-Die Vorraussetzungen um am Netzwerk teilzunehmen sind denkbar einfach.
-Man benötigt eine eigene Allsky-Kamera auf Basis einer Raspberry Pi (empfohlen 4 oder höher).
-Das Interface sollte vom allskyteam (Thomas Jaquin) sein.
+The AllSkyKamera network is a collection of all-sky cameras at different locations.
+Its goal is to provide easy access to image and sensor data, for example:
 
-Das INDI-Allsky-Interface wird in Zukunft auch in die Bibliothek eingebunden. 
+- to run environmental and astronomy projects in schools, or  
+- simply to explore the night sky from different locations.
 
-Um am Netzwerk teilzunehmen benötigt man einen Secret-Key. Diesen kann man im Netzwerk anmelden unter: https://www.allskykamera.space/machmit.php
+This Python library makes it possible to send images, videos and sensor data from a local
+all-sky camera to the central server, where they are published via
+<https://allskykamera.space>.
 
-Ohne diesen Secret-Key funktioniert die Bibliothek nicht und man kann seine Daten nicht hochladen.
+The library **does not modify** the standard allsky software by Thomas Jacquin and does
+not change any of your local camera settings or custom scripts.  
+It only reads the data and uploads it to the AllSkyKamera server.
 
-# Update
-Für alle die meine Python-Bibliothek schon installiert haben, ist es sinnvoll ab und an die Bibliothek zu aktualisieren. Wir programmieren ständig an den Funktionalitäten.
+## Requirements
 
-Der Update geht ebenso einfach wie die Installation.
-1. Man muss sich auf seiner Raspberry Pi einloggen.
-2. Im Terminal führt man folgende beiden Befehle aus:
-   <code>
-   cd AllSkyKamera
-   git pull
-   </code>
+Participating in the AllSkyKamera network is intentionally kept as simple as possible.
 
-Beim Update werden keine config-Einstellungen überschrieben. 
-Es werdenb lediglich die angepassten Funktionen aktualisiert.
+You need:
+
+- a Raspberry Pi-based all-sky camera (Raspberry Pi 4 or newer recommended)
+- the standard allsky software and web interface by Thomas Jacquin
+- a working internet connection (for data upload)
+
+Support for the **INDI-Allsky** interface is planned and will be added to this library
+in the future.
+
+To join the network you need a **secret API key**.  
+You can request a key here: <https://www.allskykamera.space/machmit.php>
+
+Without this secret key the library will not work and your camera cannot upload any data.
+
+## Updating the library
+
+If you already have the AllSkyKamera Python library installed, it is a good idea to
+update it from time to time. New features and improvements are added continuously.
+
+Updating is as simple as pulling the latest changes from GitHub:
+
+1. Log in to your Raspberry Pi (SSH or local console).
+2. Run the following commands:
+
+   ```bash
+   cd ~/AllSkyKamera
+   git pull origin main
+
+Existing configuration values (for example in askutils/config.py) are not
+overwritten by a normal update. Only the library code and scripts tracked by Git
+are updated.
 
 # Installation / Deinstallation
 
