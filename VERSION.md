@@ -1,11 +1,14 @@
-Versionshistorie
+Version history
 ----------------
 
-# xxxxx
+# xxxxxxxx
 
-- Testen aller Sensoren eingebaut
-- Manueller Upload für ältere Daten eingebaut
-- setup.sh mit grafischer Oberfläche (Command line) eingebaut
+- Easier Installation with first parameters (after installation running the setup.sh)
+- Testing Script implemented for all sensors (DIR: tests/all_sensors_test.py)
+- Implement manual upload for older data (Timelapse, Keogram, Startrial) (call: python3 -m scripts.run_manual_upload 20251201)
+- setup.sh GUI Interface (Command line) implemented
+- Integrate a cpu_heater script (as test) to run processes at the RPi with 25,50,75,100% for a specific time (seconds) (DIR: tests)
+- Integrate into the raspi_status also the cmera temperature - if it possible to read this out from TJ-Interface
 
 # v2025.10.19_02
 
