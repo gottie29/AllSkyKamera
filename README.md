@@ -52,6 +52,7 @@ Updating is as simple as pulling the latest changes from GitHub:
    ```bash
    cd ~/AllSkyKamera
    git pull origin main
+   ```
 
 Existing configuration values (for example in askutils/config.py) are not
 overwritten by a normal update. Only the library code and scripts tracked by Git
@@ -127,6 +128,7 @@ uninstallation script:
    ```bash
    cd ~/AllSkyKamera
    ./uninstall.sh
+   ```
 
 This will:
 - remove the library directory
@@ -136,6 +138,7 @@ You can verify your current cron table with:
 
    ```bash
    crontab -l
+   ```
 
 # Cronjobs
 
