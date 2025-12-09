@@ -58,67 +58,58 @@ Existing configuration values (for example in askutils/config.py) are not
 overwritten by a normal update. Only the library code and scripts tracked by Git
 are updated.
 
-# Installation / Deinstallation
+## Installation / Uninstallation
 
-Die Installation der Python-Bibliothek gestaltet sich einfach.
+Installing the Python library is straightforward.
 
-## Installation
+### Installation
 
-1. Download der Bibliothek
-   <code>
+The installation of the Python library is split into two steps:
+
+- `install.sh` – basic installation (packages, API key, minimal config)
+- `setup.sh` – interactive configuration (camera, site, sensors, cronjobs)
+
+1. **Download the library**
+
+   ```bash
    cd
    git clone https://github.com/gottie29/AllSkyKamera.git
    cd AllSkyKamera
-   </code>
-3. Aufruf der Installation
-   <code>
+   ```
+2. **Run the installer**
+
+   ```bash
    ./install.sh
-   </code>
+   ```
 
-Mit dem starten der Installation werden alle Pakete installiert, die zum Betrieb der Bibliothek nötig sind.
-Weiterhin werden alle nötigen Informationen abgefragt.
+When you start the installer, all required packages for the library will be installed.
+After that, the script will ask you for the necessary configuration values.
 
-Folgende Abfragen erfolgen mit der Installation:
-- Haben Sie bereits einen API-Key? (y/n)
-- API_KEY:
-  Der API-Key oder Secret-Key wird abgefragt und gleich auf dem Server getestet. Gibt es diesen nicht, bricht die Installation ab. 
-Existiert ein Key, gibt die Funktion die Kamera-ID (e.g. ASK001) zurück
-- Pfad zum Interface:
-  Hier gibt man den Pfad zum Allsky-Interface an. Meisten liegt dieser unter /home/<user>/allsky (e.g. /home/pi/allsky)
-- Name der Kamera (z.B. Meine AllskyCam):
-- Name des Standortes (z.B. Berliner Sternwarte):
-- Benutzername (z.B. Tom Mustermann):
-- E-Mailadresse:
-- Webseite (optional):
+<strong>Important (privacy):</strong>
+If you enter very precise location data, the map on the website will show the exact
+position of your camera.
+If you do not want that, simply shift your latitude and longitude by a small amount.
 
-<strong>ACHTUNG</strong> Gibt man die Standort-Daten sehr genau an, sieht man auf der Karte auch den sehr genauen Standort. Wer das nicht möchte, kann die Standort-Daten zu Länge und Breite einfach etwas verschieben. 
+The final step is to upload this configuration to the server.
+Once the configuration has been transferred, your camera will appear on the website.
 
-- Breitengrad des Standortes (z.B. 52.1253):
-- Längengrad des Standortes (z.B. 13.1245):  
-- Pixelgröße des Kamerachips in mm (z.B. 0.00155):
-- Brennweite in mm (z.B. 1.85):
-- Nullpunkt Helligkeit ZP (Default: 6.0):
+After installation you do not need to reboot the camera, the allsky software, or
+the Raspberry Pi. As soon as the cronjobs are installed, data transfer will start
+automatically.
 
- Falls Sensoren wie BME280, DS18b20 oder ein TSL2591 vorhanden ist, kann hier die Einstellungen vornehmen.
- Ansonsten nicht, kann hier einfach ein n eingetragen werden:
- - BME280 verwenden? (y/n):
-    - I2C-Adresse BME280 (z.B. 0x76):
-    - BME280_Overlay anlegen? (y/n):
- - TSL2591 verwenden? (y/n):
-    - I2C-Adresse TSL2591 (z.B. 0x29):
-    - SQM2-Limit (z.B. 6.0):
-    - SQM-Korrekturwert (z.B. 0.0):
-    - TSL2591_Overlay anlegen? (y/n):
-  - DS18B20 verwenden? (y/n):
-    - DS18B20_Overlay anlegen? (y/n):
+If nothing appears on the website, either the configuration has not been uploaded yet,
+or the cronjobs are not running correctly.
 
-Anschließend werden noch einige Tests durchgeführt und die Installation ist beendet.
-Nach der Installation befindet sich die generierte Konfigurationsdatei unter ~/AllSkyKamera/askutils/config.py
+3. **Run the setup**
 
-Der letzte Schritt ist die Übertragung der configuration an den Server. Sobald dies erfolgt ist, ist auf der Webseite die Kamera sichtbar.
+   ```bash
+   ./setup.sh
+   ```
+This script opens a text-based menu interface (using whiptail) and allows you to edit all configuration values in a safe and structured way.
 
-Nach der Installtion muss die Kamera, das Interface oder die Rapsberry Pi <strong>nicht</strong> neu gestartet werden. Sobald die Conjobs eingetragen sind, startet die Übertragung.
-Sollte auf der Webseite nichts erscheinen, wurde die configuration nicht übertragen oder die Cronjobs laufen noch nicht.
+**Note:**
+After installation and setup you do not need to reboot the Raspberry Pi or the allsky software.
+As soon as the cronjobs are active, data transfer starts automatically.
 
 ## Uninstallation
 
