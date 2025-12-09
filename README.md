@@ -131,453 +131,69 @@ You can verify your current cron table with:
    crontab -l
    ```
 
-# Cronjobs
+## Cronjobs
 
-Die Bibliothek arbeitet mit cronjobs. Diese cronjobs werden in den crontab eingetragen und sind damit für den Usern auch jederzeit einsehbar oder auch änderbar.
+The library uses **cronjobs** to run all recurring tasks (status updates, image uploads, sensor loggers, SQM, etc.).  
+These cronjobs are written into the user’s crontab and can be viewed or edited at any time with standard tools like `crontab -l`.
 
-Die crontabs werden bei der Installation in der config.py eingetragen. Um diese zu aktivieren ist der folgende Aufruf nötig:
-<code>
-cd
-cd AllSkyKamera
-python3 -m scripts.manage_crontabs
-</code>
+### How cronjobs are created
 
-Jetzt wird die config.py ausgelesen und alle dort definierten cronjobs werden in den crontab eingetragen.
-Hat dies funktioniert, sollte innerhalb einer Minute die Kamera die Daten an den Server senden und diese erscheinen dann auf der Netzwerk-Seite: https://allskykamera.space
+Cronjobs are not written manually – they are generated from the `CRONTABS` list inside `askutils/config.py`.
 
-Sollte die Kamera noch nicht auf der Webseite stehen, muss die config.py noch an den Server übertragen werden. Das geht einfach mit:
-<code>
-cd ~/AllSkyKamera
-python3 -m scripts.upload_config_json
-</code>
+- `install.sh` creates an initial `config.py` with a set of **base jobs**, for example:
+  - Raspberry Pi status (`scripts.raspi_status`)
+  - image upload (`scripts.run_image_upload`)
+  - daily config upload (`scripts.upload_config_json`)
+  - nightly FTP upload (`scripts.run_nightly_upload`)
+  - SQM measurement and SQM plot generation
 
-Anschließend ist die Kamera auf der Webseite zu sehen.
+- `setup.sh` then:
+  - rewrites `config.py` with all your chosen settings (camera, site, sensors, intervals),
+  - **adds additional cronjobs** dynamically for each enabled sensor (`BME280`, `TSL2591`, `DS18B20`, `DHT11`, `DHT22`, `MLX90614`) and optional KpIndex,
+  - and finally calls `scripts.manage_crontabs` to apply all cronjobs to your crontab.
 
-# Testen der Sensoren und Skripte
+In normal operation you do **not** need to edit cronjobs manually. You change settings via `setup.sh`, and the script regenerates both `config.py` and the cron configuration.
 
-Um Unterverzeichnis AllSkyKamera/tests gibt es verschiedene Skripte zum Testen der Bibliothek. Dabei werden keine Daten auf den Server geschoben, sondern ausschließlich die Funktion gestetet.
+### Apply cronjobs manually
 
-Alle Skripte können direkt aufgerufen werden. Dazu wechselt man in das Verzeichnis tests und ruft mit python3 die Skripte auf. Die Ausgaben zeigen dann die Funktion der Skripte.
+If you ever change `config.py` by hand, or want to reapply the cron configuration, you can run:
 
-<strong>Alle Sensoren testen</strong><br>
-Ab Version: v2025.11.24_01
+   ```bash
+   cd ~/AllSkyKamera
+   python3 -m scripts.manage_crontabs
+   ```
 
-Mit dem Skript kann man alle definierten Sensoren wie DS18B20, TSL2591, MLX90614, BME280 testen. Hier werden auch die Schnittstellen wie i²c und 1-Wire gestetet, da diese für die Sensoren wichtig sind.
-Am Ende des Tests erhält man ein Summary mit Informationen ob die Sensoren laufen oder nicht.
+This command:
 
-Aufruf: <code>python3 all_sensors_test.py</code><br>
-Typische Ausgabe ist:<br>
-<code>
-AllSkyKamera – Gesamttest aller Sensoren
-Zeit:  2025-11-24 14:07:58
-=== I2C-Bus Test ===
-/dev/i2c-1 vorhanden, smbus.SMBus(1) konnte geöffnet werden.
-=== 1-Wire-Bus Test ===
-1-Wire Master gefunden: w1_bus_master1
-Angeschlossene 1-Wire-Devices: 28-0121138cf3d6
-=== DHT22 / DHT11 Test ===
-Versuche zuerst DHT22 an D6 ...
-DHT22 OK: 21.3 °C, 54.0 % rF
-=== DS18B20 Test ===
-Temperatur: 21.75 °C
-=== BME280 Test ===
-Temperatur : 21.29 °C
-Druck      : 993.75 hPa
-Feuchte    : 42.50 %
-Taupunkt   : 8.02 °C
-=== MLX90614 Test ===
-Umgebung: 21.93 °C
-Objekt  : 21.27 °C
-=== TSL2591 Test ===
-Lux-Wert      : 78.34 lx
-Sichtbar      : 9830976
-Infrarot      : 150
-Vollspektrum  : 9831126
-Himmelshelligkeit (mag/arcsec²)     : 17.27
-Himmelshelligkeit Vis (mag/arcsec²): 0.00
-Zusammenfassung:
-Bus-Schnittstellen:
-- I2C: OK – /dev/i2c-1 vorhanden, smbus.SMBus(1) konnte geöffnet werden.
-- 1-Wire: OK – 1-Wire Master gefunden: w1_bus_master1; Angeschlossene 1-Wire-Devices: 28-0121138cf3d6
-Sensoren:
-- DHT22/DHT11: OK – DHT22 OK: 21.3 °C, 54.0 % rF
-- DS18B20: OK – Temperatur: 21.75 °C
-- BME280: OK – Temperatur : 21.29 °C; Druck      : 993.75 hPa; Feuchte    : 42.50 %; Taupunkt   : 8.02 °C
-- MLX90614: OK – Umgebung: 21.93 °C; Objekt  : 21.27 °C
-- TSL2591: OK – Lux-Wert      : 78.34 lx; Sichtbar      : 9830976; Infrarot      : 150; Vollspektrum  : 9831126; Himmelshelligkeit (mag/arcsec²)     : 17.27; Himmelshelligkeit Vis (mag/arcsec²): 0.00
-Gesamt:
-- OK-Sensoren       : 5 (DHT, DS18B20, BME280, MLX90614, TSL2591)
-- Problem-Sensoren  : 0 (-)
-Fertig. Alle verfügbaren Sensoren wurden getestet.
-</code>
+- reads the CRONTABS list from config.py,
+- removes old AllSkyKamera entries from your crontab,
+- and writes the current set of jobs into the crontab.
 
-<strong>bme280_test.py</strong><br>
-Testen des Sensor BME280.<br>
-Beschreibung: Sensor für Temperatur, Luftfeuchtigkeit, Luftdruck (i²c-Schnittstelle)<br>
-Aufruf: <code>python3 bme280_test.py</code><br>
-Typische Ausgabe ist:<br>
-<code>
-Temperatur : 34.21 °C
-Druck      : 1015.20 hPa
-Feuchte    : 32.15 %
-Taupunkt   : 15.23 °C
-</code>
+If it succeeds, the Raspberry Pi will start sending data within the defined intervals (typically within 1–2 minutes).
+The data should then appear on the network site: https://allskykamera.space
 
-<strong>ds18b20_test.py</strong><br>
-Testen des Sensor DS18B20.<br>
-Beschreibung: Temperatursensor (1-Wire-Schnittstelle) für Aussentemperaturmessungen.<br>
-Aufruf: <code>python3 ds18b20_test.py</code><br>
-Typische Ausgabe ist:<br>
-<code>
-Temperatur: 30.44 °C
-Temperatur: 30.44 °C
-Temperatur: 30.50 °C
-...
-</code>
-Das Skript muss mit STRG+C abgebrochen werden, sonst läuft es durchgängig weiter.
+### Upload configuration to the server
 
-<strong>tsl2591_test.py</strong><br>
-Testen des Sensor TSL2591.<br>
-Beschreibung: Lichtsensor zur Messung der Heligkeit<br>
-Aufruf: <code>python3 tsl2591_test.py</code><br>
-Typische Ausgabe ist:<br>
-<code>
-Lux-Wert      : 5.62 lx
-Sichtbar      : 1900597
-Infrarot      : 29
-Vollspektrum  : 1900626
-Himmelshelligkeit (mag/arcsec²): 20.13
-Himmelshelligkeit Vis (mag/arcsec²): 6.30
-</code>
+For your camera to appear on the website, a minimal configuration JSON must be uploaded to the central server.
+Both install.sh (optionally) and setup.sh already call this for you, but you can also trigger it manually:
 
-<strong>mlx90614_test.py</strong><br>
-Testen des Sensor MLX90614.<br>
-Beschreibung: IR-Temperatursensor Ambient (Umgebung) und Object (Himmel) zur Wolkenerkennung<br>
-Aufruf: <code>python3 mlx90614_test.py</code><br>
-Typische Ausgabe ist:<br>
-<code>
-=== MLX90614 Temperatursensor Test ===
-[2025-10-07 10:58:46] Umgebung: 21.95 °C | Objekt: 22.07 °C
-[2025-10-07 10:58:48] Umgebung: 21.91 °C | Objekt: 22.11 °C
-[2025-10-07 10:58:50] Umgebung: 21.91 °C | Objekt: 22.01 °C
-[2025-10-07 10:58:52] Umgebung: 21.91 °C | Objekt: 22.07 °C
-[2025-10-07 10:58:54] Umgebung: 21.93 °C | Objekt: 22.11 °C
-...
-</code>
-Das Skript muss mit STRG+C abgebrochen werden, sonst läuft es durchgängig weiter.
 
-<strong>FTP-Test</strong><br>
-Die Bibliothek schiebt die Daten wie Bilder, Videos, Keogramme über die FTP-Schnittstelle.
-Diese kann man hier testen.
-Aufruf: <code>python3 ftp_upload_test.py</code><br>
-Typische Ausgabe ist:<br>
-<code>
-== 1. Teste Konfiguration ==
-✅ Konfigurationswerte sind vorhanden.
+   ```bash
+   cd ~/AllSkyKamera
+   python3 -m scripts.upload_config_json
+   ```
 
-== 2. Teste FTP-Verbindung ==
-✅ FTP-Login erfolgreich bei h2888788.stratoserver.net.
-✅ Wechsel ins Remote-Verzeichnis 'ASK005' erfolgreich.
-ℹ️ Aktueller Verzeichnisinhalt: ['config.json', 'image.jpg', 'keogram', 'sqm', 'startrails', 'videos']
+After a successful upload:
 
-== 3. Teste image_upload-Funktion ==
-ℹ️ Testdatei erstellt: /home/pi/allsky/tmp/test_upload.txt
-✅ Upload abgeschlossen: test_upload.txt → /ASK005
-✅ upload_image() erfolgreich.
-ℹ️ Testdatei remote gelöscht: test_upload.txt
+- the camera entry is created or updated on the server,
+- name, site, operator and other metadata are visible on the map and detail pages.
 
-✅ Alle FTP-Tests erfolgreich abgeschlossen.
-</code>
+If your camera still does not show up:
 
-<strong>SQM-Test</strong><br>
-Aktuelle teste ich die Möglichkeit aus den Bild-Daten die Himmelshelligkeit zu berechnen.
-Der SQM-Test greift dabei auf die Bilddaten zu und berechnet die aktuelle Helligkeit. Berücksichtig werden dabei auch Belichtungszeit (exposure-time) und Empfindlichkeit (Gain).<br>
-Aufruf: <code>python3 sqm_test.py</code><br>
-Typische Ausgabe ist:<br>
-<code>
-2025-08-09 13:36:25+02:00 -> μ = 1.77 mag/arcsec², Gain=1.379, Exptime=0.000142s gespeichert in 
-</code>
+- Check that upload_config_json ran without errors.
 
-# Funktionen der Bibliothek
+Verify that manage_crontabs has been executed and the jobs are present:
 
-An dieser Stelle werden die Funktionen der Bibliothek dokumentiert. 
-Alle Bibliotheksfunktionen sind über Cronjobs gesteuert und können daher auch einzeln aufgerufen werden.
-Der Aufruf der Funktion dient dem debugging und dem prüfen ob alle Funktionen funktionieren und die Daten auch an den Server gesendet werden.
-
-Alle Aufrufe der Bibliotheksfunktionen erfolgen aus dem Hauptverzeichnis.
-Man kann mit folgendem Befehl ins Hauptverzeichnis wechseln.
-<code>
-cd ~\AllSkyKamera
-</code>
-
-## manage_crontabs
-<br>**Beschreibung:**
-<br>Liest alle definierten cronjobs aus der **config.py** und trägt diese in die crontabs ein.
-Sollten gleichnamige crontabs schon existieren, werden diese gemäß der config geändert.
-Bestehende andere crontabs werden dabei nicht angefasst oder geändert.
-<br>**Aufruf:**
-<br><code>
-cd ~/AllSkyKamera
-python3 -m scripts.manage_crontabs
-</code>
-<br>**Cronjob:**
-<br>Es ist nicht nötig ständig diese Datei aufzurufen. Daher braucht es für diese Funktion keinen cronjob.
-Wurde in der config.py ein cronjob neu definiert oder geändert, reicht 1 Aufruf dieser Funktion. 
-
-## upload_config_json
-<br>**Beschreibung:**
-<br>Die config.py ist die zentrale Einstellungsdatei.
-Damit Änderungen auch auf der Webseite des Netzwerkes ankommen, wird die config.py übersetzt in eine minimale JSON-Datei und auf den Server übertragen, so das die Webseite Aktualisierungen beim Namen der Kamera oder bei Benutzereinstellungen anzeigen kann.
-<br>**Aufruf:**
-<br><code>
-cd ~/AllSkyKamera
-python3 -m scripts.upload_config_json
-</code>
-<br>**Cronjob:**
-<br>Diese Funktion sollte 1mal am Tag ausgeführt werden. Das gewährleistet die Aktualität der lokalen Kamera und der Webseite.
-<br>**config.py:**
-<br>Hier ein Beispiel aus der config.py:
-<br><code>
-    {
-        "comment": "Config Update",
-        "schedule": "0 12 * * *",
-        "command": "cd /home/pi/AllSkyKamera && python3 -m scripts.upload_config_json"
-    },
-</code>
-
-## run_image_upload
-<br>**Beschreibung:**
-<br>Dieses Module kümmert sich um den Upload des aktuellen Kamera-Bildes.
-<br>Diese Funktion ist zwingend notwendig für die Teilnahme am Netzwerk.
-<br>**Aufruf:**
-<br><code>
-cd ~/AllSkyKamera
-python3 -m scripts.run_image_upload
-</code>
-<br>**Cronjob:**
-<br>Diese Funktion sollte 2x pro Minute aufgerufen werden, damit regelmäßig die aktuelle Ansicht auf der Webseite erscheint.
-<br>**config.py:**
-<br>Hier ein Beispiel aus der config.py:
-<br><code>
-   {
-       "comment": "Image FTP-Upload",
-       "schedule": "*/2 * * * *",
-       "command": "cd /home/pi/AllSkyKamera && python3 -m scripts.run_image_upload"
-   },
-</code>
-
-## run_nightly_upload
-<br>**Beschreibung:**
-<br>Dieses Module kümmert sich um den Upload der Sorucen aus der letzten Nacht.
-Hierbei werden das Zeitraffer-Video, das Keogram und das Startrail der letzten Nacht auf den Server geladen.
-Diese Funktion ist zwingend notwendig für die Teilnahme am Netzwerk.
-
-Upload der Videos und Bilder wird nun mit einem Altercheck und einem Größencheck durchgeführt. Damit wird sichergestellt, dass der Upload erst erfolgt, wenn die Dateien auch vorliegen und nicht kaputt auf den Server geladen werden.
-
-<br>**Aufruf:**
-<br><code>
-cd ~/AllSkyKamera
-python3 -m scripts.run_nightly_upload
-</code>
-<br>**Cronjob:**
-<br>Diese Funktion muss 1x am Tag aufgerufen werden.
-Der Aufruf sollte immer nach Sonnenaufgang erfolgen, da dann die entsprechenden Videos, Startrails und Keogramme erfolgreich erstellt wurden.
-<br>**config.py:**
-<br>Hier ein Beispiel aus der config.py:
-<br><code>
-   {
-       "comment": "Nightly FTP-Upload",
-        "schedule": "45 8 * * *",
-        "command": "cd /home/pi/AllSkyKamera && python3 -m scripts.run_nightly_upload"
-   },
-</code>
-
-## run_manual_upload
-<br>**Beschreibung:**
-<br>Ab Version: v2025.11.24_01
-<br>Das Modul erlaubt den Upload von älteren Daten. 
-
-<br>**Aufruf:**
-<br><code>
-cd ~/AllSkyKamera
-python3 -m scripts.run_manual_upload <Datum>
-</code>
-Das Datum wird hierbei angeben mit: >YYYYmmdd>, also 20251124 für die Nacht vom 24.11.2025 auf den 25.11.2025
-Es sucht sich dabei alle Daten wie Videos, Keogramm, Startrail heraus. Sind diese Daten nicht vorhanden, werden diese übersprungen.
-
-<br>**Cronjob:**
-<br>Dieses Modul wird nicht in einem Cronjob ausgeführt.
-
-## raspi_status
-<br>**Beschreibung:**
-<br>Dieses Modul überträgt den Status der Raspberry Pi. 
-Hierbei werden Werte wie Temperatur, Boottime, Speicherplatz frei/benutzt an die Datenbank gesendet und auf der Webseite dargestellt.
-Weiterhin gibt dieses Modul den Online-Status an die Datenbank weiter und sorgt dafür das die Kamera als Online oder Offline auf der Webseite angezeigt wird.
-Diese Funktion ist zwingend notwendig für die Teilnahme am Netzwerk.
-<br>**Aufruf:**
-<br><code>
-cd ~/AllSkyKamera
-python3 -m scripts.raspi_status
-</code>
-<br>**Cronjob:**
-<br>Diese Funktion sollte in einem kurzen Intervall ausgeführt (1-2 Minuten) werden.
-<br>**config.py:**
-<br>Hier ein Beispiel aus der config.py:
-<br><code>
-   {
-       "comment": "Allsky Raspi-Status",
-       "schedule": "*/1 * * * *",
-       "command": "cd /home/pi/AllSkyKamera && python3 -m scripts.raspi_status"
-   },
-</code>
-
-# Sensorenfunktionen
-
-## BME280
-<br>**Beschreibung:**
-<br>Dieses Modul liest den Sensor BME280 aus und überträgt die Daten in die Datenbank.
-Der Sensor selbst liefert:
-- Temperatur
-- Luftfeuchtigkeit
-- Luftdruck
-Weiterhin berechnet das Modul den Taupunkt und gibt diesen ebenfalls an die Datenbank weiter.
-<br>**Aufruf:**
-<br><code>
-cd ~/AllSkyKamera
-python3 -m scripts.bme280_logger
-</code>
-<br>**Cronjob:**
-<br>Diese Funktion sollte in einem kurzen Intervall ausgeführt (1-2 Minuten) werden.
-<br>**config.py:**
-<br>Hier ein Beispiel aus der config.py:
-<br><code>
-   {
-       "comment": "BME280 Sensor",
-       "schedule": "*/1 * * * *",
-       "command": "cd /home/pi/AllSkyKamera && python3 -m scripts.bme280_logger"
-   },
-</code>
-
-## DS18B20
-<br>**Beschreibung:**
-<br>Dieses Modul liest den Sensor DS18B20 aus und überträgt die Daten in die Datenbank.
-Der Sensor selbst liefert:
-- Temperatur
-<br>**Aufruf:**
-<br><code>
-cd ~/AllSkyKamera
-python3 -m scripts.ds18b20_logger
-</code>
-<br>**Cronjob:**
-<br>Diese Funktion sollte in einem kurzen Intervall ausgeführt (1-2 Minuten) werden.
-<br>**config.py:**
-<br>Hier ein Beispiel aus der config.py:
-<br><code>
-   {
-       "comment": "DS18B20 Sensor",
-       "schedule": "*/1 * * * *",
-       "command": "cd /home/pi/AllSkyKamera && python3 -m scripts.ds18b20_logger"
-   },
-</code>
-
-## TSL2591
-<br>**Beschreibung:**
-<br>Dieses Modul liest den Sensor TSL2591 aus und überträgt die Daten in die Datenbank.
-Der Sensor selbst liefert:
-- Helligkeit in LUX
-- Helligkeit im sichtbaren Bereich
-- Helligkeit im Infrarot-Bereich
-- Helligkeit (Vollspektrum sichtbar + IR)
-
-Berechnet werden:
-- SQM (gesamt)
-- SQM im sichtbaren
-
-<br>**Aufruf:**
-<br><code>
-cd ~/AllSkyKamera
-python3 -m scripts.tsl2591_logger
-</code>
-<br>**Cronjob:**
-<br>Diese Funktion sollte in einem kurzen Intervall ausgeführt (1-2 Minuten) werden.
-<br>**config.py:**
-<br>Hier ein Beispiel aus der config.py:
-<br><code>
-   {
-       "comment": "TSL2591 Sensor",
-       "schedule": "*/1 * * * *",
-       "command": "cd /home/pi/AllSkyKamera && python3 -m scripts.tsl2591_logger"
-   },
-</code>
-
-## MLX90614
-<br>**Beschreibung:**
-<br>Dieses Modul liest den Sensor MLX90614 aus und überträgt die Daten in die Datenbank.
-Der Sensor selbst liefert:
-- Ambient-Temperatur
-- Object-Temperatur
-
-<br>**Aufruf:**
-<br><code>
-cd ~/AllSkyKamera
-python3 -m scripts.mlx90614_logger
-</code>
-<br>**Cronjob:**
-<br>Diese Funktion sollte in einem kurzen Intervall ausgeführt (1-2 Minuten) werden.
-<br>**config.py:**
-<br>Hier ein Beispiel aus der config.py:
-<br><code>
-   {
-       "comment": "MLX90614 Sensor",
-       "schedule": "*/1 * * * *",
-       "command": "cd /home/pi/AllSkyKamera && python3 -m scripts.mlx90614_logger"
-   },
-</code>
-
-## DHT11
-<br>**Beschreibung:**
-<br>Dieses Modul liest den Sensor DHT11 aus und überträgt die Daten in die Datenbank.
-Der Sensor selbst liefert:
-- Temperatur
-- Luftfeuchtigkeit
-
-<br>**Aufruf:**
-<br><code>
-cd ~/AllSkyKamera
-python3 -m scripts.dht11_logger
-</code>
-<br>**Cronjob:**
-<br>Diese Funktion sollte in einem kurzen Intervall ausgeführt (1-2 Minuten) werden.
-<br>**config.py:**
-<br>Hier ein Beispiel aus der config.py:
-<br><code>
-   {
-       "comment": "DHT11 Sensor",
-       "schedule": "*/1 * * * *",
-       "command": "cd /home/pi/AllSkyKamera && python3 -m scripts.dht11_logger"
-   },
-</code>
-
-## DHT22
-<br>**Beschreibung:**
-<br>Dieses Modul liest den Sensor DHT22 aus und überträgt die Daten in die Datenbank.
-Der Sensor selbst liefert:
-- Temperatur
-- Luftfeuchtigkeit
-
-<br>**Aufruf:**
-<br><code>
-cd ~/AllSkyKamera
-python3 -m scripts.dht22_logger
-</code>
-<br>**Cronjob:**
-<br>Diese Funktion sollte in einem kurzen Intervall ausgeführt (1-2 Minuten) werden.
-<br>**config.py:**
-<br>Hier ein Beispiel aus der config.py:
-<br><code>
-   {
-       "comment": "DHT22 Sensor",
-       "schedule": "*/1 * * * *",
-       "command": "cd /home/pi/AllSkyKamera && python3 -m scripts.dht22_logger"
-   },
-</code>
+   ```bash
+   crontab -l
+   ```
