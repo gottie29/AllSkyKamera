@@ -119,18 +119,23 @@ Der letzte Schritt ist die Übertragung der configuration an den Server. Sobald 
 Nach der Installtion muss die Kamera, das Interface oder die Rapsberry Pi <strong>nicht</strong> neu gestartet werden. Sobald die Conjobs eingetragen sind, startet die Übertragung.
 Sollte auf der Webseite nichts erscheinen, wurde die configuration nicht übertragen oder die Cronjobs laufen noch nicht.
 
-## Deinstallation
+## Uninstallation
 
-Um die Bilbiothek von der Raspberry-Pi zu entfernen, reicht es aus das Skript uninstall.sh aufzurufen.
+To remove the AllSkyKamera library from your Raspberry Pi, you can use the
+uninstallation script:
 
- Aufruf der Deinstallation
-   <code>
+   ```bash
    cd ~/AllSkyKamera
    ./uninstall.sh
-   </code>
 
-Dabei wird die Bibliothek gelöscht und ebenso alle Cronjobs auf der Cron-Tabelle entfernt.
-Um das zu überprüfen, kann man mit <code>crontab -l</code> sich die Tabelle anschauen.
+This will:
+- remove the library directory
+- remove all cronjobs created by the installer
+
+You can verify your current cron table with:
+
+   ```bash
+   crontab -l
 
 # Cronjobs
 
