@@ -5,6 +5,15 @@ Python library for all-sky cameras in the **AllSkyKamera** network
 
 Version: v2025.12.09_01
 
+## Further documentation and Wiki
+
+For extended guides, troubleshooting, sensor information, development notes and advanced configuration,  
+please visit the official AllSkyKamera Wiki:
+
+🔗 **https://github.com/gottie29/AllSkyKamera/wiki**
+
+The Wiki is continuously updated and contains many additional examples and best practices.
+
 ## Description
 
 The AllSkyKamera network is a collection of all-sky cameras at different locations.
@@ -217,7 +226,6 @@ Keograms provide a quick visual overview of cloud cover and sky transitions thro
 Startrail images show the apparent motion of stars across the sky, created by stacking all long-exposure frames of the night.  
 These files are uploaded to the server.
 
-
 Startrails offer insight into sky rotation, sky quality and cloud dynamics.
 
 ---
@@ -227,9 +235,6 @@ Depending on the camera configuration, the library may also upload:
 
 - `image.jpg` → current live image  
 - `config.json` → camera configuration for website display  
-- `sqm.json` → nightly sky brightness data  
-- `analemma_*.jpg` → if Analemma mode is enabled  
-- Sensor data JSON files (`internal_sensors_display.json`, `ext_sensors_config.json`)  
 
 All uploads follow the directory structure used by the AllSkyKamera server.
 
@@ -327,4 +332,30 @@ All sensor settings are controlled via `setup.sh`:
 - Set logging interval  
 - Write updated cronjobs  
 
+## API Access
 
+The AllSkyKamera ecosystem provides a dedicated and secure API for external sensors,
+weather stations, microcontrollers (ESP32, ESP8266, Arduino), and custom data sources.
+
+The API documentation is available here:
+
+🔗 **https://allskykamera.space/api-doc.php**
+
+The page includes:
+
+- how to request an API key  
+- authentication requirements  
+- allowed request formats  
+- examples for sending multiple sensor values  
+- error codes and common responses  
+
+A detailed guide, including Python and ESP32 examples, can also be found in the Wiki:
+
+🔗 **https://github.com/gottie29/AllSkyKamera/wiki**
+
+## Additional information
+
+For more details about installation, sensor integration, overlays, plotting tools, backend processes,
+and internal structure of the library, consult the AllSkyKamera Wiki:
+
+🔗 **https://github.com/gottie29/AllSkyKamera/wiki**
