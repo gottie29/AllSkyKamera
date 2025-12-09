@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Entfernt versehentliche CRLF-Zeilenenden bei Aufruf
-if command -v dos2unix &>/dev/null; then
-    dos2unix "$0" &>/dev/null || true
+# Normalize possible CRLF line endings on first run
+if command -v dos2unix >/dev/null 2>&1; then
+    dos2unix "$0" >/dev/null 2>&1 || true
 else
     sed -i 's/\r$//' "$0" || true
 fi
@@ -12,110 +12,135 @@ export LC_ALL=C.UTF-8
 export PYTHONIOENCODING=UTF-8
 export PYTHONUTF8=1
 
-# Muss im Projekt-Root (mit askutils/) ausgefuehrt werden.
+# --------------------------------------------------------------------
+# 0. Basic checks
+# --------------------------------------------------------------------
 if [ ! -d "askutils" ]; then
-    echo " Dieses Skript muss im Projekt-Root (mit askutils/) aufgerufen werden."
+    echo "This script must be executed in the project root (with askutils/)."
     exit 1
 fi
 
 PROJECT_ROOT="$(pwd)"
-echo "Arbeitsverzeichnis: $PROJECT_ROOT"
+echo "Project root: ${PROJECT_ROOT}"
 
-# Sofortige Pruefung: existiert bereits eine askutils/config.py?
-if [ -f askutils/config.py ]; then
-  read -r -p "askutils/config.py existiert bereits. Moechten Sie sie sichern und neu anlegen? (y/n): " OVERWRITE
-  case "$OVERWRITE" in
-    [Yy]* )
-      mv askutils/config.py askutils/config.old.py
-      echo "-> Alte config.py wurde in askutils/config.old.py umbenannt."
-      ;;
-    * )
-      echo "-> Bestehende askutils/config.py bleibt erhalten. Installation abgebrochen."
-      exit 0
-      ;;
-  esac
+CFG_FILE="askutils/config.py"
+SECRET_FILE="askutils/ASKsecret.py"
+
+if [ -f "$CFG_FILE" ] || [ -f "$SECRET_FILE" ]; then
+    echo
+    echo "Existing configuration detected:"
+    [ -f "$CFG_FILE" ] && echo " - ${CFG_FILE}"
+    [ -f "$SECRET_FILE" ] && echo " - ${SECRET_FILE}"
+    read -r -p "Do you want to backup and overwrite these files? (y/n): " OVERWRITE
+    case "${OVERWRITE}" in
+        [Yy]* )
+            [ -f "$CFG_FILE" ] && mv "$CFG_FILE" "askutils/config.py.bak"
+            [ -f "$SECRET_FILE" ] && mv "$SECRET_FILE" "askutils/ASKsecret.py.bak"
+            echo "Old configuration files have been renamed to .bak."
+            ;;
+        * )
+            echo "Keeping existing configuration. Installation aborted."
+            exit 0
+            ;;
+    esac
 fi
 
-# Schritt 0: API-Key
+# --------------------------------------------------------------------
+# 1. API key
+# --------------------------------------------------------------------
 echo
-echo "Um einen API-Key zu erhalten, besuchen Sie: https://allskykamera.space"
-read -r -p "Haben Sie bereits einen API-Key? (y/n): " HAS_KEY
-case "$HAS_KEY" in
-  [Yy]* ) ;;
-  * )
-    echo "Bitte beantragen Sie einen API-Key auf https://allskykamera.space und fuehren Sie das Skript erneut aus."
-    exit 1
-    ;;
+echo "=== 1. API access ==="
+echo "To request an API key, please visit: https://allskykamera.space"
+read -r -p "Do you already have an API key? (y/n): " HAS_KEY
+case "${HAS_KEY}" in
+    [Yy]* )
+        ;;
+    * )
+        echo "Please request an API key at https://allskykamera.space and run this script again."
+        exit 1
+        ;;
 esac
 
 echo
-echo "=== 0. API-Zugangsdaten abfragen & testen ==="
 read -r -p "API_KEY: " API_KEY
+
+# Encoded API URL (base64) to avoid hardcoding plain text URL in the file
 ENC_API_URL="aHR0cHM6Ly9hbGxza3lrYW1lcmEuc3BhY2UvZ2V0U2VjcmV0cy5waHA="
-API_URL=$(printf '%s' "$ENC_API_URL" | base64 -d)
+API_URL="$(printf '%s' "${ENC_API_URL}" | base64 -d)"
 
-echo "> Teste API-Zugang..."
-if ! RESPONSE=$(curl -s --fail "${API_URL}?key=${API_KEY}"); then
-    echo " API-URL oder Netzwerkfehler. Abbruch."
-    exit 1
-fi
-
-if echo "$RESPONSE" | grep -q '"error"'; then
-    ERRMSG=$(echo "$RESPONSE" | sed -n 's/.*"error"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
-    echo " API-Fehler: ${ERRMSG:-unbekannt}. Abbruch."
-    exit 1
-fi
-
-INFLUX_URL=$(echo "$RESPONSE" | sed -n 's/.*"influx_url"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
-KAMERA_ID=$(echo "$RESPONSE" | sed -n 's/.*"kamera_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
-
-if [ -z "$INFLUX_URL" ] || [ -z "$KAMERA_ID" ]; then
-    echo " UnGueltige API-Antwort. Abbruch."
-    exit 1
-fi
-
-echo "API-Zugang validiert."
-echo "-> Verbundene Kamera-ID: $KAMERA_ID"
-
-# Schritt 1: Pfad zum Thomas-Jaquin-Interface
 echo
-echo "=== 1. Pfad zum Thomas-Jaquin-Interface ==="
-DEFAULT_ALLSKY_PATH="$HOME/allsky"
-read -r -p "Pfad zum Interface [Default: $DEFAULT_ALLSKY_PATH]: " ALLSKY_PATH
-ALLSKY_PATH=${ALLSKY_PATH:-$DEFAULT_ALLSKY_PATH}
-echo "-> Interface-Pfad: $ALLSKY_PATH"
+echo "> Testing API access..."
+if ! RESPONSE="$(curl -s --fail "${API_URL}?key=${API_KEY}")"; then
+    echo "API URL or network error. Aborting."
+    exit 1
+fi
 
-# Schritt 2: System-Pakete installieren
+if echo "${RESPONSE}" | grep -q '"error"'; then
+    ERRMSG="$(echo "${RESPONSE}" | sed -n 's/.*"error"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')"
+    echo "API error: ${ERRMSG:-unknown}. Aborting."
+    exit 1
+fi
+
+INFLUX_URL_FROM_API="$(echo "${RESPONSE}" | sed -n 's/.*"influx_url"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')"
+KAMERA_ID_FROM_API="$(echo "${RESPONSE}" | sed -n 's/.*"kamera_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')"
+
+if [ -z "${INFLUX_URL_FROM_API}" ] || [ -z "${KAMERA_ID_FROM_API}" ]; then
+    echo "Invalid API response. Aborting."
+    exit 1
+fi
+
+echo "API access validated."
+echo "Camera ID from server: ${KAMERA_ID_FROM_API}"
+
+# --------------------------------------------------------------------
+# 2. Path to Thomas Jacquin allsky interface
+# --------------------------------------------------------------------
 echo
-echo "=== 2. System-Pakete installieren ==="
+echo "=== 2. Path to allsky interface ==="
+DEFAULT_ALLSKY_PATH="${HOME}/allsky"
+read -r -p "Path to allsky interface [default: ${DEFAULT_ALLSKY_PATH}]: " ALLSKY_PATH
+ALLSKY_PATH="${ALLSKY_PATH:-${DEFAULT_ALLSKY_PATH}}"
+echo "Using allsky path: ${ALLSKY_PATH}"
+
+# --------------------------------------------------------------------
+# 3. Install system packages
+# --------------------------------------------------------------------
+echo
+echo "=== 3. Installing system packages (requires sudo) ==="
 sudo apt-get update
 sudo apt-get install -y \
     python3-pip python3-venv python3-smbus i2c-tools raspi-config \
     python3-psutil libatlas-base-dev python3-pil curl dos2unix \
-    python3-libgpiod
+    python3-libgpiod whiptail
 
-# Schritt 3: Schnittstellen aktivieren
+# --------------------------------------------------------------------
+# 4. Enable interfaces (non-interactive)
+# --------------------------------------------------------------------
 echo
-echo "=== 3. I2C, 1-Wire und Kamera aktivieren ==="
-if sudo raspi-config nonint do_i2c 0 &>/dev/null; then
-  echo "-> I2C aktiviert."
+echo "=== 4. Enabling I2C, 1-Wire and camera (if supported) ==="
+if sudo raspi-config nonint do_i2c 0 >/dev/null 2>&1; then
+    echo "I2C enabled."
 else
-  echo "-> I2C uebersprungen."
-fi
-if sudo raspi-config nonint do_1wire 0 &>/dev/null; then
-  echo "-> 1-Wire aktiviert."
-else
-  echo "-> 1-Wire uebersprungen."
-fi
-if sudo raspi-config nonint do_camera 0 &>/dev/null; then
-  echo "-> Kamera aktiviert."
-else
-  echo "-> Kamera uebersprungen."
+    echo "I2C configuration skipped."
 fi
 
-# Schritt 4: Python-Abhaengigkeiten installieren
+if sudo raspi-config nonint do_1wire 0 >/dev/null 2>&1; then
+    echo "1-Wire enabled."
+else
+    echo "1-Wire configuration skipped."
+fi
+
+if sudo raspi-config nonint do_camera 0 >/dev/null 2>&1; then
+    echo "Camera enabled."
+else
+    echo "Camera configuration skipped (may not be supported on this system)."
+fi
+
+# --------------------------------------------------------------------
+# 5. Python dependencies
+# --------------------------------------------------------------------
 echo
-echo "=== 4. Python-Abhaengigkeiten installieren ==="
+echo "=== 5. Installing Python dependencies (user scope) ==="
 pip3 install --user \
     influxdb-client \
     adafruit-circuitpython-tsl2591 \
@@ -126,371 +151,169 @@ pip3 install --user \
     matplotlib \
     --break-system-packages
 
-# Schritt 5: askutils/ASKsecret.py anlegen
+# --------------------------------------------------------------------
+# 6. Create askutils/ASKsecret.py
+# --------------------------------------------------------------------
 echo
-echo "=== 5. askutils/ASKsecret.py anlegen ==="
-cat > askutils/ASKsecret.py <<EOF
+echo "=== 6. Creating askutils/ASKsecret.py ==="
+cat > "${SECRET_FILE}" <<EOF
 import base64
 
-# Automatisch generierte Datei - nicht ins Repo committen!
+# Automatically generated file - do not commit to git!
 API_KEY = "${API_KEY}"
 ENC_API_URL = "${ENC_API_URL}"
 API_URL = base64.b64decode(ENC_API_URL).decode()
 EOF
-echo "-> askutils/ASKsecret.py erstellt"
 
-# Schritt 6: askutils/config.py anlegen
+echo "Created ${SECRET_FILE}"
+
+# --------------------------------------------------------------------
+# 7. Create a minimal default askutils/config.py
+#    Detailed configuration will be done via ./setup.sh
+# --------------------------------------------------------------------
 echo
-echo "=== 6. askutils/config.py anlegen ==="
+echo "=== 7. Creating minimal askutils/config.py ==="
 
-# Kamera-Grunddaten
-read -r -p "Name der Kamera (z.B. Meine AllskyCam): " KAMERA_NAME
-read -r -p "Name des Standortes (z.B. Berliner Sternwarte): " STANDORT_NAME
-read -r -p "Benutzername (z.B. Tom Mustermann): " BENUTZER_NAME
-read -r -p "E-Mailadresse (optional): " KONTAKT_EMAIL
-read -r -p "Webseite (optional): " WEBSITE
-
-# Standortkoordinaten
-read -r -p "Breitengrad des Standortes (z.B. 52.1253): " LATITUDE
-read -r -p "Laengengrad des Standortes (z.B. 13.1245): " LONGITUDE
-
-# Image-Pfade (fest)
-IMAGE_BASE_PATH="images"
-IMAGE_PATH="tmp"
-echo "-> IMAGE_BASE_PATH=$IMAGE_BASE_PATH, IMAGE_PATH=$IMAGE_PATH"
-
-# Objektiv- & SQM-Daten
-read -r -p "Pixelgroesse des Kamerachips in mm (z.B. 0.00155): " PIX_SIZE_MM
-read -r -p "Brennweite in mm (z.B. 1.85): " FOCAL_MM
-read -r -p "Nullpunkt Helligkeit ZP (Default: 6.0): " ZP_INPUT
-ZP=${ZP_INPUT:-6.0}
-read -r -p "SQM-Patchgroesse in Pixeln (z.B. 100): " SQM_PATCH_SIZE
-
-# Sensorenauswahl mit Overlay-Abfrage
-read -r -p "BME280 verwenden? (y/n): " USE_BME
-if [[ "$USE_BME" =~ ^[Yy] ]]; then
-  BME280_ENABLED=True
-  read -r -p "I2C-Adresse BME280 (z.B. 0x76): " BME280_I2C_ADDRESS
-  read -r -p "BME280_Overlay anlegen? (y/n): " BME280_OVERLAY_ANSWER
-  BME280_OVERLAY=$([[ "$BME280_OVERLAY_ANSWER" =~ ^[Yy] ]] && echo True || echo False)
-else
-  BME280_ENABLED=False
-  BME280_I2C_ADDRESS=0x00
-  BME280_OVERLAY=False
-fi
-
-read -r -p "TSL2591 verwenden? (y/n): " USE_TSL
-if [[ "$USE_TSL" =~ ^[Yy] ]]; then
-  TSL2591_ENABLED=True
-  read -r -p "I2C-Adresse TSL2591 (z.B. 0x29): " TSL2591_I2C_ADDRESS
-  read -r -p "SQM2-Limit (z.B. 6.0): " TSL2591_SQM2_LIMIT
-  read -r -p "SQM-Korrekturwert (z.B. 0.0): " TSL2591_SQM_CORRECTION
-  read -r -p "TSL2591_Overlay anlegen? (y/n): " TSL2591_OVERLAY_ANSWER
-  TSL2591_OVERLAY=$([[ "$TSL2591_OVERLAY_ANSWER" =~ ^[Yy] ]] && echo True || echo False)
-else
-  TSL2591_ENABLED=False
-  TSL2591_I2C_ADDRESS=0x00
-  TSL2591_SQM2_LIMIT=0.0
-  TSL2591_SQM_CORRECTION=0.0
-  TSL2591_OVERLAY=False
-fi
-
-read -r -p "DS18B20 verwenden? (y/n): " USE_DS
-if [[ "$USE_DS" =~ ^[Yy] ]]; then
-  DS18B20_ENABLED=True
-  read -r -p "DS18B20_Overlay anlegen? (y/n): " DS18B20_OVERLAY_ANSWER
-  DS18B20_OVERLAY=$([[ "$DS18B20_OVERLAY_ANSWER" =~ ^[Yy] ]] && echo True || echo False)
-else
-  DS18B20_ENABLED=False
-  DS18B20_OVERLAY=False
-fi
-
-# DHT11
-read -r -p "DHT11 verwenden? (y/n): " USE_DHT11
-if [[ "$USE_DHT11" =~ ^[Yy] ]]; then
-  DHT11_ENABLED=True
-  read -r -p "DHT11 GPIO (BCM-Nummer, z.B. 6): " DHT11_GPIO_BCM
-  DHT11_GPIO_BCM=${DHT11_GPIO_BCM:-6}
-  read -r -p "DHT11 Retries pro Messung (z.B. 10): " DHT11_RETRIES
-  DHT11_RETRIES=${DHT11_RETRIES:-10}
-  read -r -p "DHT11 Retry-Delay in Sekunden (z.B. 0.3): " DHT11_RETRY_DELAY
-  DHT11_RETRY_DELAY=${DHT11_RETRY_DELAY:-0.3}
-  read -r -p "DHT11 Overlay anlegen? (y/n): " DHT11_OVERLAY_ANSWER
-  DHT11_OVERLAY=$([[ "$DHT11_OVERLAY_ANSWER" =~ ^[Yy] ]] && echo True || echo False)
-else
-  DHT11_ENABLED=False
-  DHT11_GPIO_BCM=6
-  DHT11_RETRIES=10
-  DHT11_RETRY_DELAY=0.3
-  DHT11_OVERLAY=False
-fi
-
-# DHT22
-read -r -p "DHT22 verwenden? (y/n): " USE_DHT22
-if [[ "$USE_DHT22" =~ ^[Yy] ]]; then
-  DHT22_ENABLED=True
-  read -r -p "DHT22 GPIO (BCM-Nummer, z.B. 6): " DHT22_GPIO_BCM
-  DHT22_GPIO_BCM=${DHT22_GPIO_BCM:-6}
-  read -r -p "DHT22 Retries pro Messung (z.B. 10): " DHT22_RETRIES
-  DHT22_RETRIES=${DHT22_RETRIES:-10}
-  read -r -p "DHT22 Retry-Delay in Sekunden (z.B. 0.3): " DHT22_RETRY_DELAY
-  DHT22_RETRY_DELAY=${DHT22_RETRY_DELAY:-0.3}
-  read -r -p "DHT22 Overlay anlegen? (y/n): " DHT22_OVERLAY_ANSWER
-  DHT22_OVERLAY=$([[ "$DHT22_OVERLAY_ANSWER" =~ ^[Yy] ]] && echo True || echo False)
-else
-  DHT22_ENABLED=False
-  DHT22_GPIO_BCM=6
-  DHT22_RETRIES=10
-  DHT22_RETRY_DELAY=0.3
-  DHT22_OVERLAY=False
-fi
-
-# MLX90614
-read -r -p "MLX90614 verwenden? (y/n): " USE_MLX
-if [[ "$USE_MLX" =~ ^[Yy] ]]; then
-  MLX90614_ENABLED=True
-  read -r -p "I2C-Adresse MLX90614 (z.B. 0x5A): " MLX90614_I2C_ADDRESS
-else
-  MLX90614_ENABLED=False
-  MLX90614_I2C_ADDRESS=0x00
-fi
-
-# KP-Index & Analemma
-read -r -p "KP-Index als Overlay verwenden? (y/n): " USE_KP
-if [[ "$USE_KP" =~ ^[Yy] ]]; then
-  KPINDEX_OVERLAY=True
-else
-  KPINDEX_OVERLAY=False
-fi
-
-read -r -p "Analemma generieren? (y/n): " USE_ANALEMMA
-if [[ "$USE_ANALEMMA" =~ ^[Yy] ]]; then
-  ANALEMMA_ENABLED=True
-else
-  ANALEMMA_ENABLED=False
-fi
-
-# CRONTAB-Bloecke vorbereiten
-CRONTAB_BLOCKS=""
-
-if [ "${BME280_ENABLED}" = "True" ]; then
-CRONTAB_BLOCKS="$CRONTAB_BLOCKS
-    {
-        \"comment\": \"BME280 Sensor\",
-        \"schedule\": \"*/1 * * * *\",
-        \"command\": \"cd ${PROJECT_ROOT} && python3 -m scripts.bme280_logger\"
-    },"
-else
-CRONTAB_BLOCKS="$CRONTAB_BLOCKS
-    # BME280 deaktiviert"
-fi
-
-if [ "${MLX90614_ENABLED}" = "True" ]; then
-CRONTAB_BLOCKS="$CRONTAB_BLOCKS
-    {
-        \"comment\": \"MLX90614 Sensor\",
-        \"schedule\": \"*/1 * * * *\",
-        \"command\": \"cd ${PROJECT_ROOT} && python3 -m scripts.mlx90614_logger\"
-    },"
-else
-CRONTAB_BLOCKS="$CRONTAB_BLOCKS
-    # MLX90614 deaktiviert"
-fi
-
-if [ "${TSL2591_ENABLED}" = "True" ]; then
-CRONTAB_BLOCKS="$CRONTAB_BLOCKS
-    {
-        \"comment\": \"TSL2591 Sensor\",
-        \"schedule\": \"*/1 * * * *\",
-        \"command\": \"cd ${PROJECT_ROOT} && python3 -m scripts.tsl2591_logger\"
-    },"
-else
-CRONTAB_BLOCKS="$CRONTAB_BLOCKS
-    # TSL2591 deaktiviert"
-fi
-
-if [ "${DS18B20_ENABLED}" = "True" ]; then
-CRONTAB_BLOCKS="$CRONTAB_BLOCKS
-    {
-        \"comment\": \"DS18B20 Sensor\",
-        \"schedule\": \"*/1 * * * *\",
-        \"command\": \"cd ${PROJECT_ROOT} && python3 -m scripts.ds18b20_logger\"
-    },"
-else
-CRONTAB_BLOCKS="$CRONTAB_BLOCKS
-    # DS18B20 deaktiviert"
-fi
-
-# DHT11 Cron
-if [ "${DHT11_ENABLED}" = "True" ]; then
-CRONTAB_BLOCKS="$CRONTAB_BLOCKS
-    {
-        \"comment\": \"DHT11 Sensor\",
-        \"schedule\": \"*/1 * * * *\",
-        \"command\": \"cd ${PROJECT_ROOT} && python3 -m scripts.dht11_logger\"
-    },"
-else
-CRONTAB_BLOCKS="$CRONTAB_BLOCKS
-    # DHT11 deaktiviert"
-fi
-
-# DHT22 Cron
-if [ "${DHT22_ENABLED}" = "True" ]; then
-CRONTAB_BLOCKS="$CRONTAB_BLOCKS
-    {
-        \"comment\": \"DHT22 Sensor\",
-        \"schedule\": \"*/1 * * * *\",
-        \"command\": \"cd ${PROJECT_ROOT} && python3 -m scripts.dht22_logger\"
-    },"
-else
-CRONTAB_BLOCKS="$CRONTAB_BLOCKS
-    # DHT22 deaktiviert"
-fi
-
-if [ "${KPINDEX_OVERLAY}" = "True" ]; then
-CRONTAB_BLOCKS="$CRONTAB_BLOCKS
-    {
-        \"comment\": \"Generiere KPIndex Overlay variable\",
-        \"schedule\": \"*/15 * * * *\",
-        \"command\": \"cd ${PROJECT_ROOT} && python3 -m scripts.kpindex_logger\"
-    },"
-else
-CRONTAB_BLOCKS="$CRONTAB_BLOCKS
-    # KPIndex Overlay ist deaktiviert"
-fi
-
-if [ "${ANALEMMA_ENABLED}" = "True" ]; then
-CRONTAB_BLOCKS="$CRONTAB_BLOCKS
-    {
-        \"comment\": \"Generiere Analemma\",
-        \"schedule\": \"54/11 * * * *\",
-        \"command\": \"cd ${PROJECT_ROOT} && python3 -m scripts.analemma\"
-    },"
-else
-CRONTAB_BLOCKS="$CRONTAB_BLOCKS
-    # Analemma ist deaktiviert"
-fi
-
-# write config.py
-cat > askutils/config.py <<EOF
-# config.py - automatisch generiert
+cat > "${CFG_FILE}" <<EOF
+# config.py - automatically generated by install.sh
 
 try:
     from askutils.ASKsecret import API_KEY, API_URL
 except ImportError:
-    API_KEY = API_URL = None
+    API_KEY = None
+    API_URL = None
 
-# Kameradaten
-KAMERA_ID      = "${KAMERA_ID}"
-KAMERA_NAME    = "${KAMERA_NAME}"
-STANDORT_NAME  = "${STANDORT_NAME}"
-BENUTZER_NAME  = "${BENUTZER_NAME}"
-KONTAKT_EMAIL  = "${KONTAKT_EMAIL}"
-WEBSEITE       = "${WEBSITE}"
+# Basic camera data (will be overwritten by setup.sh if you run it)
+KAMERA_ID      = "${KAMERA_ID_FROM_API}"
+KAMERA_NAME    = "My AllSky Camera"
+STANDORT_NAME  = "My location"
+BENUTZER_NAME  = "Operator"
+KONTAKT_EMAIL  = ""
+WEBSEITE       = ""
 
-# Standortkoordinaten
-LATITUDE       = ${LATITUDE}
-LONGITUDE      = ${LONGITUDE}
+# Location coordinates (example values, change with setup.sh)
+LATITUDE       = 52.0
+LONGITUDE      = 13.0
 
-# Pfade
+# Paths
 ALLSKY_PATH     = "${ALLSKY_PATH}"
-IMAGE_BASE_PATH = "${IMAGE_BASE_PATH}"
-IMAGE_PATH      = "${IMAGE_PATH}"
-INDI=0
+IMAGE_BASE_PATH = "images"
+IMAGE_PATH      = "tmp"
+INDI            = 0
+CAMERAID        = "ccd_unknown"
 
-# Objektiv- & SQM-Daten
-PIX_SIZE_MM    = ${PIX_SIZE_MM}
-FOCAL_MM       = ${FOCAL_MM}
-ZP             = ${ZP}
-SQM_PATCH_SIZE = ${SQM_PATCH_SIZE}
+# Optics and SQM defaults
+PIX_SIZE_MM    = 0.00155
+FOCAL_MM       = 1.85
+ZP             = 6.0
+SQM_PATCH_SIZE = 100
 
-# Sensoren
-BME280_ENABLED      = ${BME280_ENABLED}
-BME280_I2C_ADDRESS  = ${BME280_I2C_ADDRESS}
-BME280_OVERLAY      = ${BME280_OVERLAY}
+# Sensors: disabled by default, setup.sh will enable and configure them
+BME280_ENABLED      = False
+BME280_NAME         = "BME280"
+BME280_I2C_ADDRESS  = 0x76
+BME280_OVERLAY      = False
 
-TSL2591_ENABLED         = ${TSL2591_ENABLED}
-TSL2591_I2C_ADDRESS     = ${TSL2591_I2C_ADDRESS}
-TSL2591_SQM2_LIMIT      = ${TSL2591_SQM2_LIMIT}
-TSL2591_SQM_CORRECTION  = ${TSL2591_SQM_CORRECTION}
-TSL2591_OVERLAY         = ${TSL2591_OVERLAY}
+TSL2591_ENABLED        = False
+TSL2591_NAME           = "TSL2591"
+TSL2591_I2C_ADDRESS    = 0x29
+TSL2591_SQM2_LIMIT     = 0.0
+TSL2591_SQM_CORRECTION = 0.0
+TSL2591_OVERLAY        = False
 
-DS18B20_ENABLED = ${DS18B20_ENABLED}
-DS18B20_OVERLAY = ${DS18B20_OVERLAY}
+DS18B20_ENABLED  = False
+DS18B20_NAME     = "DS18B20"
+DS18B20_OVERLAY  = False
 
 # DHT11
-DHT11_ENABLED      = ${DHT11_ENABLED}
-DHT11_GPIO_BCM     = ${DHT11_GPIO_BCM}
-DHT11_RETRIES      = ${DHT11_RETRIES}
-DHT11_RETRY_DELAY  = ${DHT11_RETRY_DELAY}
-DHT11_OVERLAY      = ${DHT11_OVERLAY}
+DHT11_ENABLED      = False
+DHT11_NAME         = "DHT11"
+DHT11_GPIO_BCM     = 6
+DHT11_RETRIES      = 10
+DHT11_RETRY_DELAY  = 0.3
+DHT11_OVERLAY      = False
 
 # DHT22
-DHT22_ENABLED      = ${DHT22_ENABLED}
-DHT22_GPIO_BCM     = ${DHT22_GPIO_BCM}
-DHT22_RETRIES      = ${DHT22_RETRIES}
-DHT22_RETRY_DELAY  = ${DHT22_RETRY_DELAY}
-DHT22_OVERLAY      = ${DHT22_OVERLAY}
+DHT22_ENABLED      = False
+DHT22_NAME         = "DHT22"
+DHT22_GPIO_BCM     = 6
+DHT22_RETRIES      = 10
+DHT22_RETRY_DELAY  = 0.3
+DHT22_OVERLAY      = False
 
-MLX90614_ENABLED=${MLX90614_ENABLED}
-MLX90614_I2C_ADDRESS=${MLX90614_I2C_ADDRESS}
+MLX90614_ENABLED     = False
+MLX90614_NAME        = "MLX90614"
+MLX90614_I2C_ADDRESS = 0x5a
 
-KPINDEX_OVERLAY = ${KPINDEX_OVERLAY}
+# Logger intervals in minutes
+BME280_LOG_INTERVAL_MIN   = 1
+TSL2591_LOG_INTERVAL_MIN  = 1
+DS18B20_LOG_INTERVAL_MIN  = 1
+DHT11_LOG_INTERVAL_MIN    = 1
+DHT22_LOG_INTERVAL_MIN    = 1
+MLX90614_LOG_INTERVAL_MIN = 1
 
-ANALEMMA_ENABLED = ${ANALEMMA_ENABLED}
+# KpIndex / Analemma / camera
+KPINDEX_ENABLED = False
+KPINDEX_OVERLAY = False
+KPINDEX_LOG_INTERVAL_MIN = 15
+
+ANALEMMA_ENABLED = False
 KAMERA_WIDTH = 4056
 KAMERA_HEIGHT = 3040
-A_SHUTTER = 10       # 1 ms - deutlich kuerzer!
-A_GAIN = 1.0           # Kein Gain
+A_SHUTTER = 10
+A_GAIN = 1.0
 A_BRIGHTNESS = 0.0
 A_CONTRAST = 0.0
 A_SATURATION = 0.0
 A_PATH = "${PROJECT_ROOT}/tmp"
 
-# CRONTABS
+# CRONTABS - base jobs
 CRONTABS = [
     {
-        "comment": "Allsky Raspi-Status",
+        "comment": "Allsky Raspi status",
         "schedule": "*/1 * * * *",
-        "command": "cd ${PROJECT_ROOT} && python3 -m scripts.raspi_status"
+        "command": "cd ${PROJECT_ROOT} && python3 -m scripts.raspi_status",
     },
     {
-        "comment": "Config Update",
-        "schedule": "0 12 * * *",
-        "command": "cd ${PROJECT_ROOT} && python3 -m scripts.upload_config_json"
-    },${CRONTAB_BLOCKS}
-    {
-        "comment": "Image FTP-Upload",
+        "comment": "Allsky image upload",
         "schedule": "*/2 * * * *",
-        "command": "cd ${PROJECT_ROOT} && python3 -m scripts.run_image_upload"
+        "command": "cd ${PROJECT_ROOT} && python3 -m scripts.run_image_upload",
     },
     {
-        "comment": "Nightly FTP-Upload",
+        "comment": "Config update",
+        "schedule": "0 12 * * *",
+        "command": "cd ${PROJECT_ROOT} && python3 -m scripts.upload_config_json",
+    },
+    {
+        "comment": "Nightly FTP upload",
         "schedule": "45 8 * * *",
-        "command": "cd ${PROJECT_ROOT} && python3 -m scripts.run_nightly_upload"
+        "command": "cd ${PROJECT_ROOT} && python3 -m scripts.run_nightly_upload",
     },
     {
-        "comment": "SQM Messung",
+        "comment": "SQM measurement",
         "schedule": "*/5 * * * *",
-        "command": "cd ${PROJECT_ROOT} && python3 -m scripts.sqm_camera_logger"
+        "command": "cd ${PROJECT_ROOT} && python3 -m scripts.sqm_camera_logger",
     },
     {
-        "comment": "SQM Plot Generierung",
+        "comment": "SQM plot generation",
         "schedule": "0 8 * * *",
-        "command": "cd ${PROJECT_ROOT} && python3 -m scripts.plot_sqm_night"
-    }
+        "command": "cd ${PROJECT_ROOT} && python3 -m scripts.plot_sqm_night",
+    },
 ]
 
-###################################################################
-# Nichts aendern !!!
-###################################################################
-FTP_VIDEO_DIR = "videos"
-FTP_KEOGRAM_DIR = "keogram"
-FTP_STARTRAIL_DIR = "startrails"
-FTP_SQM_DIR = "sqm"
-FTP_ANALEMMA_DIR = "analemma"
+# Sensor logger cronjobs will be added dynamically by setup.sh
+# based on the *_ENABLED flags and *_LOG_INTERVAL_MIN values.
 
-# Secrets laden
+###################################################################
+# Do not change below this line
+###################################################################
+FTP_VIDEO_DIR      = "videos"
+FTP_KEOGRAM_DIR    = "keogram"
+FTP_STARTRAIL_DIR  = "startrails"
+FTP_SQM_DIR        = "sqm"
+FTP_ANALEMMA_DIR   = "analemma"
+
 from askutils.utils.load_secrets import load_remote_secrets
 _secrets = load_remote_secrets(API_KEY, API_URL)
 if _secrets:
@@ -508,26 +331,31 @@ else:
     FTP_USER = FTP_PASS = FTP_SERVER = FTP_REMOTE_DIR = None
 EOF
 
-echo "-> askutils/config.py erstellt"
+echo "Created ${CFG_FILE}"
 
-# Schritt 7: FTP-Upload testen
+# --------------------------------------------------------------------
+# 8. Optional: FTP upload test and initial config upload
+# --------------------------------------------------------------------
 echo
-echo "=== 7. FTP-Upload testen ==="
-python3 tests/ftp_upload_test.py
-
-# Schritt 8: Crontabs eintragen
-echo
-echo "=== 8. Crontabs eintragen ==="
-read -r -p "Sollen die Crontabs jetzt eingetragen werden? (y/n): " SET_CRON
-if [[ "$SET_CRON" =~ ^[Yy] ]]; then
-    echo "-> Trage Crontabs ein..."
-    cd "$PROJECT_ROOT" && python3 -m scripts.manage_crontabs
+read -r -p "Run FTP upload test now (tests/ftp_upload_test.py)? (y/n): " RUN_FTP_TEST
+if [ "${RUN_FTP_TEST}" = "y" ] || [ "${RUN_FTP_TEST}" = "Y" ]; then
+    if python3 tests/ftp_upload_test.py; then
+        echo "FTP upload test finished."
+    else
+        echo "FTP upload test failed. Please check the output above."
+    fi
 fi
 
-# Schritt 10: Uebertragung der config-Daten (config-json)
-echo "-> Upload der config.json..."
-cd "$PROJECT_ROOT" && python3 -m scripts.upload_config_json
+echo
+read -r -p "Upload config.json now and install cronjobs? (y/n): " RUN_SETUP
+if [ "${RUN_SETUP}" = "y" ] || [ "${RUN_SETUP}" = "Y" ]; then
+    cd "${PROJECT_ROOT}"
+    python3 -m scripts.upload_config_json || echo "upload_config_json failed."
+    python3 -m scripts.manage_crontabs || echo "manage_crontabs failed."
+fi
 
 echo
-echo "Installation und Konfiguration abgeschlossen!"
-echo "Ab sofort sollten alle Daten auf der Webseite https://allskykamera.space erscheinen."
+echo "Installation finished."
+echo "Next steps:"
+echo "  1) Run ./setup.sh to configure camera, sensors and intervals."
+echo "  2) After setup.sh, your configuration will be uploaded and cronjobs will be updated."

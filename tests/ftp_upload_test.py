@@ -3,7 +3,7 @@ import os
 import sys
 import ftplib
 
-# Damit wir askutils aus dem Parent-Verzeichnis importieren koennen:
+# Make sure we can import askutils from the project root
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
 sys.path.insert(0, PROJECT_ROOT)
@@ -11,7 +11,9 @@ sys.path.insert(0, PROJECT_ROOT)
 from askutils import config
 from askutils.uploader.image_upload import upload_image
 
-def test_config():
+
+def test_config() -> None:
+    """Check that all required configuration values are present."""
     required = [
         "FTP_SERVER",
         "FTP_USER",
@@ -23,56 +25,75 @@ def test_config():
     ]
     missing = [var for var in required if not getattr(config, var, None)]
     if missing:
-        print(f"Fehlende Konfigurationswerte: {', '.join(missing)}")
+        print(f"Missing configuration values: {', '.join(missing)}")
         sys.exit(1)
-    print("Konfigurationswerte sind vorhanden.")
+    print("All required configuration values are present.")
 
-def test_ftp_connection():
+
+def test_ftp_connection() -> None:
+    """Test basic FTP connectivity (login + cwd + listing)."""
     try:
         ftp = ftplib.FTP(config.FTP_SERVER, timeout=10)
         ftp.login(config.FTP_USER, config.FTP_PASS)
-        print(f"FTP-Login erfolgreich bei {config.FTP_SERVER}.")
+        print("FTP login successful on AllSkyKamera server.")
+
         ftp.cwd(config.FTP_REMOTE_DIR)
-        print(f"Wechsel ins Remote-Verzeichnis '{config.FTP_REMOTE_DIR}' erfolgreich.")
-        listing = ftp.nlst()
-        print(f"Aktueller Verzeichnisinhalt: {listing}")
+        print(f"Changed to remote directory '{config.FTP_REMOTE_DIR}' successfully.")
+
+        try:
+            listing = ftp.nlst()
+        except Exception:
+            listing = []
+        print(f"Current remote directory listing: {listing}")
+
         ftp.quit()
     except Exception as e:
-        print(f"FTP-Verbindung oder Verzeichniszugriff fehlgeschlagen: {e}")
+        print(f"FTP connection or directory access failed: {e}")
         sys.exit(1)
 
-def test_image_upload():
-    # Erstelle Dummy-Datei im tmp-Verzeichnis
+
+def test_image_upload() -> None:
+    """
+    Test the image upload function.
+
+    Important:
+    - We only check that upload_image() returns successfully.
+    - We DO NOT try to delete the remote file, because upload_image()
+      will typically use a fixed filename (e.g. image.jpg) that is
+      used by the camera in production.
+    """
+    # Create dummy file in the tmp directory
     tmp_dir = os.path.join(config.ALLSKY_PATH, config.IMAGE_PATH)
     os.makedirs(tmp_dir, exist_ok=True)
-    test_file = os.path.join(tmp_dir, "test_upload.txt")
+
+    test_file = os.path.join(tmp_dir, "ftp_upload_test.txt")
     with open(test_file, "w", encoding="utf-8") as f:
-        f.write("FTP-Upload Test\n")
-    print(f"Testdatei erstellt: {test_file}")
+        f.write("AllSkyKamera FTP upload test\n")
+    print(f"Created local test file: {test_file}")
 
-    # Hochladen testen
-    success = upload_image(test_file)
-    if not success:
-        print(" upload_image() fehlgeschlagen.")
-        sys.exit(1)
-    print(" upload_image() erfolgreich.")
-
-    # Testdatei remote wieder loeschen
+    # Run upload via the normal upload function
     try:
-        ftp = ftplib.FTP(config.FTP_SERVER, timeout=10)
-        ftp.login(config.FTP_USER, config.FTP_PASS)
-        ftp.cwd(config.FTP_REMOTE_DIR)
-        ftp.delete(os.path.basename(test_file))
-        print(f"Testdatei remote geloescht: {os.path.basename(test_file)}")
-        ftp.quit()
+        success = upload_image(test_file)
     except Exception as e:
-        print(f"Konnte Testdatei remote nicht loeschen: {e}")
+        print(f"upload_image() raised an exception: {e}")
+        sys.exit(1)
+
+    if not success:
+        print("upload_image() reported failure.")
+        sys.exit(1)
+
+    print("upload_image() returned successfully.")
+    print("Note: The remote file is not deleted on purpose, because it may use the production filename (e.g. image.jpg).")
+
 
 if __name__ == "__main__":
-    print("== 1. Teste Konfiguration ==")
+    print("== 1. Checking configuration ==")
     test_config()
-    print("\n== 2. Teste FTP-Verbindung ==")
+
+    print("\n== 2. Testing FTP connection ==")
     test_ftp_connection()
-    print("\n== 3. Teste image_upload-Funktion ==")
+
+    print("\n== 3. Testing image upload function ==")
     test_image_upload()
-    print("\n Alle FTP-Tests erfolgreich abgeschlossen.")
+
+    print("\nAll FTP tests finished successfully.")

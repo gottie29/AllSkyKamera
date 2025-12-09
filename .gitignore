@@ -168,3 +168,4 @@ config.json
 tmp/*
 askutils/utils/netstatus_state.json
 askutils/config.old.py
+asktuils/ASKsecret.py.bak
