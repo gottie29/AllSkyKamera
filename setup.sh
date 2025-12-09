@@ -437,7 +437,7 @@ edit_lens() {
   local title q_pix q_foc rc tmp
   if [ "$LANG_CODE" = "de" ]; then
     title="Objektiv"
-    q_pix="Pixelgroeße in mm (PIX_SIZE_MM, z.B. 0.00155):"
+    q_pix="Pixelgroesse in mm (PIX_SIZE_MM, z.B. 0.00155):"
     q_foc="Brennweite in mm (FOCAL_MM, z.B. 1.85):"
   else
     title="Lens"
