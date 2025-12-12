@@ -10,7 +10,7 @@ from askutils.sensors import tsl2591
 
 def main():
     if not getattr(config, "TSL2591_ENABLED", False):
-        print("TSL2591 ist deaktiviert. Test wird übersprungen.")
+        print("TSL2591 ist deaktiviert. Test wird uebersprungen.")
         return
 
     if not tsl2591.is_connected():
@@ -34,7 +34,7 @@ def main():
     print(f"Integration   : {data['integration_ms']} ms (Auto-Range: {data['autorange']})")
 
     # Hinweis: InfluxDB 2.x kann String-Felder. Falls dein influx_writer nur numerische Felder mag,
-    # kannst du zusätzlich einen numerischen Code mitschreiben (LOW=1, MED=25, HIGH=428, MAX=9876).
+    # kannst du zusaetzlich einen numerischen Code mitschreiben (LOW=1, MED=25, HIGH=428, MAX=9876).
     gain_numeric_map = {"LOW": 1, "MED": 25, "HIGH": 428, "MAX": 9876}
     gain_code = gain_numeric_map.get(data["gain"], 0)
 
@@ -49,7 +49,7 @@ def main():
             "SQM2": data["sqm2"],
             "IntegrationMs": data["integration_ms"],  # neu: numerisch
             "GainCode": gain_code,                    # neu: numerisch
-            "Gain": data["gain"],                     # optional: als String (falls unterstützt)
+            "Gain": data["gain"],                     # optional: als String (falls unterstuetzt)
             "AutoRange": 1 if data["autorange"] else 0
         }, tags={"host": "host1"})
 

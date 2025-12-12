@@ -7,7 +7,7 @@ import RPi.GPIO as GPIO
 
 # === Einstellungen ===
 RELAIS_PIN = 26                 # Dein IN liegt auf GPIO26 (BCM)
-STATE_DIR = "."                 # Verzeichnis für Zustandsdatei
+STATE_DIR = "."                 # Verzeichnis fuer Zustandsdatei
 STATE_FILE = os.path.join(STATE_DIR, f"relay_{RELAIS_PIN}.state")  # Inhalt: "ON" oder "OFF"
 
 # === Helper ===
@@ -15,7 +15,7 @@ def ensure_state_dir():
     try:
         os.makedirs(STATE_DIR, exist_ok=True)
     except PermissionError:
-        print(f"Keine Schreibrechte für {STATE_DIR}. Starte mit sudo oder passe STATE_DIR an.", file=sys.stderr)
+        print(f"Keine Schreibrechte fuer {STATE_DIR}. Starte mit sudo oder passe STATE_DIR an.", file=sys.stderr)
         sys.exit(1)
 
 def read_state():
@@ -55,7 +55,7 @@ def main():
     if args.cmd == "status":
         print(last)
         apply_state(last)
-        print(f"Pin gesetzt für Zustand: {last}")
+        print(f"Pin gesetzt fuer Zustand: {last}")
         return
 
     if args.cmd == "restore":

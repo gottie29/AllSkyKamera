@@ -147,20 +147,20 @@ if __name__ == '__main__':
 
     # Define events with German labels and colors
     events = [
-        (civil_dawn, 'Bürgerliche Daemmerung Beginn'),
+        (civil_dawn, 'Buergerliche Daemmerung Beginn'),
         (sunrise, 'Sonnenaufgang'),
         (sunset, 'Sonnenuntergang'),
-        (civil_dusk, 'Bürgerliche Daemmerung Ende'),
+        (civil_dusk, 'Buergerliche Daemmerung Ende'),
         (nautical_dawn, 'Nautische Daemmerung Beginn'),
         (nautical_dusk, 'Nautische Daemmerung Ende'),
         (astro_dawn, 'Astronomische Daemmerung Beginn'),
         (astro_dusk, 'Astronomische Daemmerung Ende')
     ]
     color_map = {
-        'Bürgerliche Daemmerung Beginn': 'gold',
+        'Buergerliche Daemmerung Beginn': 'gold',
         'Sonnenaufgang': 'yellowgreen',
         'Sonnenuntergang': 'orangered',
-        'Bürgerliche Daemmerung Ende': 'goldenrod',
+        'Buergerliche Daemmerung Ende': 'goldenrod',
         'Nautische Daemmerung Beginn': 'deepskyblue',
         'Nautische Daemmerung Ende': 'dodgerblue',
         'Astronomische Daemmerung Beginn': 'midnightblue',

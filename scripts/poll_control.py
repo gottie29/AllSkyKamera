@@ -7,11 +7,11 @@ AllSkyKamera Control-Poller (cronfreundlich, Einzeldurchlauf)
 - Locking per RNFR/RNTO: control.json -> control.processing.json
 - Delete-on-success, Fehlerpfad mit control.error.json
 - Beendet sich sofort, wenn keine control.json vorhanden ist
-- Unterstützte Commands:
+- Unterstuetzte Commands:
     - upload_last_batch  → ruft dein run_nightly_upload.py auf
     - upload_config      → ruft askutils.uploader.config_upload auf
     - lib_start / lib_stop → ruft ~/AllSkyKamera/startstop.sh auf
-    - reboot             → führt System-Reboot am Ende aus
+    - reboot             → fuehrt System-Reboot am Ende aus
 """
 
 import ftplib
@@ -50,7 +50,7 @@ def rpath(name):
 def ftp_connect():
     """FTP-Verbindung aufbauen."""
     if not FTP_HOST or not FTP_USER or not FTP_PASS:
-        raise RuntimeError("FTP-Config unvollständig (FTP_SERVER/USER/PASS).")
+        raise RuntimeError("FTP-Config unvollstaendig (FTP_SERVER/USER/PASS).")
     if not REMOTE_DIR:
         raise RuntimeError("FTP_REMOTE_DIR ist nicht gesetzt.")
     ftp = ftplib.FTP(FTP_HOST, timeout=FTP_TIMEOUT)
@@ -85,7 +85,7 @@ def ftp_delete_safe(ftp, name):
 # ==== Command-Helfer ====
 
 def run_cmd(cmd):
-    """Starte externen Prozess; Rückgabe: Return-Code."""
+    """Starte externen Prozess; Rueckgabe: Return-Code."""
     try:
         return subprocess.call(cmd)
     except Exception:
@@ -97,7 +97,7 @@ def cmd_upload_last_batch():
     return run_cmd(["/usr/bin/python3", script_path])
 
 def cmd_upload_config():
-    """Erstellt & lädt config.json per FTP hoch (dein gezeigter Flow)."""
+    """Erstellt & laedt config.json per FTP hoch (dein gezeigter Flow)."""
     try:
         from askutils.uploader import config_upload
     except Exception:
@@ -144,8 +144,8 @@ def cmd_lib_stop():
 
 def apply_desired_config(ctl):
     """
-    Wende gewünschte Config-Änderungen an.
-    (Derzeit Dummy — kann später config.py oder config.json modifizieren)
+    Wende gewuenschte Config-aenderungen an.
+    (Derzeit Dummy — kann spaeter config.py oder config.json modifizieren)
     """
     desired = ctl.get("desired_config") or {}
     applied = {}
@@ -244,7 +244,7 @@ def main_loop():
         # queue verarbeiten
         q_res = process_queue(ctl)
 
-        # Status anhängen
+        # Status anhaengen
         now = int(time.time())
         ctl["updated_at"] = now
         ctl["status"] = {

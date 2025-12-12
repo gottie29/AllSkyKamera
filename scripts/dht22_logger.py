@@ -10,7 +10,7 @@ from askutils.utils import influx_writer
 
 def main():
     if not getattr(config, "DHT22_ENABLED", False):
-        print("DHT22 ist deaktiviert. Messung übersprungen.")
+        print("DHT22 ist deaktiviert. Messung uebersprungen.")
         return
 
     try:
@@ -18,9 +18,9 @@ def main():
         dew = dhtxx.calculate_dew_point(temp, hum)
 
         print(f"Standort: {config.STANDORT_NAME} ({config.KAMERA_ID})")
-        print(f"Temperatur : {temp:.2f} °C")
+        print(f"Temperatur : {temp:.2f} Grad_C")
         print(f"Feuchte    : {hum:.2f} %")
-        print(f"Taupunkt   : {dew:.2f} °C")
+        print(f"Taupunkt   : {dew:.2f} Grad_C")
 
         influx_writer.log_metric(
             "dht22",

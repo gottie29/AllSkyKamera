@@ -12,7 +12,7 @@ from askutils.sensors import mlx90614
 
 
 # ------------------------------------------------------------
-# Hilfsfunktionen für CloudWatcher-Modell
+# Hilfsfunktionen fuer CloudWatcher-Modell
 # ------------------------------------------------------------
 
 def sgn(x: float) -> int:
@@ -39,11 +39,11 @@ def compute_tsky_cloudwatcher(
     Berechnet die korrigierte Himmels-Temperatur Tsky nach dem
     CloudWatcher-Modell.
 
-    Ts : MLX90614-Objekttemperatur (Himmel) in °C
-    Ta : Ambient-Temperatur in °C (z.B. BME280 oder MLX-Ambient)
+    Ts : MLX90614-Objekttemperatur (Himmel) in Grad_C
+    Ta : Ambient-Temperatur in Grad_C (z.B. BME280 oder MLX-Ambient)
     K1..K7 : CloudWatcher-Koeffizienten (aus config.py)
 
-    Spezialfälle lt. Manual:
+    Spezialfaelle lt. Manual:
       - K1=100, K2..K7=0  -> Tsky = Ts - Ta
       - alle K = 0        -> Tsky = Ts (Roh-IR)
     """
@@ -54,7 +54,7 @@ def compute_tsky_cloudwatcher(
 
     # --- T67-Term (kaltes Wetter) ---
     if K6 == 0.0:
-        # Wenn K6 = 0, fällt T67 vollständig weg
+        # Wenn K6 = 0, faellt T67 vollstaendig weg
         T67 = 0.0
     else:
         if d < 1.0:
@@ -78,31 +78,31 @@ def compute_tsky_cloudwatcher(
 
 def classify_cloudiness(Tsky: float) -> int:
     """
-    Bewölkungsgrad als Integer.
+    Bewoelkungsgrad als Integer.
 
     Achtung: Die Schwellenwerte sind erstmal heurisch und
     sollten mit echten Daten kalibriert werden!
 
     Vorschlag:
       0 = klar
-      1 = leicht bewölkt
-      2 = stark bewölkt
+      1 = leicht bewoelkt
+      2 = stark bewoelkt
       3 = bedeckt
     """
     # Diese Grenzen sind nur ein Startpunkt!
     if Tsky <= -25.0:
         return 0  # klar
     elif Tsky <= -18.0:
-        return 1  # leicht bewölkt
+        return 1  # leicht bewoelkt
     elif Tsky <= -12.0:
-        return 2  # stark bewölkt
+        return 2  # stark bewoelkt
     else:
         return 3  # bedeckt
 
 
 def main():
     if not getattr(config, "MLX90614_ENABLED", False):
-        print("MLX90614 ist deaktiviert. Test wird übersprungen.")
+        print("MLX90614 ist deaktiviert. Test wird uebersprungen.")
         return
 
     if not mlx90614.is_connected():
@@ -147,16 +147,16 @@ def main():
         K7=K7,
     )
 
-    # Bewölkungsgrad als Integer
+    # Bewoelkungsgrad als Integer
     cloud_state = classify_cloudiness(Tsky)
 
     # Ausgabe auf Konsole
     print(f"Standort       : {getattr(config, 'STANDORT_NAME', 'unbekannt')} ({getattr(config, 'KAMERA_ID', 'n/a')})")
-    print(f"Umgebung (Ta)  : {ambient:.2f} °C")
-    print(f"Objekt   (Ts)  : {obj:.2f} °C")
-    print(f"ΔT (Ts - Ta)   : {delta_simple:.2f} °C")
-    print(f"Tsky korrigiert: {Tsky:.2f} °C")
-    print(f"Bewölkung (int): {cloud_state}")
+    print(f"Umgebung (Ta)  : {ambient:.2f} Grad_C")
+    print(f"Objekt   (Ts)  : {obj:.2f} Grad_C")
+    print(f"delteT (Ts - Ta)   : {delta_simple:.2f} Grad_C")
+    print(f"Tsky korrigiert: {Tsky:.2f}  Grad_C")
+    print(f"Bewoelkung (int): {cloud_state}")
 
     # Influx schreiben (Measurement: mlx90614)
     # Felder:
@@ -164,7 +164,7 @@ def main():
     #   - Object           (Ts)
     #   - DeltaSimple      (Ts - Ta)
     #   - Tsky             (korrigierte Sky-Temperatur)
-    #   - CloudState       (Integer-Bewölkungsgrad)
+    #   - CloudState       (Integer-Bewoelkungsgrad)
     try:
         influx_writer.log_metric(
             "mlx90614",

@@ -11,7 +11,7 @@ from askutils.utils import influx_writer
 
 def main():
     if not config.DS18B20_ENABLED:
-        print("DS18B20 ist deaktiviert. Test wird übersprungen.")
+        print("DS18B20 ist deaktiviert. Test wird uebersprungen.")
         return
 
     try:
@@ -21,10 +21,10 @@ def main():
         return
 
     print(f"Standort: {config.STANDORT_NAME} ({config.KAMERA_ID})")
-    print(f"Temperatur: {temp:.2f} °C")
+    print(f"Temperatur: {temp:.2f} Grad_C")
 
     if float(temp) < -35.0 or float(temp) > 75.0:
-        warn(f"Ungültiger Temperaturwert: {temp:.2f} °C")
+        warn(f"Ungueltiger Temperaturwert: {temp:.2f} Grad_C")
         return
     
     influx_writer.log_metric("ds18b20", {

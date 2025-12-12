@@ -321,6 +321,26 @@ Ideal for housing climate monitoring inside the camera.
 
 ---
 
+### **7. HTU21/GY-21/SHT21 (Temperature, Huminity)**  
+**Connection:** I2C (`0x40`)  
+**Features:**  
+- Basic temperature & humidity sensor  
+- Adjustable retry count and delay  
+- Optional overlay  
+- Good for simple internal monitoring    
+
+---
+
+### **8. SHT3x (Temperature, Huminity)**  
+**Connection:** I2C (`0x44`)  
+**Features:**  
+- Basic temperature & humidity sensor  
+- Adjustable retry count and delay  
+- Optional overlay  
+- Good for simple internal monitoring    
+
+---
+
 ### **Sensor configuration**
 
 All sensor settings are controlled via `setup.sh`:

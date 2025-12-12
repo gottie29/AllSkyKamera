@@ -7,6 +7,8 @@ This script runs a one-shot test for all supported sensors:
 - DHT22 / DHT11 on GPIO D6 (Pin 31) via adafruit_dht (board.D6)
 - DS18B20 via 1-Wire (/sys/bus/w1/devices/28-*)
 - BME280 via I2C bus 1, address 0x76 (smbus)
+- HTU21 / GY-21 (Si7021/HTU21D) via I2C bus 1, address 0x40 (smbus)
+- SHT3x (SHT30 / SHT31 / SHT35) via I2C bus 1, address 0x44 (smbus)
 - MLX90614 via I2C bus 1, address 0x5A (smbus)
 - TSL2591 via I2C bus 1 on SCL/SDA (busio + adafruit_tsl2591)
 
@@ -38,7 +40,7 @@ try:
 except ImportError:
     HAVE_DHT = False
 
-# SMBus (for BME280 + MLX90614)
+# SMBus (for BME280 + HTU21 + SHT3x + MLX90614)
 try:
     import smbus
     HAVE_SMBUS = True
@@ -451,6 +453,219 @@ def test_bme280(summary=None):
 
 
 # --------------------------------------------------------------------
+# HTU21 / GY-21 (Si7021 / HTU21D, I2C, 0x40)
+# --------------------------------------------------------------------
+
+DEVICE_HTU = 0x40
+CMD_HTU_TEMP_HOLD = 0xE3  # Measure Temperature, Hold Master
+CMD_HTU_HUM_HOLD  = 0xE5  # Measure Humidity, Hold Master
+
+
+def readHTU21All(addr=DEVICE_HTU):
+    """
+    Read temperature (C) and humidity (% RH) from HTU21 / GY-21
+    using Hold-Master mode: read_i2c_block_data(addr, command, 2).
+    """
+    global bus
+
+    # Temperature
+    data_t = bus.read_i2c_block_data(addr, CMD_HTU_TEMP_HOLD, 2)
+    raw_t = (data_t[0] << 8) | data_t[1]
+    raw_t &= 0xFFFC
+    temp_c = -46.85 + (175.72 * raw_t / 65536.0)
+
+    time.sleep(0.02)
+
+    # Humidity
+    data_h = bus.read_i2c_block_data(addr, CMD_HTU_HUM_HOLD, 2)
+    raw_h = (data_h[0] << 8) | data_h[1]
+    raw_h &= 0xFFFC
+    rh = -6.0 + (125.0 * raw_h / 65536.0)
+    rh = max(0.0, min(100.0, rh))
+
+    return temp_c, rh
+
+
+def test_htu21(summary=None):
+    sensor_key = "HTU21"
+    print("=== HTU21 / GY-21 (Si7021 / HTU21D) Test ===")
+    print("Interface: I2C bus 1, address 0x40 via smbus (Hold-Master mode)\n")
+
+    if not HAVE_SMBUS:
+        msg = (
+            "Python smbus module is not installed. HTU21/GY-21 cannot be read.\n"
+            "Install with:\n"
+            "  sudo apt-get install python3-smbus\n"
+            "or (alternative):\n"
+            "  sudo pip3 install smbus2"
+        )
+        print(msg)
+        if summary is not None:
+            summary["sensors"][sensor_key] = {"status": "unavailable", "details": msg}
+        print()
+        return
+
+    global bus
+    try:
+        if bus is None:
+            bus = smbus.SMBus(1)
+    except Exception as e:
+        msg = (
+            "ERROR: Could not open I2C bus 1 using smbus.SMBus(1).\n"
+            "Is I2C enabled in 'sudo raspi-config'?\n"
+            f"Exception: {e}"
+        )
+        print(msg)
+        if summary is not None:
+            summary["sensors"][sensor_key] = {"status": "error", "details": msg}
+        print()
+        return
+
+    try:
+        temp_c, rh = readHTU21All()
+    except OSError as e:
+        msg = (
+            "I2C error while talking to HTU21/GY-21 "
+            "(sensor not found on address 0x40?).\n"
+            f"Exception: {e}"
+        )
+        print(msg)
+        if summary is not None:
+            summary["sensors"][sensor_key] = {"status": "not found", "details": msg}
+        print()
+        return
+    except Exception as e:
+        msg = f"Unexpected error while reading HTU21/GY-21: {e}"
+        print(msg)
+        if summary is not None:
+            summary["sensors"][sensor_key] = {"status": "error", "details": msg}
+        print()
+        return
+
+    td = dew_point(temp_c, rh)
+    msg_lines = [
+        f"Temperature : {temp_c:.2f} C",
+        f"Humidity    : {rh:.2f} % RH",
+        f"Dew point   : {td:.2f} C",
+    ]
+    for line in msg_lines:
+        print(line)
+    if summary is not None:
+        summary["sensors"][sensor_key] = {
+            "status": "OK",
+            "details": "; ".join(msg_lines),
+        }
+    print()
+
+
+# --------------------------------------------------------------------
+# SHT3x (SHT30 / SHT31 / SHT35, I2C, 0x44)
+# --------------------------------------------------------------------
+
+DEVICE_SHT = 0x44  # default address for SHT3x
+CMD_SHT_SINGLE_SHOT = (0x24, 0x00)  # High repeatability, no clock stretching
+
+
+def readSHT3xAll(addr=DEVICE_SHT):
+    """
+    Read temperature (C) and humidity (% RH) from SHT3x using a
+    single-shot measurement (no clock stretching).
+    """
+    global bus
+
+    # Send single-shot command
+    bus.write_i2c_block_data(addr, CMD_SHT_SINGLE_SHOT[0], [CMD_SHT_SINGLE_SHOT[1]])
+
+    time.sleep(0.020)
+
+    # Read 6 bytes: T_MSB, T_LSB, T_CRC, H_MSB, H_LSB, H_CRC
+    data = bus.read_i2c_block_data(addr, 0x00, 6)
+    if len(data) != 6:
+        raise RuntimeError(f"Unexpected SHT3x data length: {len(data)}, expected 6")
+
+    raw_t = (data[0] << 8) | data[1]
+    raw_h = (data[3] << 8) | data[4]
+
+    temp_c = -45.0 + (175.0 * (raw_t / 65535.0))
+    hum = 100.0 * (raw_h / 65535.0)
+    hum = max(0.0, min(100.0, hum))
+
+    return round(temp_c, 2), round(hum, 2)
+
+
+def test_sht3x(summary=None):
+    sensor_key = "SHT3x"
+    print("=== SHT3x Test (SHT30 / SHT31 / SHT35) ===")
+    print("Interface: I2C bus 1, address 0x44 via smbus\n")
+
+    if not HAVE_SMBUS:
+        msg = (
+            "Python smbus module is not installed. SHT3x cannot be read.\n"
+            "Install with:\n"
+            "  sudo apt-get install python3-smbus\n"
+            "or (alternative):\n"
+            "  sudo pip3 install smbus2"
+        )
+        print(msg)
+        if summary is not None:
+            summary["sensors"][sensor_key] = {"status": "unavailable", "details": msg}
+        print()
+        return
+
+    global bus
+    try:
+        if bus is None:
+            bus = smbus.SMBus(1)
+    except Exception as e:
+        msg = (
+            "ERROR: Could not open I2C bus 1 using smbus.SMBus(1).\n"
+            "Is I2C enabled in 'sudo raspi-config'?\n"
+            f"Exception: {e}"
+        )
+        print(msg)
+        if summary is not None:
+            summary["sensors"][sensor_key] = {"status": "error", "details": msg}
+        print()
+        return
+
+    try:
+        temp_c, hum = readSHT3xAll()
+    except OSError as e:
+        msg = (
+            "I2C error while talking to SHT3x "
+            "(sensor not found on address 0x44?).\n"
+            f"Exception: {e}"
+        )
+        print(msg)
+        if summary is not None:
+            summary["sensors"][sensor_key] = {"status": "not found", "details": msg}
+        print()
+        return
+    except Exception as e:
+        msg = f"Unexpected error while reading SHT3x: {e}"
+        print(msg)
+        if summary is not None:
+            summary["sensors"][sensor_key] = {"status": "error", "details": msg}
+        print()
+        return
+
+    td = dew_point(temp_c, hum)
+    msg_lines = [
+        f"Temperature : {temp_c:.2f} C",
+        f"Humidity    : {hum:.2f} % RH",
+        f"Dew point   : {td:.2f} C",
+    ]
+    for line in msg_lines:
+        print(line)
+    if summary is not None:
+        summary["sensors"][sensor_key] = {
+            "status": "OK",
+            "details": "; ".join(msg_lines),
+        }
+    print()
+
+
+# --------------------------------------------------------------------
 # MLX90614 (I2C, 0x5A)
 # --------------------------------------------------------------------
 
@@ -634,11 +849,9 @@ def test_tsl2591(summary=None):
         infrared = safe_value(sensor.infrared)
         full = safe_value(sensor.full_spectrum)
 
-        # mag/arcsec^2 calculation
         skybright = 22.0 - 2.5 * math.log10(lux)
         skybright2 = 22.0 - 2.5 * math.log10(visible)
         if skybright2 < 6.0:
-            # Optional threshold as in your original script
             skybright2 = 0.0001
 
         msg_lines = [
@@ -803,6 +1016,8 @@ def print_summary(summary):
         ("DHT", "DHT22/DHT11"),
         ("DS18B20", "DS18B20"),
         ("BME280", "BME280"),
+        ("HTU21", "HTU21 / GY-21"),
+        ("SHT3x", "SHT3x"),
         ("MLX90614", "MLX90614"),
         ("TSL2591", "TSL2591"),
     ]
@@ -844,7 +1059,15 @@ def main():
         print(f"[ERROR] test_onewire_bus crashed unexpectedly: {e}\n")
 
     # Sensor tests (each wrapped to keep script running)
-    for fn in (test_dht, test_ds18b20, test_bme280, test_mlx90614, test_tsl2591):
+    for fn in (
+        test_dht,
+        test_ds18b20,
+        test_bme280,
+        test_htu21,
+        test_sht3x,
+        test_mlx90614,
+        test_tsl2591,
+    ):
         try:
             fn(summary)
         except Exception as e:

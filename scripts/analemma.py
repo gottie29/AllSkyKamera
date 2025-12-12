@@ -41,9 +41,9 @@ def overlay_text_on_image(image_path, text_lines, output_path):
 
 def bewertung_sonne_zu_sehen(image_path, threshold=240, min_percent_above=0.001):
     """
-    Prüft, ob ein kleiner Bereich sehr heller Pixel im Bild vorhanden ist.
+    Prueft, ob ein kleiner Bereich sehr heller Pixel im Bild vorhanden ist.
     threshold: Mindesthelligkeit (0-255)
-    min_percent_above: Mindestanteil an Pixeln über threshold (z.B. 0.1 %)
+    min_percent_above: Mindestanteil an Pixeln ueber threshold (z.B. 0.1 %)
     """
     try:
         img = Image.open(image_path).convert("L")
@@ -63,8 +63,8 @@ def bewertung_sonne_zu_sehen(image_path, threshold=240, min_percent_above=0.001)
 def bewertung_sonne_konzentriert(image_path, threshold=240, max_blob_size=1000):
     """
     Erkennt, ob ein kleiner, konzentrierter heller Fleck (z.B. die Sonne) im Bild ist.
-    threshold: Mindesthelligkeit für "hell"
-    max_blob_size: Maximale Anzahl benachbarter heller Pixel für einen gültigen Punkt
+    threshold: Mindesthelligkeit fuer "hell"
+    max_blob_size: Maximale Anzahl benachbarter heller Pixel fuer einen gueltigen Punkt
     """
     try:
         img = Image.open(image_path).convert("L")
@@ -119,7 +119,7 @@ def erzeuge_debugbild(image_path, output_path, threshold=240):
                     max_val = val
                     max_pos = (x, y)
 
-        # Markiere helle Pixel über Threshold (z.B. ab 240) als halbtransparentes Gelb
+        # Markiere helle Pixel ueber Threshold (z.B. ab 240) als halbtransparentes Gelb
         for y in range(height):
             for x in range(width):
                 if pixels[x, y] >= threshold:

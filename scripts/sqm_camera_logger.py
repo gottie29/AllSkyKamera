@@ -2,7 +2,7 @@
 #!/usr/bin/env python3
 
 """
-Logger für fortlaufende SQM-Messungen:
+Logger fuer fortlaufende SQM-Messungen:
 liest image.jpg + metadata.txt, berechnet μ und schreibt in InfluxDB.
 """
 

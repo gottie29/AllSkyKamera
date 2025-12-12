@@ -63,7 +63,7 @@ def _remote_name_for(local_path: str, date_str: str) -> Optional[str]:
 
 
 def _file_available(path: str) -> bool:
-    """Nur prüfen, ob die Datei existiert und > 0 Byte hat."""
+    """Nur pruefen, ob die Datei existiert und > 0 Byte hat."""
     if not os.path.isfile(path):
         return False
     try:
@@ -74,20 +74,20 @@ def _file_available(path: str) -> bool:
 
 def upload_manual_batch(date_str: str) -> bool:
     """
-    Manueller Upload für einen expliziten Tag (JJJJMMTT).
-    Kein Alters- oder Stabilitäts-Check – nur: Datei vorhanden und > 0 Byte.
-    Nutzt dieselbe Logik wie nightly_upload (inkl. INDI-Unterstützung),
-    greift aber NICHT auf nightly_upload.py zurück.
+    Manueller Upload fuer einen expliziten Tag (JJJJMMTT).
+    Kein Alters- oder Stabilitaets-Check – nur: Datei vorhanden und > 0 Byte.
+    Nutzt dieselbe Logik wie nightly_upload (inkl. INDI-Unterstuetzung),
+    greift aber NICHT auf nightly_upload.py zurueck.
     """
     # Datum validieren
     try:
         dt = datetime.strptime(date_str, "%Y%m%d")
     except ValueError:
-        log(f"Ungültiges Datum: {date_str} (erwartet: JJJJMMTT)")
+        log(f"Ungueltiges Datum: {date_str} (erwartet: JJJJMMTT)")
         return False
 
     date_str = dt.strftime("%Y%m%d")
-    log(f"Starte MANUELLEN Upload für {date_str}")
+    log(f"Starte MANUELLEN Upload fuer {date_str}")
 
     images_base   = os.path.join(config.ALLSKY_PATH, config.IMAGE_BASE_PATH)
     analemma_base = os.path.join(config.A_PATH)
@@ -151,16 +151,16 @@ def upload_manual_batch(date_str: str) -> bool:
             log(f"Verbindung zu FTP-Server '{config.FTP_SERVER}' hergestellt.")
 
             for local_path, remote_subdir in files:
-                log(f"Prüfe Datei: {local_path}")
+                log(f"Pruefe Datei: {local_path}")
 
                 if not _file_available(local_path):
-                    log(f"Datei fehlt oder ist leer, übersprungen: {local_path}")
+                    log(f"Datei fehlt oder ist leer, uebersprungen: {local_path}")
                     continue
 
                 try:
                     _upload_file(ftp, local_path, remote_subdir, config.FTP_REMOTE_DIR)
                 except Exception as e:
-                    log(f"Upload-Fehler für {local_path}: {e}")
+                    log(f"Upload-Fehler fuer {local_path}: {e}")
                     continue
 
                 # Nach dem Upload serverseitig auf Zielnamen umbenennen
@@ -170,7 +170,7 @@ def upload_manual_batch(date_str: str) -> bool:
                         prev = ftp.pwd()
                         ftp.cwd(remote_subdir)
 
-                        src = os.path.basename(local_path)  # _upload_file lädt unter Originalnamen hoch
+                        src = os.path.basename(local_path)  # _upload_file laedt unter Originalnamen hoch
                         if src != desired:
                             log(f"Rename remote: {src} -> {desired}")
                             try:

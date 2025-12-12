@@ -7,7 +7,7 @@ from askutils.uploader.manual_upload import upload_manual_batch
 def _parse_date_arg(arg: str) -> str:
     """
     Erwartet JJJJMMTT, z.B. 20251119.
-    Gibt denselben String zurück, wenn er ein gültiges Datum repräsentiert,
+    Gibt denselben String zurueck, wenn er ein gueltiges Datum repraesentiert,
     sonst beendet es das Script mit Fehlercode.
     """
     try:
@@ -23,7 +23,7 @@ def main() -> None:
         print(
             "Verwendung:\n"
             "  python3 -m scripts.run_manual_upload 20251119\n"
-            "    -> lädt Video/Keogram/Startrail/Analemma für diesen Tag hoch\n",
+            "    -> laedt Video/Keogram/Startrail/Analemma fuer diesen Tag hoch\n",
             flush=True,
         )
         if len(sys.argv) != 2:
@@ -32,7 +32,7 @@ def main() -> None:
 
     raw = sys.argv[1]
     date_str = _parse_date_arg(raw)
-    print(f"Starte MANUELLEN Upload für Datum {date_str} ...", flush=True)
+    print(f"Starte MANUELLEN Upload fuer Datum {date_str} ...", flush=True)
 
     success = upload_manual_batch(date_str)
     sys.exit(0 if success else 1)

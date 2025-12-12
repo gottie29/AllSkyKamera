@@ -149,6 +149,7 @@ pip3 install --user \
     pillow \
     numpy \
     matplotlib \
+    smbus2 \
     --break-system-packages
 
 # --------------------------------------------------------------------
@@ -208,12 +209,20 @@ FOCAL_MM       = 1.85
 ZP             = 6.0
 SQM_PATCH_SIZE = 100
 
+# --------------------------------------------------------------------
 # Sensors: disabled by default, setup.sh will enable and configure them
-BME280_ENABLED      = False
-BME280_NAME         = "BME280"
-BME280_I2C_ADDRESS  = 0x76
-BME280_OVERLAY      = False
+# --------------------------------------------------------------------
 
+# BME280
+BME280_ENABLED          = False
+BME280_NAME             = "BME280"
+BME280_I2C_ADDRESS      = 0x76
+BME280_OVERLAY          = False
+BME280_TEMP_OFFSET_C    = 0.0
+BME280_PRESS_OFFSET_HPA = 0.0
+BME280_HUM_OFFSET_PCT   = 0.0
+
+# TSL2591
 TSL2591_ENABLED        = False
 TSL2591_NAME           = "TSL2591"
 TSL2591_I2C_ADDRESS    = 0x29
@@ -221,37 +230,68 @@ TSL2591_SQM2_LIMIT     = 0.0
 TSL2591_SQM_CORRECTION = 0.0
 TSL2591_OVERLAY        = False
 
-DS18B20_ENABLED  = False
-DS18B20_NAME     = "DS18B20"
-DS18B20_OVERLAY  = False
+# DS18B20
+DS18B20_ENABLED        = False
+DS18B20_NAME           = "DS18B20"
+DS18B20_OVERLAY        = False
+DS18B20_TEMP_OFFSET_C  = 0.0
 
 # DHT11
-DHT11_ENABLED      = False
-DHT11_NAME         = "DHT11"
-DHT11_GPIO_BCM     = 6
-DHT11_RETRIES      = 10
-DHT11_RETRY_DELAY  = 0.3
-DHT11_OVERLAY      = False
+DHT11_ENABLED          = False
+DHT11_NAME             = "DHT11"
+DHT11_GPIO_BCM         = 6
+DHT11_RETRIES          = 10
+DHT11_RETRY_DELAY      = 0.3
+DHT11_OVERLAY          = False
+DHT11_TEMP_OFFSET_C    = 0.0
+DHT11_HUM_OFFSET_PCT   = 0.0
 
 # DHT22
-DHT22_ENABLED      = False
-DHT22_NAME         = "DHT22"
-DHT22_GPIO_BCM     = 6
-DHT22_RETRIES      = 10
-DHT22_RETRY_DELAY  = 0.3
-DHT22_OVERLAY      = False
+DHT22_ENABLED          = False
+DHT22_NAME             = "DHT22"
+DHT22_GPIO_BCM         = 6
+DHT22_RETRIES          = 10
+DHT22_RETRY_DELAY      = 0.3
+DHT22_OVERLAY          = False
+DHT22_TEMP_OFFSET_C    = 0.0
+DHT22_HUM_OFFSET_PCT   = 0.0
 
-MLX90614_ENABLED     = False
-MLX90614_NAME        = "MLX90614"
-MLX90614_I2C_ADDRESS = 0x5a
+# MLX90614
+MLX90614_ENABLED            = False
+MLX90614_NAME               = "MLX90614"
+MLX90614_I2C_ADDRESS        = 0x5a
+MLX90614_AMBIENT_OFFSET_C   = 0.0
+# optional clamp defaults (safe to keep even if script ignores them)
+MLX90614_AMBIENT_MIN_C      = -40.0
+MLX90614_AMBIENT_MAX_C      = 85.0
 
+# HTU21 / GY-21
+HTU21_ENABLED       = False
+HTU21_NAME          = "HTU21 / GY-21"
+HTU21_I2C_ADDRESS   = 0x40
+HTU21_TEMP_OFFSET   = 0.0
+HTU21_HUM_OFFSET    = 0.0
+HTU21_OVERLAY       = False
+
+# SHT3X Series (SHT30 / SHT31 / SHT35)
+SHT3X_ENABLED       = False
+SHT3X_NAME          = "SHT3x"
+SHT3X_I2C_ADDRESS   = 0x44
+SHT3X_TEMP_OFFSET   = 0.0
+SHT3X_HUM_OFFSET    = 0.0
+SHT3X_OVERLAY       = False
+
+# --------------------------------------------------------------------
 # Logger intervals in minutes
+# --------------------------------------------------------------------
 BME280_LOG_INTERVAL_MIN   = 1
 TSL2591_LOG_INTERVAL_MIN  = 1
 DS18B20_LOG_INTERVAL_MIN  = 1
 DHT11_LOG_INTERVAL_MIN    = 1
 DHT22_LOG_INTERVAL_MIN    = 1
 MLX90614_LOG_INTERVAL_MIN = 1
+HTU21_LOG_INTERVAL_MIN    = 1
+SHT3X_LOG_INTERVAL_MIN    = 1
 
 # KpIndex / Analemma / camera
 KPINDEX_ENABLED = False
@@ -268,7 +308,9 @@ A_CONTRAST = 0.0
 A_SATURATION = 0.0
 A_PATH = "${PROJECT_ROOT}/tmp"
 
+# --------------------------------------------------------------------
 # CRONTABS - base jobs
+# --------------------------------------------------------------------
 CRONTABS = [
     {
         "comment": "Allsky Raspi status",

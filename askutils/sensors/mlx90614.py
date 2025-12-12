@@ -29,7 +29,7 @@ def _read_raw(reg: int) -> int:
     return (msb << 8) | lsb
 
 def _raw_to_celsius(raw: int) -> float:
-    # Formel laut Datenblatt: °C = raw * 0.02 - 273.15
+    # Formel laut Datenblatt: Grad_C = raw * 0.02 - 273.15
     return (raw * 0.02) - 273.15
 
 def _read_temp_celsius(reg: int) -> float:
@@ -56,7 +56,7 @@ def is_connected() -> bool:
 
 def read_mlx90614() -> dict:
     """
-    Liefert ein Dict mit 'ambient' und 'object' in °C.
+    Liefert ein Dict mit 'ambient' und 'object' in Grad_C.
     """
     amb = _read_temp_celsius(REG_TA)
     obj = _read_temp_celsius(REG_TOBJ1)

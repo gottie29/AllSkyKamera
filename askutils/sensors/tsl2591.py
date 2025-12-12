@@ -3,15 +3,15 @@ import board
 import busio
 
 # -------------------------
-# Adafruit-API-Kompatibilität
+# Adafruit-API-Kompatibilitaet
 # -------------------------
 # Neuere Bibliotheken exportieren:   TSL2591, Gain, IntegrationTime
-# Ältere Bibliotheken exportieren:   TSL2591 + GAIN_* und INTEGRATIONTIME_* Konstanten
+# aeltere Bibliotheken exportieren:   TSL2591 + GAIN_* und INTEGRATIONTIME_* Konstanten
 try:
     from adafruit_tsl2591 import TSL2591, Gain, IntegrationTime  # neuere API
     _API_STYLE = "enum"
 except ImportError:
-    import adafruit_tsl2591 as _tsl  # ältere API (Konstanten)
+    import adafruit_tsl2591 as _tsl  # aeltere API (Konstanten)
     TSL2591 = _tsl.TSL2591
     _API_STYLE = "const"
 
@@ -91,7 +91,7 @@ def _autorange(sensor):
             elif sensor.integration_time != IntegrationTime.TIME_600MS:
                 sensor.integration_time = order_t[min(order_t.index(sensor.integration_time) + 1, len(order_t) - 1)]
 
-        # Sättigung → weniger empfindlich
+        # Saettigung → weniger empfindlich
         elif counts > 60000:
             order_g = [Gain.LOW, Gain.MED, Gain.HIGH, Gain.MAX]
             order_t = [
@@ -103,7 +103,7 @@ def _autorange(sensor):
             elif sensor.gain != Gain.LOW:
                 sensor.gain = order_g[max(order_g.index(sensor.gain) - 1, 0)]
     except Exception:
-        # Safety: nie crashen, falls die Lib intern etwas ändert
+        # Safety: nie crashen, falls die Lib intern etwas aendert
         pass
 
 def is_connected():
@@ -116,7 +116,7 @@ def is_connected():
         return False
 
 def read_tsl2591():
-    """Werte + SQM berechnen und aktuelle Gain/Integration zurückgeben."""
+    """Werte + SQM berechnen und aktuelle Gain/Integration zurueckgeben."""
     sensor = _make_sensor()
     _autorange(sensor)
 

@@ -112,7 +112,6 @@ IMAGE_BASE_PATH="$(get_val "IMAGE_BASE_PATH")"
 IMAGE_PATH="$(get_val "IMAGE_PATH")"
 
 INDI="$(get_val "INDI")"
-
 CAMERAID="$(get_val "CAMERAID")"
 
 # Sensor-Status
@@ -122,8 +121,10 @@ DS18B20_ENABLED="$(get_val "DS18B20_ENABLED")"
 DHT11_ENABLED="$(get_val "DHT11_ENABLED")"
 DHT22_ENABLED="$(get_val "DHT22_ENABLED")"
 MLX90614_ENABLED="$(get_val "MLX90614_ENABLED")"
+HTU21_ENABLED="$(get_val "HTU21_ENABLED")"
+SHT3X_ENABLED="$(get_val "SHT3X_ENABLED")"
 
-# Sensor-Parameter
+# Sensor-Parameter (alt)
 BME280_I2C_ADDRESS="$(get_val "BME280_I2C_ADDRESS")"
 BME280_OVERLAY="$(get_val "BME280_OVERLAY")"
 
@@ -146,6 +147,40 @@ DHT22_OVERLAY="$(get_val "DHT22_OVERLAY")"
 
 MLX90614_I2C_ADDRESS="$(get_val "MLX90614_I2C_ADDRESS")"
 
+HTU21_I2C_ADDRESS="$(get_val "HTU21_I2C_ADDRESS")"
+HTU21_TEMP_OFFSET="$(get_val "HTU21_TEMP_OFFSET")"
+HTU21_HUM_OFFSET="$(get_val "HTU21_HUM_OFFSET")"
+HTU21_OVERLAY="$(get_val "HTU21_OVERLAY")"
+
+SHT3X_I2C_ADDRESS="$(get_val "SHT3X_I2C_ADDRESS")"
+SHT3X_TEMP_OFFSET="$(get_val "SHT3X_TEMP_OFFSET")"
+SHT3X_HUM_OFFSET="$(get_val "SHT3X_HUM_OFFSET")"
+SHT3X_OVERLAY="$(get_val "SHT3X_OVERLAY")"
+
+# --- NEU: Offsets / Kalibrierungen ---
+BME280_TEMP_OFFSET_C="$(get_val "BME280_TEMP_OFFSET_C")"
+BME280_PRESS_OFFSET_HPA="$(get_val "BME280_PRESS_OFFSET_HPA")"
+BME280_HUM_OFFSET_PCT="$(get_val "BME280_HUM_OFFSET_PCT")"
+
+DS18B20_TEMP_OFFSET_C="$(get_val "DS18B20_TEMP_OFFSET_C")"
+
+DHT11_TEMP_OFFSET_C="$(get_val "DHT11_TEMP_OFFSET_C")"
+DHT11_HUM_OFFSET_PCT="$(get_val "DHT11_HUM_OFFSET_PCT")"
+
+DHT22_TEMP_OFFSET_C="$(get_val "DHT22_TEMP_OFFSET_C")"
+DHT22_HUM_OFFSET_PCT="$(get_val "DHT22_HUM_OFFSET_PCT")"
+
+MLX90614_AMBIENT_OFFSET_C="$(get_val "MLX90614_AMBIENT_OFFSET_C")"
+
+# --- NEU: MLX Cloud Koeffizienten ---
+MLX_CLOUD_K1="$(get_val "MLX_CLOUD_K1")"
+MLX_CLOUD_K2="$(get_val "MLX_CLOUD_K2")"
+MLX_CLOUD_K3="$(get_val "MLX_CLOUD_K3")"
+MLX_CLOUD_K4="$(get_val "MLX_CLOUD_K4")"
+MLX_CLOUD_K5="$(get_val "MLX_CLOUD_K5")"
+MLX_CLOUD_K6="$(get_val "MLX_CLOUD_K6")"
+MLX_CLOUD_K7="$(get_val "MLX_CLOUD_K7")"
+
 # Logger-Intervalle (Minuten)
 BME280_LOG_INTERVAL_MIN="$(get_val "BME280_LOG_INTERVAL_MIN")"
 TSL2591_LOG_INTERVAL_MIN="$(get_val "TSL2591_LOG_INTERVAL_MIN")"
@@ -153,14 +188,18 @@ DS18B20_LOG_INTERVAL_MIN="$(get_val "DS18B20_LOG_INTERVAL_MIN")"
 DHT11_LOG_INTERVAL_MIN="$(get_val "DHT11_LOG_INTERVAL_MIN")"
 DHT22_LOG_INTERVAL_MIN="$(get_val "DHT22_LOG_INTERVAL_MIN")"
 MLX90614_LOG_INTERVAL_MIN="$(get_val "MLX90614_LOG_INTERVAL_MIN")"
+HTU21_LOG_INTERVAL_MIN="$(get_val "HTU21_LOG_INTERVAL_MIN")"
+SHT3X_LOG_INTERVAL_MIN="$(get_val "SHT3X_LOG_INTERVAL_MIN")"
 
-# Neue Sensor-Namen
+# Sensor-Namen
 BME280_NAME="$(get_val "BME280_NAME")"
 DS18B20_NAME="$(get_val "DS18B20_NAME")"
 MLX90614_NAME="$(get_val "MLX90614_NAME")"
 TSL2591_NAME="$(get_val "TSL2591_NAME")"
 DHT11_NAME="$(get_val "DHT11_NAME")"
 DHT22_NAME="$(get_val "DHT22_NAME")"
+HTU21_NAME="$(get_val "HTU21_NAME")"
+SHT3X_NAME="$(get_val "SHT3X_NAME")"
 
 # Kamera / Objektiv / SQM / Analemma / KpIndex
 PIX_SIZE_MM="$(get_val "PIX_SIZE_MM")"
@@ -181,7 +220,6 @@ A_SATURATION="$(get_val "A_SATURATION")"
 KPINDEX_ENABLED="$(get_val "KPINDEX_ENABLED")"
 KPINDEX_OVERLAY="$(get_val "KPINDEX_OVERLAY")"
 KPINDEX_LOG_INTERVAL_MIN="$(get_val "KPINDEX_LOG_INTERVAL_MIN")"
-
 
 # ---------------------------------------------------
 # Defaults
@@ -208,6 +246,8 @@ KPINDEX_LOG_INTERVAL_MIN="$(get_val "KPINDEX_LOG_INTERVAL_MIN")"
 [ -z "$DHT11_ENABLED" ] && DHT11_ENABLED="False"
 [ -z "$DHT22_ENABLED" ] && DHT22_ENABLED="False"
 [ -z "$MLX90614_ENABLED" ] && MLX90614_ENABLED="False"
+[ -z "$HTU21_ENABLED" ] && HTU21_ENABLED="False"
+[ -z "$SHT3X_ENABLED" ] && SHT3X_ENABLED="False"
 
 [ -z "$BME280_I2C_ADDRESS" ] && BME280_I2C_ADDRESS="0x76"
 [ -z "$BME280_OVERLAY" ] && BME280_OVERLAY="False"
@@ -231,12 +271,24 @@ KPINDEX_LOG_INTERVAL_MIN="$(get_val "KPINDEX_LOG_INTERVAL_MIN")"
 
 [ -z "$MLX90614_I2C_ADDRESS" ] && MLX90614_I2C_ADDRESS="0x5a"
 
+[ -z "$HTU21_I2C_ADDRESS" ] && HTU21_I2C_ADDRESS="0x40"
+[ -z "$HTU21_TEMP_OFFSET" ] && HTU21_TEMP_OFFSET="0.0"
+[ -z "$HTU21_HUM_OFFSET" ] && HTU21_HUM_OFFSET="0.0"
+[ -z "$HTU21_OVERLAY" ] && HTU21_OVERLAY="False"
+
+[ -z "$SHT3X_I2C_ADDRESS" ] && SHT3X_I2C_ADDRESS="0x44"
+[ -z "$SHT3X_TEMP_OFFSET" ] && SHT3X_TEMP_OFFSET="0.0"
+[ -z "$SHT3X_HUM_OFFSET" ] && SHT3X_HUM_OFFSET="0.0"
+[ -z "$SHT3X_OVERLAY" ] && SHT3X_OVERLAY="False"
+
 [ -z "$BME280_NAME" ] && BME280_NAME="BME280"
 [ -z "$DS18B20_NAME" ] && DS18B20_NAME="DS18B20"
 [ -z "$MLX90614_NAME" ] && MLX90614_NAME="MLX90614"
 [ -z "$TSL2591_NAME" ] && TSL2591_NAME="TSL2591"
 [ -z "$DHT11_NAME" ] && DHT11_NAME="DHT11"
 [ -z "$DHT22_NAME" ] && DHT22_NAME="DHT22"
+[ -z "$HTU21_NAME" ] && HTU21_NAME="HTU21 / GY-21"
+[ -z "$SHT3X_NAME" ] && SHT3X_NAME="SHT3x"
 
 # Standard-Logger-Intervalle in Minuten
 [ -z "$BME280_LOG_INTERVAL_MIN" ]   && BME280_LOG_INTERVAL_MIN="1"
@@ -245,6 +297,8 @@ KPINDEX_LOG_INTERVAL_MIN="$(get_val "KPINDEX_LOG_INTERVAL_MIN")"
 [ -z "$DHT11_LOG_INTERVAL_MIN" ]    && DHT11_LOG_INTERVAL_MIN="1"
 [ -z "$DHT22_LOG_INTERVAL_MIN" ]    && DHT22_LOG_INTERVAL_MIN="1"
 [ -z "$MLX90614_LOG_INTERVAL_MIN" ] && MLX90614_LOG_INTERVAL_MIN="1"
+[ -z "$HTU21_LOG_INTERVAL_MIN" ]    && HTU21_LOG_INTERVAL_MIN="1"
+[ -z "$SHT3X_LOG_INTERVAL_MIN" ]    && SHT3X_LOG_INTERVAL_MIN="1"
 
 # Defaults fuer Kamera / Objektiv / SQM / Analemma / KpIndex
 [ -z "$PIX_SIZE_MM" ] && PIX_SIZE_MM="0.00155"
@@ -266,11 +320,58 @@ KPINDEX_LOG_INTERVAL_MIN="$(get_val "KPINDEX_LOG_INTERVAL_MIN")"
 [ -z "$KPINDEX_OVERLAY" ] && KPINDEX_OVERLAY="False"
 [ -z "$KPINDEX_LOG_INTERVAL_MIN" ] && KPINDEX_LOG_INTERVAL_MIN="15"
 
+# --- NEU: Defaults Offsets ---
+[ -z "$BME280_TEMP_OFFSET_C" ] && BME280_TEMP_OFFSET_C="0.0"
+[ -z "$BME280_PRESS_OFFSET_HPA" ] && BME280_PRESS_OFFSET_HPA="0.0"
+[ -z "$BME280_HUM_OFFSET_PCT" ] && BME280_HUM_OFFSET_PCT="0.0"
+
+[ -z "$DS18B20_TEMP_OFFSET_C" ] && DS18B20_TEMP_OFFSET_C="0.0"
+
+[ -z "$DHT11_TEMP_OFFSET_C" ] && DHT11_TEMP_OFFSET_C="0.0"
+[ -z "$DHT11_HUM_OFFSET_PCT" ] && DHT11_HUM_OFFSET_PCT="0.0"
+
+[ -z "$DHT22_TEMP_OFFSET_C" ] && DHT22_TEMP_OFFSET_C="0.0"
+[ -z "$DHT22_HUM_OFFSET_PCT" ] && DHT22_HUM_OFFSET_PCT="0.0"
+
+[ -z "$MLX90614_AMBIENT_OFFSET_C" ] && MLX90614_AMBIENT_OFFSET_C="0.0"
+
+# --- NEU: Defaults MLX Cloud ---
+[ -z "$MLX_CLOUD_K1" ] && MLX_CLOUD_K1="100.0"
+[ -z "$MLX_CLOUD_K2" ] && MLX_CLOUD_K2="0.0"
+[ -z "$MLX_CLOUD_K3" ] && MLX_CLOUD_K3="0.0"
+[ -z "$MLX_CLOUD_K4" ] && MLX_CLOUD_K4="0.0"
+[ -z "$MLX_CLOUD_K5" ] && MLX_CLOUD_K5="0.0"
+[ -z "$MLX_CLOUD_K6" ] && MLX_CLOUD_K6="0.0"
+[ -z "$MLX_CLOUD_K7" ] && MLX_CLOUD_K7="0.0"
 
 # I2C-Adressen in schoene Hex-Notation bringen
 BME280_I2C_ADDRESS="$(normalize_hex_literal "$BME280_I2C_ADDRESS")"
 TSL2591_I2C_ADDRESS="$(normalize_hex_literal "$TSL2591_I2C_ADDRESS")"
 MLX90614_I2C_ADDRESS="$(normalize_hex_literal "$MLX90614_I2C_ADDRESS")"
+HTU21_I2C_ADDRESS="$(normalize_hex_literal "$HTU21_I2C_ADDRESS")"
+SHT3X_I2C_ADDRESS="$(normalize_hex_literal "$SHT3X_I2C_ADDRESS")"
+
+# --- NEU: Float Normalisierung (Komma -> Punkt) ---
+BME280_TEMP_OFFSET_C="${BME280_TEMP_OFFSET_C//,/.}"
+BME280_PRESS_OFFSET_HPA="${BME280_PRESS_OFFSET_HPA//,/.}"
+BME280_HUM_OFFSET_PCT="${BME280_HUM_OFFSET_PCT//,/.}"
+
+DS18B20_TEMP_OFFSET_C="${DS18B20_TEMP_OFFSET_C//,/.}"
+
+DHT11_TEMP_OFFSET_C="${DHT11_TEMP_OFFSET_C//,/.}"
+DHT11_HUM_OFFSET_PCT="${DHT11_HUM_OFFSET_PCT//,/.}"
+DHT22_TEMP_OFFSET_C="${DHT22_TEMP_OFFSET_C//,/.}"
+DHT22_HUM_OFFSET_PCT="${DHT22_HUM_OFFSET_PCT//,/.}"
+
+MLX90614_AMBIENT_OFFSET_C="${MLX90614_AMBIENT_OFFSET_C//,/.}"
+
+MLX_CLOUD_K1="${MLX_CLOUD_K1//,/.}"
+MLX_CLOUD_K2="${MLX_CLOUD_K2//,/.}"
+MLX_CLOUD_K3="${MLX_CLOUD_K3//,/.}"
+MLX_CLOUD_K4="${MLX_CLOUD_K4//,/.}"
+MLX_CLOUD_K5="${MLX_CLOUD_K5//,/.}"
+MLX_CLOUD_K6="${MLX_CLOUD_K6//,/.}"
+MLX_CLOUD_K7="${MLX_CLOUD_K7//,/.}"
 
 # ---------------------------------------------------
 # Standortdaten-Dialog
@@ -498,12 +599,15 @@ camera_lens_menu() {
 # ---------------------------------------------------
 
 edit_bme280() {
-  local title q_enable q_name q_i2c q_int q_ov rc tmp
+  local title q_enable q_name q_i2c q_int q_ov q_toff q_poff q_hoff rc tmp
   if [ "$LANG_CODE" = "de" ]; then
     title="Sensor BME280"
     q_enable="BME280 (Temp/Feuchte/Druck) aktivieren?"
     q_name="Name fuer BME280:"
     q_i2c="I2C-Adresse des BME280 (z.B. 0x76):"
+    q_toff="Temperatur-Offset in °C (BME280_TEMP_OFFSET_C, z.B. 0.0):"
+    q_poff="Druck-Offset in hPa (BME280_PRESS_OFFSET_HPA, z.B. 0.0):"
+    q_hoff="Feuchte-Offset in %-Punkten (BME280_HUM_OFFSET_PCT, z.B. 0.0):"
     q_int="Logger-Intervall in Minuten (Cronjob-Frequenz):"
     q_ov="Overlay (Werte im Bild anzeigen)?"
   else
@@ -511,6 +615,9 @@ edit_bme280() {
     q_enable="Enable BME280 (temp/humidity/pressure)?"
     q_name="Name for BME280:"
     q_i2c="I2C address for BME280 (e.g. 0x76):"
+    q_toff="Temperature offset in °C (BME280_TEMP_OFFSET_C, e.g. 0.0):"
+    q_poff="Pressure offset in hPa (BME280_PRESS_OFFSET_HPA, e.g. 0.0):"
+    q_hoff="Humidity offset in %-points (BME280_HUM_OFFSET_PCT, e.g. 0.0):"
     q_int="Logger interval in minutes (cronjob frequency):"
     q_ov="Overlay (show values on image)?"
   fi
@@ -520,6 +627,9 @@ edit_bme280() {
   local OLD_ADDR="$BME280_I2C_ADDRESS"
   local OLD_OV="$BME280_OVERLAY"
   local OLD_INT="$BME280_LOG_INTERVAL_MIN"
+  local OLD_TOFF="$BME280_TEMP_OFFSET_C"
+  local OLD_POFF="$BME280_PRESS_OFFSET_HPA"
+  local OLD_HOFF="$BME280_HUM_OFFSET_PCT"
 
   whiptail --title "$title" --yesno "$q_enable" 10 70
   rc=$?
@@ -540,6 +650,9 @@ edit_bme280() {
     BME280_I2C_ADDRESS="$OLD_ADDR"
     BME280_OVERLAY="$OLD_OV"
     BME280_LOG_INTERVAL_MIN="$OLD_INT"
+    BME280_TEMP_OFFSET_C="$OLD_TOFF"
+    BME280_PRESS_OFFSET_HPA="$OLD_POFF"
+    BME280_HUM_OFFSET_PCT="$OLD_HOFF"
     return 0
   fi
   BME280_NAME="$tmp"
@@ -553,9 +666,36 @@ edit_bme280() {
       BME280_I2C_ADDRESS="$OLD_ADDR"
       BME280_OVERLAY="$OLD_OV"
       BME280_LOG_INTERVAL_MIN="$OLD_INT"
+      BME280_TEMP_OFFSET_C="$OLD_TOFF"
+      BME280_PRESS_OFFSET_HPA="$OLD_POFF"
+      BME280_HUM_OFFSET_PCT="$OLD_HOFF"
       return 0
     fi
     BME280_I2C_ADDRESS="$tmp"
+
+    tmp=$(whiptail --title "$title" --inputbox "$q_toff" 10 70 "$BME280_TEMP_OFFSET_C" 3>&1 1>&2 2>&3)
+    rc=$?; if [ $rc -ne 0 ]; then
+      BME280_ENABLED="$OLD_ENABLED"; BME280_NAME="$OLD_NAME"; BME280_I2C_ADDRESS="$OLD_ADDR"; BME280_OVERLAY="$OLD_OV"; BME280_LOG_INTERVAL_MIN="$OLD_INT"
+      BME280_TEMP_OFFSET_C="$OLD_TOFF"; BME280_PRESS_OFFSET_HPA="$OLD_POFF"; BME280_HUM_OFFSET_PCT="$OLD_HOFF"
+      return 0
+    fi
+    BME280_TEMP_OFFSET_C="${tmp//,/.}"
+
+    tmp=$(whiptail --title "$title" --inputbox "$q_poff" 10 70 "$BME280_PRESS_OFFSET_HPA" 3>&1 1>&2 2>&3)
+    rc=$?; if [ $rc -ne 0 ]; then
+      BME280_ENABLED="$OLD_ENABLED"; BME280_NAME="$OLD_NAME"; BME280_I2C_ADDRESS="$OLD_ADDR"; BME280_OVERLAY="$OLD_OV"; BME280_LOG_INTERVAL_MIN="$OLD_INT"
+      BME280_TEMP_OFFSET_C="$OLD_TOFF"; BME280_PRESS_OFFSET_HPA="$OLD_POFF"; BME280_HUM_OFFSET_PCT="$OLD_HOFF"
+      return 0
+    fi
+    BME280_PRESS_OFFSET_HPA="${tmp//,/.}"
+
+    tmp=$(whiptail --title "$title" --inputbox "$q_hoff" 10 70 "$BME280_HUM_OFFSET_PCT" 3>&1 1>&2 2>&3)
+    rc=$?; if [ $rc -ne 0 ]; then
+      BME280_ENABLED="$OLD_ENABLED"; BME280_NAME="$OLD_NAME"; BME280_I2C_ADDRESS="$OLD_ADDR"; BME280_OVERLAY="$OLD_OV"; BME280_LOG_INTERVAL_MIN="$OLD_INT"
+      BME280_TEMP_OFFSET_C="$OLD_TOFF"; BME280_PRESS_OFFSET_HPA="$OLD_POFF"; BME280_HUM_OFFSET_PCT="$OLD_HOFF"
+      return 0
+    fi
+    BME280_HUM_OFFSET_PCT="${tmp//,/.}"
 
     tmp=$(whiptail --title "$title" --inputbox "$q_int" 10 70 "$BME280_LOG_INTERVAL_MIN" 3>&1 1>&2 2>&3)
     rc=$?
@@ -565,6 +705,9 @@ edit_bme280() {
       BME280_I2C_ADDRESS="$OLD_ADDR"
       BME280_OVERLAY="$OLD_OV"
       BME280_LOG_INTERVAL_MIN="$OLD_INT"
+      BME280_TEMP_OFFSET_C="$OLD_TOFF"
+      BME280_PRESS_OFFSET_HPA="$OLD_POFF"
+      BME280_HUM_OFFSET_PCT="$OLD_HOFF"
       return 0
     fi
     BME280_LOG_INTERVAL_MIN="$tmp"
@@ -581,23 +724,28 @@ edit_bme280() {
       BME280_I2C_ADDRESS="$OLD_ADDR"
       BME280_OVERLAY="$OLD_OV"
       BME280_LOG_INTERVAL_MIN="$OLD_INT"
+      BME280_TEMP_OFFSET_C="$OLD_TOFF"
+      BME280_PRESS_OFFSET_HPA="$OLD_POFF"
+      BME280_HUM_OFFSET_PCT="$OLD_HOFF"
       return 0
     fi
   fi
 }
 
 edit_ds18b20() {
-  local title q_enable q_name q_ov q_int rc tmp
+  local title q_enable q_name q_off q_ov q_int rc tmp
   if [ "$LANG_CODE" = "de" ]; then
     title="Sensor DS18B20"
     q_enable="DS18B20 (Temperatur) aktivieren?"
     q_name="Name fuer DS18B20:"
+    q_off="Temperatur-Offset in °C (DS18B20_TEMP_OFFSET_C, z.B. 0.0):"
     q_ov="Overlay (Werte im Bild anzeigen)?"
     q_int="Logger-Intervall in Minuten (Cronjob-Frequenz):"
   else
     title="Sensor DS18B20"
     q_enable="Enable DS18B20 (temperature)?"
     q_name="Name for DS18B20:"
+    q_off="Temperature offset in °C (DS18B20_TEMP_OFFSET_C, e.g. 0.0):"
     q_ov="Overlay (show values on image)?"
     q_int="Logger interval in minutes (cronjob frequency):"
   fi
@@ -606,6 +754,7 @@ edit_ds18b20() {
   local OLD_NAME="$DS18B20_NAME"
   local OLD_OV="$DS18B20_OVERLAY"
   local OLD_INT="$DS18B20_LOG_INTERVAL_MIN"
+  local OLD_OFF="$DS18B20_TEMP_OFFSET_C"
 
   whiptail --title "$title" --yesno "$q_enable" 10 70
   rc=$?
@@ -625,11 +774,24 @@ edit_ds18b20() {
     DS18B20_NAME="$OLD_NAME"
     DS18B20_OVERLAY="$OLD_OV"
     DS18B20_LOG_INTERVAL_MIN="$OLD_INT"
+    DS18B20_TEMP_OFFSET_C="$OLD_OFF"
     return 0
   fi
   DS18B20_NAME="$tmp"
 
   if [ "$DS18B20_ENABLED" = "True" ]; then
+    tmp=$(whiptail --title "$title" --inputbox "$q_off" 10 70 "$DS18B20_TEMP_OFFSET_C" 3>&1 1>&2 2>&3)
+    rc=$?
+    if [ $rc -ne 0 ]; then
+      DS18B20_ENABLED="$OLD_ENABLED"
+      DS18B20_NAME="$OLD_NAME"
+      DS18B20_OVERLAY="$OLD_OV"
+      DS18B20_LOG_INTERVAL_MIN="$OLD_INT"
+      DS18B20_TEMP_OFFSET_C="$OLD_OFF"
+      return 0
+    fi
+    DS18B20_TEMP_OFFSET_C="${tmp//,/.}"
+
     whiptail --title "$title" --yesno "$q_ov" 10 70
     rc=$?
     if [ $rc -eq 0 ]; then
@@ -641,6 +803,7 @@ edit_ds18b20() {
       DS18B20_NAME="$OLD_NAME"
       DS18B20_OVERLAY="$OLD_OV"
       DS18B20_LOG_INTERVAL_MIN="$OLD_INT"
+      DS18B20_TEMP_OFFSET_C="$OLD_OFF"
       return 0
     fi
 
@@ -651,6 +814,7 @@ edit_ds18b20() {
       DS18B20_NAME="$OLD_NAME"
       DS18B20_OVERLAY="$OLD_OV"
       DS18B20_LOG_INTERVAL_MIN="$OLD_INT"
+      DS18B20_TEMP_OFFSET_C="$OLD_OFF"
       return 0
     fi
     DS18B20_LOG_INTERVAL_MIN="$tmp"
@@ -658,18 +822,36 @@ edit_ds18b20() {
 }
 
 edit_mlx90614() {
-  local title q_enable q_name q_i2c q_int rc tmp
+  local title q_enable q_name q_i2c q_int q_off q_adv q_k1 q_k2 q_k3 q_k4 q_k5 q_k6 q_k7 rc tmp
   if [ "$LANG_CODE" = "de" ]; then
     title="Sensor MLX90614"
     q_enable="MLX90614 (IR-Temperatur) aktivieren?"
     q_name="Name fuer MLX90614:"
     q_i2c="I2C-Adresse des MLX90614 (z.B. 0x5a):"
+    q_off="Ambient-Offset in °C (MLX90614_AMBIENT_OFFSET_C, z.B. 0.0):"
+    q_adv="Cloud-Koeffizienten bearbeiten? (MLX_CLOUD_K1..K7)"
+    q_k1="MLX_CLOUD_K1 (Default 100.0):"
+    q_k2="MLX_CLOUD_K2 (Default 0.0):"
+    q_k3="MLX_CLOUD_K3 (Default 0.0):"
+    q_k4="MLX_CLOUD_K4 (Default 0.0):"
+    q_k5="MLX_CLOUD_K5 (Default 0.0):"
+    q_k6="MLX_CLOUD_K6 (Default 0.0):"
+    q_k7="MLX_CLOUD_K7 (Default 0.0):"
     q_int="Logger-Intervall in Minuten (Cronjob-Frequenz):"
   else
     title="Sensor MLX90614"
     q_enable="Enable MLX90614 (IR temperature)?"
     q_name="Name for MLX90614:"
     q_i2c="I2C address for MLX90614 (e.g. 0x5a):"
+    q_off="Ambient offset in °C (MLX90614_AMBIENT_OFFSET_C, e.g. 0.0):"
+    q_adv="Edit cloud coefficients? (MLX_CLOUD_K1..K7)"
+    q_k1="MLX_CLOUD_K1 (default 100.0):"
+    q_k2="MLX_CLOUD_K2 (default 0.0):"
+    q_k3="MLX_CLOUD_K3 (default 0.0):"
+    q_k4="MLX_CLOUD_K4 (default 0.0):"
+    q_k5="MLX_CLOUD_K5 (default 0.0):"
+    q_k6="MLX_CLOUD_K6 (default 0.0):"
+    q_k7="MLX_CLOUD_K7 (default 0.0):"
     q_int="Logger interval in minutes (cronjob frequency):"
   fi
 
@@ -677,6 +859,9 @@ edit_mlx90614() {
   local OLD_NAME="$MLX90614_NAME"
   local OLD_ADDR="$MLX90614_I2C_ADDRESS"
   local OLD_INT="$MLX90614_LOG_INTERVAL_MIN"
+  local OLD_OFF="$MLX90614_AMBIENT_OFFSET_C"
+  local OLD_K1="$MLX_CLOUD_K1"; local OLD_K2="$MLX_CLOUD_K2"; local OLD_K3="$MLX_CLOUD_K3"
+  local OLD_K4="$MLX_CLOUD_K4"; local OLD_K5="$MLX_CLOUD_K5"; local OLD_K6="$MLX_CLOUD_K6"; local OLD_K7="$MLX_CLOUD_K7"
 
   whiptail --title "$title" --yesno "$q_enable" 10 70
   rc=$?
@@ -696,6 +881,9 @@ edit_mlx90614() {
     MLX90614_NAME="$OLD_NAME"
     MLX90614_I2C_ADDRESS="$OLD_ADDR"
     MLX90614_LOG_INTERVAL_MIN="$OLD_INT"
+    MLX90614_AMBIENT_OFFSET_C="$OLD_OFF"
+    MLX_CLOUD_K1="$OLD_K1"; MLX_CLOUD_K2="$OLD_K2"; MLX_CLOUD_K3="$OLD_K3"
+    MLX_CLOUD_K4="$OLD_K4"; MLX_CLOUD_K5="$OLD_K5"; MLX_CLOUD_K6="$OLD_K6"; MLX_CLOUD_K7="$OLD_K7"
     return 0
   fi
   MLX90614_NAME="$tmp"
@@ -708,6 +896,9 @@ edit_mlx90614() {
       MLX90614_NAME="$OLD_NAME"
       MLX90614_I2C_ADDRESS="$OLD_ADDR"
       MLX90614_LOG_INTERVAL_MIN="$OLD_INT"
+      MLX90614_AMBIENT_OFFSET_C="$OLD_OFF"
+      MLX_CLOUD_K1="$OLD_K1"; MLX_CLOUD_K2="$OLD_K2"; MLX_CLOUD_K3="$OLD_K3"
+      MLX_CLOUD_K4="$OLD_K4"; MLX_CLOUD_K5="$OLD_K5"; MLX_CLOUD_K6="$OLD_K6"; MLX_CLOUD_K7="$OLD_K7"
       return 0
     fi
     MLX90614_I2C_ADDRESS="$tmp"
@@ -719,9 +910,45 @@ edit_mlx90614() {
       MLX90614_NAME="$OLD_NAME"
       MLX90614_I2C_ADDRESS="$OLD_ADDR"
       MLX90614_LOG_INTERVAL_MIN="$OLD_INT"
+      MLX90614_AMBIENT_OFFSET_C="$OLD_OFF"
+      MLX_CLOUD_K1="$OLD_K1"; MLX_CLOUD_K2="$OLD_K2"; MLX_CLOUD_K3="$OLD_K3"
+      MLX_CLOUD_K4="$OLD_K4"; MLX_CLOUD_K5="$OLD_K5"; MLX_CLOUD_K6="$OLD_K6"; MLX_CLOUD_K7="$OLD_K7"
       return 0
     fi
     MLX90614_LOG_INTERVAL_MIN="$tmp"
+
+    tmp=$(whiptail --title "$title" --inputbox "$q_off" 10 70 "$MLX90614_AMBIENT_OFFSET_C" 3>&1 1>&2 2>&3)
+    rc=$?
+    if [ $rc -ne 0 ]; then
+      MLX90614_ENABLED="$OLD_ENABLED"
+      MLX90614_NAME="$OLD_NAME"
+      MLX90614_I2C_ADDRESS="$OLD_ADDR"
+      MLX90614_LOG_INTERVAL_MIN="$OLD_INT"
+      MLX90614_AMBIENT_OFFSET_C="$OLD_OFF"
+      MLX_CLOUD_K1="$OLD_K1"; MLX_CLOUD_K2="$OLD_K2"; MLX_CLOUD_K3="$OLD_K3"
+      MLX_CLOUD_K4="$OLD_K4"; MLX_CLOUD_K5="$OLD_K5"; MLX_CLOUD_K6="$OLD_K6"; MLX_CLOUD_K7="$OLD_K7"
+      return 0
+    fi
+    MLX90614_AMBIENT_OFFSET_C="${tmp//,/.}"
+
+    whiptail --title "$title" --yesno "$q_adv" 10 70
+    rc=$?
+    if [ $rc -eq 0 ]; then
+      tmp=$(whiptail --title "$title" --inputbox "$q_k1" 10 70 "$MLX_CLOUD_K1" 3>&1 1>&2 2>&3) || true
+      [ -n "${tmp:-}" ] && MLX_CLOUD_K1="${tmp//,/.}"
+      tmp=$(whiptail --title "$title" --inputbox "$q_k2" 10 70 "$MLX_CLOUD_K2" 3>&1 1>&2 2>&3) || true
+      [ -n "${tmp:-}" ] && MLX_CLOUD_K2="${tmp//,/.}"
+      tmp=$(whiptail --title "$title" --inputbox "$q_k3" 10 70 "$MLX_CLOUD_K3" 3>&1 1>&2 2>&3) || true
+      [ -n "${tmp:-}" ] && MLX_CLOUD_K3="${tmp//,/.}"
+      tmp=$(whiptail --title "$title" --inputbox "$q_k4" 10 70 "$MLX_CLOUD_K4" 3>&1 1>&2 2>&3) || true
+      [ -n "${tmp:-}" ] && MLX_CLOUD_K4="${tmp//,/.}"
+      tmp=$(whiptail --title "$title" --inputbox "$q_k5" 10 70 "$MLX_CLOUD_K5" 3>&1 1>&2 2>&3) || true
+      [ -n "${tmp:-}" ] && MLX_CLOUD_K5="${tmp//,/.}"
+      tmp=$(whiptail --title "$title" --inputbox "$q_k6" 10 70 "$MLX_CLOUD_K6" 3>&1 1>&2 2>&3) || true
+      [ -n "${tmp:-}" ] && MLX_CLOUD_K6="${tmp//,/.}"
+      tmp=$(whiptail --title "$title" --inputbox "$q_k7" 10 70 "$MLX_CLOUD_K7" 3>&1 1>&2 2>&3) || true
+      [ -n "${tmp:-}" ] && MLX_CLOUD_K7="${tmp//,/.}"
+    fi
   fi
 }
 
@@ -857,7 +1084,7 @@ edit_tsl2591() {
 }
 
 edit_dht11() {
-  local title q_enable q_name q_gpio q_ret q_delay q_ov q_int rc tmp
+  local title q_enable q_name q_gpio q_ret q_delay q_toff q_hoff q_ov q_int rc tmp
   if [ "$LANG_CODE" = "de" ]; then
     title="Sensor DHT11"
     q_enable="DHT11 aktivieren?"
@@ -865,6 +1092,8 @@ edit_dht11() {
     q_gpio="GPIO (BCM-Nummer, z.B. 6):"
     q_ret="Anzahl Wiederholungen (DHT11_RETRIES):"
     q_delay="Retry-Delay in Sekunden (DHT11_RETRY_DELAY, z.B. 0.3):"
+    q_toff="Temperatur-Offset in °C (DHT11_TEMP_OFFSET_C, z.B. 0.0):"
+    q_hoff="Feuchte-Offset in %-Punkten (DHT11_HUM_OFFSET_PCT, z.B. 0.0):"
     q_ov="Overlay (Werte im Bild anzeigen)?"
     q_int="Logger-Intervall in Minuten (Cronjob-Frequenz):"
   else
@@ -874,6 +1103,8 @@ edit_dht11() {
     q_gpio="GPIO (BCM number, e.g. 6):"
     q_ret="Number of retries (DHT11_RETRIES):"
     q_delay="Retry delay in seconds (DHT11_RETRY_DELAY, e.g. 0.3):"
+    q_toff="Temperature offset in °C (DHT11_TEMP_OFFSET_C, e.g. 0.0):"
+    q_hoff="Humidity offset in %-points (DHT11_HUM_OFFSET_PCT, e.g. 0.0):"
     q_ov="Overlay (show values on image)?"
     q_int="Logger interval in minutes (cronjob frequency):"
   fi
@@ -885,6 +1116,8 @@ edit_dht11() {
   local OLD_DEL="$DHT11_RETRY_DELAY"
   local OLD_OV="$DHT11_OVERLAY"
   local OLD_INT="$DHT11_LOG_INTERVAL_MIN"
+  local OLD_TOFF="$DHT11_TEMP_OFFSET_C"
+  local OLD_HOFF="$DHT11_HUM_OFFSET_PCT"
 
   whiptail --title "$title" --yesno "$q_enable" 10 70
   rc=$?
@@ -907,6 +1140,8 @@ edit_dht11() {
     DHT11_RETRY_DELAY="$OLD_DEL"
     DHT11_OVERLAY="$OLD_OV"
     DHT11_LOG_INTERVAL_MIN="$OLD_INT"
+    DHT11_TEMP_OFFSET_C="$OLD_TOFF"
+    DHT11_HUM_OFFSET_PCT="$OLD_HOFF"
     return 0
   fi
   DHT11_NAME="$tmp"
@@ -922,6 +1157,8 @@ edit_dht11() {
       DHT11_RETRY_DELAY="$OLD_DEL"
       DHT11_OVERLAY="$OLD_OV"
       DHT11_LOG_INTERVAL_MIN="$OLD_INT"
+      DHT11_TEMP_OFFSET_C="$OLD_TOFF"
+      DHT11_HUM_OFFSET_PCT="$OLD_HOFF"
       return 0
     fi
     DHT11_GPIO_BCM="$tmp"
@@ -936,6 +1173,8 @@ edit_dht11() {
       DHT11_RETRY_DELAY="$OLD_DEL"
       DHT11_OVERLAY="$OLD_OV"
       DHT11_LOG_INTERVAL_MIN="$OLD_INT"
+      DHT11_TEMP_OFFSET_C="$OLD_TOFF"
+      DHT11_HUM_OFFSET_PCT="$OLD_HOFF"
       return 0
     fi
     DHT11_RETRIES="$tmp"
@@ -950,9 +1189,27 @@ edit_dht11() {
       DHT11_RETRY_DELAY="$OLD_DEL"
       DHT11_OVERLAY="$OLD_OV"
       DHT11_LOG_INTERVAL_MIN="$OLD_INT"
+      DHT11_TEMP_OFFSET_C="$OLD_TOFF"
+      DHT11_HUM_OFFSET_PCT="$OLD_HOFF"
       return 0
     fi
     DHT11_RETRY_DELAY="${tmp//,/.}"
+
+    tmp=$(whiptail --title "$title" --inputbox "$q_toff" 10 70 "$DHT11_TEMP_OFFSET_C" 3>&1 1>&2 2>&3)
+    rc=$?; if [ $rc -ne 0 ]; then
+      DHT11_ENABLED="$OLD_ENABLED"; DHT11_NAME="$OLD_NAME"; DHT11_GPIO_BCM="$OLD_GPIO"; DHT11_RETRIES="$OLD_RET"; DHT11_RETRY_DELAY="$OLD_DEL"; DHT11_OVERLAY="$OLD_OV"; DHT11_LOG_INTERVAL_MIN="$OLD_INT"
+      DHT11_TEMP_OFFSET_C="$OLD_TOFF"; DHT11_HUM_OFFSET_PCT="$OLD_HOFF"
+      return 0
+    fi
+    DHT11_TEMP_OFFSET_C="${tmp//,/.}"
+
+    tmp=$(whiptail --title "$title" --inputbox "$q_hoff" 10 70 "$DHT11_HUM_OFFSET_PCT" 3>&1 1>&2 2>&3)
+    rc=$?; if [ $rc -ne 0 ]; then
+      DHT11_ENABLED="$OLD_ENABLED"; DHT11_NAME="$OLD_NAME"; DHT11_GPIO_BCM="$OLD_GPIO"; DHT11_RETRIES="$OLD_RET"; DHT11_RETRY_DELAY="$OLD_DEL"; DHT11_OVERLAY="$OLD_OV"; DHT11_LOG_INTERVAL_MIN="$OLD_INT"
+      DHT11_TEMP_OFFSET_C="$OLD_TOFF"; DHT11_HUM_OFFSET_PCT="$OLD_HOFF"
+      return 0
+    fi
+    DHT11_HUM_OFFSET_PCT="${tmp//,/.}"
 
     whiptail --title "$title" --yesno "$q_ov" 10 70
     rc=$?
@@ -968,6 +1225,8 @@ edit_dht11() {
       DHT11_RETRY_DELAY="$OLD_DEL"
       DHT11_OVERLAY="$OLD_OV"
       DHT11_LOG_INTERVAL_MIN="$OLD_INT"
+      DHT11_TEMP_OFFSET_C="$OLD_TOFF"
+      DHT11_HUM_OFFSET_PCT="$OLD_HOFF"
       return 0
     fi
 
@@ -981,6 +1240,8 @@ edit_dht11() {
       DHT11_RETRY_DELAY="$OLD_DEL"
       DHT11_OVERLAY="$OLD_OV"
       DHT11_LOG_INTERVAL_MIN="$OLD_INT"
+      DHT11_TEMP_OFFSET_C="$OLD_TOFF"
+      DHT11_HUM_OFFSET_PCT="$OLD_HOFF"
       return 0
     fi
     DHT11_LOG_INTERVAL_MIN="$tmp"
@@ -988,7 +1249,7 @@ edit_dht11() {
 }
 
 edit_dht22() {
-  local title q_enable q_name q_gpio q_ret q_delay q_ov q_int rc tmp
+  local title q_enable q_name q_gpio q_ret q_delay q_toff q_hoff q_ov q_int rc tmp
   if [ "$LANG_CODE" = "de" ]; then
     title="Sensor DHT22"
     q_enable="DHT22 aktivieren?"
@@ -996,6 +1257,8 @@ edit_dht22() {
     q_gpio="GPIO (BCM-Nummer, z.B. 6):"
     q_ret="Anzahl Wiederholungen (DHT22_RETRIES):"
     q_delay="Retry-Delay in Sekunden (DHT22_RETRY_DELAY, z.B. 12):"
+    q_toff="Temperatur-Offset in °C (DHT22_TEMP_OFFSET_C, z.B. 0.0):"
+    q_hoff="Feuchte-Offset in %-Punkten (DHT22_HUM_OFFSET_PCT, z.B. 0.0):"
     q_ov="Overlay (Werte im Bild anzeigen)?"
     q_int="Logger-Intervall in Minuten (Cronjob-Frequenz):"
   else
@@ -1005,6 +1268,8 @@ edit_dht22() {
     q_gpio="GPIO (BCM number, e.g. 6):"
     q_ret="Number of retries (DHT22_RETRIES):"
     q_delay="Retry delay in seconds (DHT22_RETRY_DELAY, e.g. 12):"
+    q_toff="Temperature offset in °C (DHT22_TEMP_OFFSET_C, e.g. 0.0):"
+    q_hoff="Humidity offset in %-points (DHT22_HUM_OFFSET_PCT, e.g. 0.0):"
     q_ov="Overlay (show values on image)?"
     q_int="Logger interval in minutes (cronjob frequency):"
   fi
@@ -1016,6 +1281,8 @@ edit_dht22() {
   local OLD_DEL="$DHT22_RETRY_DELAY"
   local OLD_OV="$DHT22_OVERLAY"
   local OLD_INT="$DHT22_LOG_INTERVAL_MIN"
+  local OLD_TOFF="$DHT22_TEMP_OFFSET_C"
+  local OLD_HOFF="$DHT22_HUM_OFFSET_PCT"
 
   whiptail --title "$title" --yesno "$q_enable" 10 70
   rc=$?
@@ -1038,6 +1305,8 @@ edit_dht22() {
     DHT22_RETRY_DELAY="$OLD_DEL"
     DHT22_OVERLAY="$OLD_OV"
     DHT22_LOG_INTERVAL_MIN="$OLD_INT"
+    DHT22_TEMP_OFFSET_C="$OLD_TOFF"
+    DHT22_HUM_OFFSET_PCT="$OLD_HOFF"
     return 0
   fi
   DHT22_NAME="$tmp"
@@ -1053,6 +1322,8 @@ edit_dht22() {
       DHT22_RETRY_DELAY="$OLD_DEL"
       DHT22_OVERLAY="$OLD_OV"
       DHT22_LOG_INTERVAL_MIN="$OLD_INT"
+      DHT22_TEMP_OFFSET_C="$OLD_TOFF"
+      DHT22_HUM_OFFSET_PCT="$OLD_HOFF"
       return 0
     fi
     DHT22_GPIO_BCM="$tmp"
@@ -1067,6 +1338,8 @@ edit_dht22() {
       DHT22_RETRY_DELAY="$OLD_DEL"
       DHT22_OVERLAY="$OLD_OV"
       DHT22_LOG_INTERVAL_MIN="$OLD_INT"
+      DHT22_TEMP_OFFSET_C="$OLD_TOFF"
+      DHT22_HUM_OFFSET_PCT="$OLD_HOFF"
       return 0
     fi
     DHT22_RETRIES="$tmp"
@@ -1081,9 +1354,27 @@ edit_dht22() {
       DHT22_RETRY_DELAY="$OLD_DEL"
       DHT22_OVERLAY="$OLD_OV"
       DHT22_LOG_INTERVAL_MIN="$OLD_INT"
+      DHT22_TEMP_OFFSET_C="$OLD_TOFF"
+      DHT22_HUM_OFFSET_PCT="$OLD_HOFF"
       return 0
     fi
     DHT22_RETRY_DELAY="${tmp//,/.}"
+
+    tmp=$(whiptail --title "$title" --inputbox "$q_toff" 10 70 "$DHT22_TEMP_OFFSET_C" 3>&1 1>&2 2>&3)
+    rc=$?; if [ $rc -ne 0 ]; then
+      DHT22_ENABLED="$OLD_ENABLED"; DHT22_NAME="$OLD_NAME"; DHT22_GPIO_BCM="$OLD_GPIO"; DHT22_RETRIES="$OLD_RET"; DHT22_RETRY_DELAY="$OLD_DEL"; DHT22_OVERLAY="$OLD_OV"; DHT22_LOG_INTERVAL_MIN="$OLD_INT"
+      DHT22_TEMP_OFFSET_C="$OLD_TOFF"; DHT22_HUM_OFFSET_PCT="$OLD_HOFF"
+      return 0
+    fi
+    DHT22_TEMP_OFFSET_C="${tmp//,/.}"
+
+    tmp=$(whiptail --title "$title" --inputbox "$q_hoff" 10 70 "$DHT22_HUM_OFFSET_PCT" 3>&1 1>&2 2>&3)
+    rc=$?; if [ $rc -ne 0 ]; then
+      DHT22_ENABLED="$OLD_ENABLED"; DHT22_NAME="$OLD_NAME"; DHT22_GPIO_BCM="$OLD_GPIO"; DHT22_RETRIES="$OLD_RET"; DHT22_RETRY_DELAY="$OLD_DEL"; DHT22_OVERLAY="$OLD_OV"; DHT22_LOG_INTERVAL_MIN="$OLD_INT"
+      DHT22_TEMP_OFFSET_C="$OLD_TOFF"; DHT22_HUM_OFFSET_PCT="$OLD_HOFF"
+      return 0
+    fi
+    DHT22_HUM_OFFSET_PCT="${tmp//,/.}"
 
     whiptail --title "$title" --yesno "$q_ov" 10 70
     rc=$?
@@ -1099,6 +1390,8 @@ edit_dht22() {
       DHT22_RETRY_DELAY="$OLD_DEL"
       DHT22_OVERLAY="$OLD_OV"
       DHT22_LOG_INTERVAL_MIN="$OLD_INT"
+      DHT22_TEMP_OFFSET_C="$OLD_TOFF"
+      DHT22_HUM_OFFSET_PCT="$OLD_HOFF"
       return 0
     fi
 
@@ -1112,9 +1405,273 @@ edit_dht22() {
       DHT22_RETRY_DELAY="$OLD_DEL"
       DHT22_OVERLAY="$OLD_OV"
       DHT22_LOG_INTERVAL_MIN="$OLD_INT"
+      DHT22_TEMP_OFFSET_C="$OLD_TOFF"
+      DHT22_HUM_OFFSET_PCT="$OLD_HOFF"
       return 0
     fi
     DHT22_LOG_INTERVAL_MIN="$tmp"
+  fi
+}
+
+edit_htu21() {
+  local title q_enable q_name q_i2c q_toff q_hoff q_ov q_int rc tmp
+  if [ "$LANG_CODE" = "de" ]; then
+    title="Sensor HTU21 / GY-21"
+    q_enable="HTU21 / GY-21 (Temp/Feuchte) aktivieren?"
+    q_name="Name fuer HTU21 / GY-21:"
+    q_i2c="I2C-Adresse des HTU21 (z.B. 0x40):"
+    q_toff="Temperatur-Offset in Grad_C (HTU21_TEMP_OFFSET, z.B. 0.0):"
+    q_hoff="Feuchte-Offset in %-Punkten (HTU21_HUM_OFFSET, z.B. 0.0):"
+    q_ov="Overlay (Werte im Bild anzeigen)?"
+    q_int="Logger-Intervall in Minuten (Cronjob-Frequenz):"
+  else
+    title="Sensor HTU21 / GY-21"
+    q_enable="Enable HTU21 / GY-21 (temp/humidity)?"
+    q_name="Name for HTU21 / GY-21:"
+    q_i2c="I2C address for HTU21 (e.g. 0x40):"
+    q_toff="Temperature offset in Grad_C (HTU21_TEMP_OFFSET, e.g. 0.0):"
+    q_hoff="Humidity offset in % points (HTU21_HUM_OFFSET, e.g. 0.0):"
+    q_ov="Overlay (show values on image)?"
+    q_int="Logger interval in minutes (cronjob frequency):"
+  fi
+
+  local OLD_ENABLED="$HTU21_ENABLED"
+  local OLD_NAME="$HTU21_NAME"
+  local OLD_ADDR="$HTU21_I2C_ADDRESS"
+  local OLD_TOFF="$HTU21_TEMP_OFFSET"
+  local OLD_HOFF="$HTU21_HUM_OFFSET"
+  local OLD_OV="$HTU21_OVERLAY"
+  local OLD_INT="$HTU21_LOG_INTERVAL_MIN"
+
+  whiptail --title "$title" --yesno "$q_enable" 10 70
+  rc=$?
+  if [ $rc -eq 0 ]; then
+    HTU21_ENABLED="True"
+  elif [ $rc -eq 1 ]; then
+    HTU21_ENABLED="False"
+  else
+    HTU21_ENABLED="$OLD_ENABLED"
+    return 0
+  fi
+
+  tmp=$(whiptail --title "$title" --inputbox "$q_name" 10 70 "$HTU21_NAME" 3>&1 1>&2 2>&3)
+  rc=$?
+  if [ $rc -ne 0 ]; then
+    HTU21_ENABLED="$OLD_ENABLED"
+    HTU21_NAME="$OLD_NAME"
+    HTU21_I2C_ADDRESS="$OLD_ADDR"
+    HTU21_TEMP_OFFSET="$OLD_TOFF"
+    HTU21_HUM_OFFSET="$OLD_HOFF"
+    HTU21_OVERLAY="$OLD_OV"
+    HTU21_LOG_INTERVAL_MIN="$OLD_INT"
+    return 0
+  fi
+  HTU21_NAME="$tmp"
+
+  if [ "$HTU21_ENABLED" = "True" ]; then
+    tmp=$(whiptail --title "$title" --inputbox "$q_i2c" 10 70 "$HTU21_I2C_ADDRESS" 3>&1 1>&2 2>&3)
+    rc=$?
+    if [ $rc -ne 0 ]; then
+      HTU21_ENABLED="$OLD_ENABLED"
+      HTU21_NAME="$OLD_NAME"
+      HTU21_I2C_ADDRESS="$OLD_ADDR"
+      HTU21_TEMP_OFFSET="$OLD_TOFF"
+      HTU21_HUM_OFFSET="$OLD_HOFF"
+      HTU21_OVERLAY="$OLD_OV"
+      HTU21_LOG_INTERVAL_MIN="$OLD_INT"
+      return 0
+    fi
+    HTU21_I2C_ADDRESS="$tmp"
+
+    tmp=$(whiptail --title "$title" --inputbox "$q_toff" 10 70 "$HTU21_TEMP_OFFSET" 3>&1 1>&2 2>&3)
+    rc=$?
+    if [ $rc -ne 0 ]; then
+      HTU21_ENABLED="$OLD_ENABLED"
+      HTU21_NAME="$OLD_NAME"
+      HTU21_I2C_ADDRESS="$OLD_ADDR"
+      HTU21_TEMP_OFFSET="$OLD_TOFF"
+      HTU21_HUM_OFFSET="$OLD_HOFF"
+      HTU21_OVERLAY="$OLD_OV"
+      HTU21_LOG_INTERVAL_MIN="$OLD_INT"
+      return 0
+    fi
+    HTU21_TEMP_OFFSET="${tmp//,/.}"
+
+    tmp=$(whiptail --title "$title" --inputbox "$q_hoff" 10 70 "$HTU21_HUM_OFFSET" 3>&1 1>&2 2>&3)
+    rc=$?
+    if [ $rc -ne 0 ]; then
+      HTU21_ENABLED="$OLD_ENABLED"
+      HTU21_NAME="$OLD_NAME"
+      HTU21_I2C_ADDRESS="$OLD_ADDR"
+      HTU21_TEMP_OFFSET="$OLD_TOFF"
+      HTU21_HUM_OFFSET="$OLD_HOFF"
+      HTU21_OVERLAY="$OLD_OV"
+      HTU21_LOG_INTERVAL_MIN="$OLD_INT"
+      return 0
+    fi
+    HTU21_HUM_OFFSET="${tmp//,/.}"
+
+    whiptail --title "$title" --yesno "$q_ov" 10 70
+    rc=$?
+    if [ $rc -eq 0 ]; then
+      HTU21_OVERLAY="True"
+    elif [ $rc -eq 1 ]; then
+      HTU21_OVERLAY="False"
+    else
+      HTU21_ENABLED="$OLD_ENABLED"
+      HTU21_NAME="$OLD_NAME"
+      HTU21_I2C_ADDRESS="$OLD_ADDR"
+      HTU21_TEMP_OFFSET="$OLD_TOFF"
+      HTU21_HUM_OFFSET="$OLD_HOFF"
+      HTU21_OVERLAY="$OLD_OV"
+      HTU21_LOG_INTERVAL_MIN="$OLD_INT"
+      return 0
+    fi
+
+    tmp=$(whiptail --title "$title" --inputbox "$q_int" 10 70 "$HTU21_LOG_INTERVAL_MIN" 3>&1 1>&2 2>&3)
+    rc=$?
+    if [ $rc -ne 0 ]; then
+      HTU21_ENABLED="$OLD_ENABLED"
+      HTU21_NAME="$OLD_NAME"
+      HTU21_I2C_ADDRESS="$OLD_ADDR"
+      HTU21_TEMP_OFFSET="$OLD_TOFF"
+      HTU21_HUM_OFFSET="$OLD_HOFF"
+      HTU21_OVERLAY="$OLD_OV"
+      HTU21_LOG_INTERVAL_MIN="$OLD_INT"
+      return 0
+    fi
+    HTU21_LOG_INTERVAL_MIN="$tmp"
+  fi
+}
+
+edit_sht3x() {
+  local title q_enable q_name q_i2c q_toff q_hoff q_ov q_int rc tmp
+  if [ "$LANG_CODE" = "de" ]; then
+    title="Sensor SHT3x (SHT30/31/35)"
+    q_enable="SHT3x (Temp/Feuchte) aktivieren?"
+    q_name="Name fuer SHT3x:"
+    q_i2c="I2C-Adresse des SHT3x (z.B. 0x44):"
+    q_toff="Temperatur-Offset in Grad_C (SHT3X_TEMP_OFFSET, z.B. 0.0):"
+    q_hoff="Feuchte-Offset in %-Punkten (SHT3X_HUM_OFFSET, z.B. 0.0):"
+    q_ov="Overlay (Werte im Bild anzeigen)?"
+    q_int="Logger-Intervall in Minuten (Cronjob-Frequenz):"
+  else
+    title="Sensor SHT3x (SHT30/31/35)"
+    q_enable="Enable SHT3x (temp/humidity)?"
+    q_name="Name for SHT3x:"
+    q_i2c="I2C address for SHT3x (e.g. 0x44):"
+    q_toff="Temperature offset in Grad_C (SHT3X_TEMP_OFFSET, e.g. 0.0):"
+    q_hoff="Humidity offset in % points (SHT3X_HUM_OFFSET, e.g. 0.0):"
+    q_ov="Overlay (show values on image)?"
+    q_int="Logger interval in minutes (cronjob frequency):"
+  fi
+
+  local OLD_ENABLED="$SHT3X_ENABLED"
+  local OLD_NAME="$SHT3X_NAME"
+  local OLD_ADDR="$SHT3X_I2C_ADDRESS"
+  local OLD_TOFF="$SHT3X_TEMP_OFFSET"
+  local OLD_HOFF="$SHT3X_HUM_OFFSET"
+  local OLD_OV="$SHT3X_OVERLAY"
+  local OLD_INT="$SHT3X_LOG_INTERVAL_MIN"
+
+  whiptail --title "$title" --yesno "$q_enable" 10 70
+  rc=$?
+  if [ $rc -eq 0 ]; then
+    SHT3X_ENABLED="True"
+  elif [ $rc -eq 1 ]; then
+    SHT3X_ENABLED="False"
+  else
+    SHT3X_ENABLED="$OLD_ENABLED"
+    return 0
+  fi
+
+  tmp=$(whiptail --title "$title" --inputbox "$q_name" 10 70 "$SHT3X_NAME" 3>&1 1>&2 2>&3)
+  rc=$?
+  if [ $rc -ne 0 ]; then
+    SHT3X_ENABLED="$OLD_ENABLED"
+    SHT3X_NAME="$OLD_NAME"
+    SHT3X_I2C_ADDRESS="$OLD_ADDR"
+    SHT3X_TEMP_OFFSET="$OLD_TOFF"
+    SHT3X_HUM_OFFSET="$OLD_HOFF"
+    SHT3X_OVERLAY="$OLD_OV"
+    SHT3X_LOG_INTERVAL_MIN="$OLD_INT"
+    return 0
+  fi
+  SHT3X_NAME="$tmp"
+
+  if [ "$SHT3X_ENABLED" = "True" ]; then
+    tmp=$(whiptail --title "$title" --inputbox "$q_i2c" 10 70 "$SHT3X_I2C_ADDRESS" 3>&1 1>&2 2>&3)
+    rc=$?
+    if [ $rc -ne 0 ]; then
+      SHT3X_ENABLED="$OLD_ENABLED"
+      SHT3X_NAME="$OLD_NAME"
+      SHT3X_I2C_ADDRESS="$OLD_ADDR"
+      SHT3X_TEMP_OFFSET="$OLD_TOFF"
+      SHT3X_HUM_OFFSET="$OLD_HOFF"
+      SHT3X_OVERLAY="$OLD_OV"
+      SHT3X_LOG_INTERVAL_MIN="$OLD_INT"
+      return 0
+    fi
+    SHT3X_I2C_ADDRESS="$tmp"
+
+    tmp=$(whiptail --title "$title" --inputbox "$q_toff" 10 70 "$SHT3X_TEMP_OFFSET" 3>&1 1>&2 2>&3)
+    rc=$?
+    if [ $rc -ne 0 ]; then
+      SHT3X_ENABLED="$OLD_ENABLED"
+      SHT3X_NAME="$OLD_NAME"
+      SHT3X_I2C_ADDRESS="$OLD_ADDR"
+      SHT3X_TEMP_OFFSET="$OLD_TOFF"
+      SHT3X_HUM_OFFSET="$OLD_HOFF"
+      SHT3X_OVERLAY="$OLD_OV"
+      SHT3X_LOG_INTERVAL_MIN="$OLD_INT"
+      return 0
+    fi
+    SHT3X_TEMP_OFFSET="${tmp//,/.}"
+
+    tmp=$(whiptail --title "$title" --inputbox "$q_hoff" 10 70 "$SHT3X_HUM_OFFSET" 3>&1 1>&2 2>&3)
+    rc=$?
+    if [ $rc -ne 0 ]; then
+      SHT3X_ENABLED="$OLD_ENABLED"
+      SHT3X_NAME="$OLD_NAME"
+      SHT3X_I2C_ADDRESS="$OLD_ADDR"
+      SHT3X_TEMP_OFFSET="$OLD_TOFF"
+      SHT3X_HUM_OFFSET="$OLD_HOFF"
+      SHT3X_OVERLAY="$OLD_OV"
+      SHT3X_LOG_INTERVAL_MIN="$OLD_INT"
+      return 0
+    fi
+    SHT3X_HUM_OFFSET="${tmp//,/.}"
+
+    whiptail --title "$title" --yesno "$q_ov" 10 70
+    rc=$?
+    if [ $rc -eq 0 ]; then
+      SHT3X_OVERLAY="True"
+    elif [ $rc -eq 1 ]; then
+      SHT3X_OVERLAY="False"
+    else
+      SHT3X_ENABLED="$OLD_ENABLED"
+      SHT3X_NAME="$OLD_NAME"
+      SHT3X_I2C_ADDRESS="$OLD_ADDR"
+      SHT3X_TEMP_OFFSET="$OLD_TOFF"
+      SHT3X_HUM_OFFSET="$OLD_HOFF"
+      SHT3X_OVERLAY="$OLD_OV"
+      SHT3X_LOG_INTERVAL_MIN="$OLD_INT"
+      return 0
+    fi
+
+    tmp=$(whiptail --title "$title" --inputbox "$q_int" 10 70 "$SHT3X_LOG_INTERVAL_MIN" 3>&1 1>&2 2>&3)
+    rc=$?
+    if [ $rc -ne 0 ]; then
+      SHT3X_ENABLED="$OLD_ENABLED"
+      SHT3X_NAME="$OLD_NAME"
+      SHT3X_I2C_ADDRESS="$OLD_ADDR"
+      SHT3X_TEMP_OFFSET="$OLD_TOFF"
+      SHT3X_HUM_OFFSET="$OLD_HOFF"
+      SHT3X_OVERLAY="$OLD_OV"
+      SHT3X_LOG_INTERVAL_MIN="$OLD_INT"
+      return 0
+    fi
+    SHT3X_LOG_INTERVAL_MIN="$tmp"
   fi
 }
 
@@ -1131,21 +1688,25 @@ sensors_menu() {
   fi
 
   while true; do
-    local s_bme s_ds s_mlx s_tsl s_d11 s_d22
+    local s_bme s_ds s_mlx s_tsl s_d11 s_d22 s_htu s_sht
     s_bme=$(bool_to_status "$BME280_ENABLED")
     s_ds=$(bool_to_status "$DS18B20_ENABLED")
     s_mlx=$(bool_to_status "$MLX90614_ENABLED")
     s_tsl=$(bool_to_status "$TSL2591_ENABLED")
     s_d11=$(bool_to_status "$DHT11_ENABLED")
     s_d22=$(bool_to_status "$DHT22_ENABLED")
+    s_htu=$(bool_to_status "$HTU21_ENABLED")
+    s_sht=$(bool_to_status "$SHT3X_ENABLED")
 
     CHOICE=$(whiptail --title "$tb" --menu "$mp" 20 70 10 \
-      "1" "BME280  ($s_bme)" \
-      "2" "DS18B20 ($s_ds)" \
-      "3" "MLX90614 ($s_mlx)" \
-      "4" "TSL2591 ($s_tsl)" \
-      "5" "DHT11  ($s_d11)" \
-      "6" "DHT22  ($s_d22)" \
+      "1" "BME280        ($s_bme)" \
+      "2" "DS18B20       ($s_ds)" \
+      "3" "MLX90614      ($s_mlx)" \
+      "4" "TSL2591       ($s_tsl)" \
+      "5" "DHT11         ($s_d11)" \
+      "6" "DHT22         ($s_d22)" \
+      "7" "HTU21 / GY-21 ($s_htu)" \
+      "8" "SHT3x         ($s_sht)" \
       "Z" "$back_label" \
       3>&1 1>&2 2>&3) || return 0
 
@@ -1156,6 +1717,8 @@ sensors_menu() {
       "4") edit_tsl2591 ;;
       "5") edit_dht11 ;;
       "6") edit_dht22 ;;
+      "7") edit_htu21 ;;
+      "8") edit_sht3x ;;
       "Z") return 0 ;;
     esac
   done
@@ -1182,7 +1745,6 @@ edit_kpindex() {
   local OLD_OV="$KPINDEX_OVERLAY"
   local OLD_INT="$KPINDEX_LOG_INTERVAL_MIN"
 
-  # Aktivieren / deaktivieren
   whiptail --title "$title" --yesno "$q_enable" 10 70
   rc=$?
   if [ $rc -eq 0 ]; then
@@ -1194,12 +1756,10 @@ edit_kpindex() {
     return 0
   fi
 
-  # Wenn nicht aktiviert: Overlay/Intervall erstmal in Ruhe lassen
   if [ "$KPINDEX_ENABLED" != "True" ]; then
     return 0
   fi
 
-  # Overlay
   whiptail --title "$title" --yesno "$q_ov" 10 70
   rc=$?
   if [ $rc -eq 0 ]; then
@@ -1213,7 +1773,6 @@ edit_kpindex() {
     return 0
   fi
 
-  # Intervall in Minuten
   tmp=$(whiptail --title "$title" --inputbox "$q_int" 10 70 "$KPINDEX_LOG_INTERVAL_MIN" 3>&1 1>&2 2>&3)
   rc=$?
   if [ $rc -ne 0 ]; then
@@ -1373,6 +1932,7 @@ show_processes() {
     msg="Die Sensor-Logger-Cronjobs werden automatisch nach Sensor-Status und Intervall erzeugt.\n\n\
 Basisjobs:\n\
 - Allsky Raspi-Status (*/1 Min)\n\
+- Allsky Image-Upload (*/2 Min)\n\
 - Config Update (taeglich 12:00)\n\
 - Nightly FTP-Upload (taeglich 08:45)\n\
 - SQM Messung (alle 5 Min)\n\
@@ -1383,6 +1943,7 @@ Sensor-Logger haengen von den *_ENABLED-Flags und *_LOG_INTERVAL_MIN in config.p
     msg="Sensor logger cronjobs are generated automatically based on sensor status and interval.\n\n\
 Base jobs:\n\
 - Allsky Raspi status (*/1 min)\n\
+- Allsky image upload (*/2 min)\n\
 - Config update (daily 12:00)\n\
 - Nightly FTP upload (daily 08:45)\n\
 - SQM measurement (every 5 min)\n\
@@ -1461,6 +2022,8 @@ MLX90614_NAME_ESC="$(esc_py_str "$MLX90614_NAME")"
 TSL2591_NAME_ESC="$(esc_py_str "$TSL2591_NAME")"
 DHT11_NAME_ESC="$(esc_py_str "$DHT11_NAME")"
 DHT22_NAME_ESC="$(esc_py_str "$DHT22_NAME")"
+HTU21_NAME_ESC="$(esc_py_str "$HTU21_NAME")"
+SHT3X_NAME_ESC="$(esc_py_str "$SHT3X_NAME")"
 
 cat > "$CFG_FILE" <<EOF
 # config.py - automatisch generiert
@@ -1500,6 +2063,9 @@ BME280_ENABLED      = ${BME280_ENABLED}
 BME280_NAME         = "${BME280_NAME_ESC}"
 BME280_I2C_ADDRESS  = ${BME280_I2C_ADDRESS}
 BME280_OVERLAY      = ${BME280_OVERLAY}
+BME280_TEMP_OFFSET_C     = ${BME280_TEMP_OFFSET_C}
+BME280_PRESS_OFFSET_HPA  = ${BME280_PRESS_OFFSET_HPA}
+BME280_HUM_OFFSET_PCT    = ${BME280_HUM_OFFSET_PCT}
 
 TSL2591_ENABLED        = ${TSL2591_ENABLED}
 TSL2591_NAME           = "${TSL2591_NAME_ESC}"
@@ -1511,6 +2077,7 @@ TSL2591_OVERLAY        = ${TSL2591_OVERLAY}
 DS18B20_ENABLED  = ${DS18B20_ENABLED}
 DS18B20_NAME     = "${DS18B20_NAME_ESC}"
 DS18B20_OVERLAY  = ${DS18B20_OVERLAY}
+DS18B20_TEMP_OFFSET_C = ${DS18B20_TEMP_OFFSET_C}
 
 # DHT11
 DHT11_ENABLED      = ${DHT11_ENABLED}
@@ -1519,6 +2086,8 @@ DHT11_GPIO_BCM     = ${DHT11_GPIO_BCM}
 DHT11_RETRIES      = ${DHT11_RETRIES}
 DHT11_RETRY_DELAY  = ${DHT11_RETRY_DELAY}
 DHT11_OVERLAY      = ${DHT11_OVERLAY}
+DHT11_TEMP_OFFSET_C    = ${DHT11_TEMP_OFFSET_C}
+DHT11_HUM_OFFSET_PCT   = ${DHT11_HUM_OFFSET_PCT}
 
 # DHT22
 DHT22_ENABLED      = ${DHT22_ENABLED}
@@ -1527,10 +2096,35 @@ DHT22_GPIO_BCM     = ${DHT22_GPIO_BCM}
 DHT22_RETRIES      = ${DHT22_RETRIES}
 DHT22_RETRY_DELAY  = ${DHT22_RETRY_DELAY}
 DHT22_OVERLAY      = ${DHT22_OVERLAY}
+DHT22_TEMP_OFFSET_C    = ${DHT22_TEMP_OFFSET_C}
+DHT22_HUM_OFFSET_PCT   = ${DHT22_HUM_OFFSET_PCT}
 
 MLX90614_ENABLED     = ${MLX90614_ENABLED}
 MLX90614_NAME        = "${MLX90614_NAME_ESC}"
 MLX90614_I2C_ADDRESS = ${MLX90614_I2C_ADDRESS}
+MLX90614_AMBIENT_OFFSET_C   = ${MLX90614_AMBIENT_OFFSET_C}
+MLX_CLOUD_K1 = ${MLX_CLOUD_K1}
+MLX_CLOUD_K2 = ${MLX_CLOUD_K2}
+MLX_CLOUD_K3 = ${MLX_CLOUD_K3}
+MLX_CLOUD_K4 = ${MLX_CLOUD_K4}
+MLX_CLOUD_K5 = ${MLX_CLOUD_K5}
+MLX_CLOUD_K6 = ${MLX_CLOUD_K6}
+MLX_CLOUD_K7 = ${MLX_CLOUD_K7}
+
+HTU21_ENABLED       = ${HTU21_ENABLED}
+HTU21_NAME          = "${HTU21_NAME_ESC}"
+HTU21_I2C_ADDRESS   = ${HTU21_I2C_ADDRESS}
+HTU21_TEMP_OFFSET   = ${HTU21_TEMP_OFFSET}
+HTU21_HUM_OFFSET    = ${HTU21_HUM_OFFSET}
+HTU21_OVERLAY       = ${HTU21_OVERLAY}
+
+# SHT3X Series (SHT30 / SHT31 / SHT35)
+SHT3X_ENABLED       = ${SHT3X_ENABLED}
+SHT3X_NAME          = "${SHT3X_NAME_ESC}"
+SHT3X_I2C_ADDRESS   = ${SHT3X_I2C_ADDRESS}
+SHT3X_TEMP_OFFSET   = ${SHT3X_TEMP_OFFSET}
+SHT3X_HUM_OFFSET    = ${SHT3X_HUM_OFFSET}
+SHT3X_OVERLAY       = ${SHT3X_OVERLAY}
 
 # Logger-Intervalle in Minuten
 BME280_LOG_INTERVAL_MIN   = ${BME280_LOG_INTERVAL_MIN}
@@ -1539,6 +2133,8 @@ DS18B20_LOG_INTERVAL_MIN  = ${DS18B20_LOG_INTERVAL_MIN}
 DHT11_LOG_INTERVAL_MIN    = ${DHT11_LOG_INTERVAL_MIN}
 DHT22_LOG_INTERVAL_MIN    = ${DHT22_LOG_INTERVAL_MIN}
 MLX90614_LOG_INTERVAL_MIN = ${MLX90614_LOG_INTERVAL_MIN}
+HTU21_LOG_INTERVAL_MIN    = ${HTU21_LOG_INTERVAL_MIN}
+SHT3X_LOG_INTERVAL_MIN    = ${SHT3X_LOG_INTERVAL_MIN}
 
 # KpIndex / Analemma / Kamera
 KPINDEX_ENABLED = ${KPINDEX_ENABLED}
@@ -1630,6 +2226,20 @@ if DHT22_ENABLED:
         "comment": "DHT22 Sensor",
         "schedule": f"*/{DHT22_LOG_INTERVAL_MIN} * * * *",
         "command": "cd ${ROOT_DIR} && python3 -m scripts.dht22_logger",
+    })
+
+if HTU21_ENABLED:
+    CRONTABS.append({
+        "comment": "HTU21 / GY-21 Sensor",
+        "schedule": f"*/{HTU21_LOG_INTERVAL_MIN} * * * *",
+        "command": "cd ${ROOT_DIR} && python3 -m scripts.htu21_logger",
+    })
+
+if SHT3X_ENABLED:
+    CRONTABS.append({
+        "comment": "SHT3x Sensor",
+        "schedule": f"*/{SHT3X_LOG_INTERVAL_MIN} * * * *",
+        "command": "cd ${ROOT_DIR} && python3 -m scripts.sht3x_logger",
     })
 
 if KPINDEX_ENABLED:

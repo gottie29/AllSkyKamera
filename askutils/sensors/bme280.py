@@ -112,6 +112,14 @@ def read_bme280(addr=DEVICE):
     humidity = humidity * (1.0 - dig_H1 * humidity / 524288.0)
     humidity = max(0, min(humidity, 100))
 
+    t_off = float(getattr(config, "BME280_TEMP_OFFSET_C", 0.0) or 0.0)
+    p_off = float(getattr(config, "BME280_PRESS_OFFSET_HPA", 0.0) or 0.0)
+    h_off = float(getattr(config, "BME280_HUM_OFFSET_PCT", 0.0) or 0.0)
+
+    temperature = temperature + t_off
+    pressure    = pressure + p_off
+    humidity    = humidity + h_off
+
     return round(temperature, 2), round(pressure, 2), round(humidity, 2)
 
 def calculate_dew_point(temp, hum):

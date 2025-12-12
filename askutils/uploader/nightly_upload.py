@@ -221,10 +221,10 @@ def upload_nightly_batch(date_str: str = None) -> bool:
                     if desired:
                         try:
                             prev = ftp.pwd()
-                            # HIER: nur in remote_subdir wechseln, NICHT nochmal FTP_REMOTE_DIR davor hängen
+                            # HIER: nur in remote_subdir wechseln, NICHT nochmal FTP_REMOTE_DIR davor haengen
                             ftp.cwd(remote_subdir)
 
-                            src = os.path.basename(local_path)  # _upload_file lädt unter Originalnamen hoch
+                            src = os.path.basename(local_path)  # _upload_file laedt unter Originalnamen hoch
                             if src != desired:
                                 log(f"Rename remote: {src} -> {desired}")
                                 try:

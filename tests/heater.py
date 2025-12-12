@@ -18,7 +18,7 @@ GPIO.setwarnings(False)
 
 # BME280
 DEVICE = 0x76        # I2C-Adresse (ggf. 0x77)
-bus = smbus.SMBus(1) # I2C-Bus (1 für neuere Raspberry Pis)
+bus = smbus.SMBus(1) # I2C-Bus (1 fuer neuere Raspberry Pis)
 
 # Relais
 RELAIS_PIN = 26      # GPIO-Nummer (BCM)
@@ -163,7 +163,7 @@ def ensure_state_dir():
     try:
         os.makedirs(STATE_DIR, exist_ok=True)
     except PermissionError:
-        print(f"Keine Schreibrechte für {STATE_DIR}. Bitte Rechte prüfen.", file=sys.stderr)
+        print(f"Keine Schreibrechte fuer {STATE_DIR}. Bitte Rechte pruefen.", file=sys.stderr)
         sys.exit(1)
 
 def read_state():
@@ -206,10 +206,10 @@ def main():
         print(f"Fehler beim Lesen des BME280: {e}")
         return
 
-    print(f"🌡️ Temperatur : {temperature:.2f} °C")
+    print(f"🌡️ Temperatur : {temperature:.2f} Grad_C")
     print(f"🧭 Druck      : {pressure:.2f} hPa")
     print(f"💧 Feuchte    : {humidity:.2f} %")
-    print(f"❄️ Taupunkt   : {taupunkt:.2f} °C")
+    print(f"❄️ Taupunkt   : {taupunkt:.2f} Grad_C")
 
     # Relaiszustand lesen
     last = read_state()
@@ -225,7 +225,7 @@ def main():
         new = "OFF"
         print(f"Feuchte {humidity:.2f}% < {HUM_OFF:.2f}% → Relais AUS")
     else:
-        print("Keine Änderung am Relais (Hysterese-Bereich).")
+        print("Keine aenderung am Relais (Hysterese-Bereich).")
 
     # Relais setzen & Zustand speichern
     apply_state(new)

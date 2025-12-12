@@ -52,7 +52,7 @@ def get_camera_sensor_temperature():
         SensorTemperature=19.000000
 
     Rueckgabewert:
-        float: Temperatur in °C, falls vorhanden
+        float: Temperatur in Grad_C, falls vorhanden
         None : falls Datei nicht existiert oder kein Wert gelesen werden kann
     """
     meta_path = os.path.join(config.ALLSKY_PATH, "tmp", "metadata.txt")

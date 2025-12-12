@@ -6,7 +6,7 @@ from askutils import config
 
 def upload_image(image_path: str = None) -> bool:
     """
-    Lädt eine einzelne Bilddatei per FTP hoch.
+    Laedt eine einzelne Bilddatei per FTP hoch.
     - Thomas Jaquin:   .../<IMAGE_PATH>/image.jpg  -> als 'image.jpg' hochladen
     - INDI:            .../<ALLSKY_PATH>/latest.jpg -> als **'image.jpg'** hochladen
       (atomar: Upload als .tmp und serverseitiges Rename)
@@ -47,7 +47,7 @@ def upload_image(image_path: str = None) -> bool:
             with open(image_path, "rb") as f:
                 ftp.storbinary(f"STOR {tmp_name}", f)
             try:
-                # Falls bereits eine alte image.jpg existiert, wird sie durch RNTO überschrieben
+                # Falls bereits eine alte image.jpg existiert, wird sie durch RNTO ueberschrieben
                 ftp.rename(tmp_name, remote_name)
             except ftplib.error_perm as e:
                 # Cleanup bei Fehler
