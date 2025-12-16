@@ -1,6 +1,13 @@
 Version history
 ----------------
 
+# v2025.12.16_02
+
+- INDI-Allsky-Integration - AllSky-Cameras with the software INDI-Allsky can now integrated into the network
+- Prepare upload for INDI cameras (timelapse, startrail, keogram and current actual figure)
+- Integrate the upload for startrail-timelapse (only for INDI)
+- Prepare install.sh and setup.sh 
+
 # v2025.12.12_01
 
 - Integrate Sensor HTU21/GY-21/SHT21 into library

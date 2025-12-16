@@ -37,11 +37,8 @@ Participating in the AllSkyKamera network is intentionally kept as simple as pos
 You need:
 
 - a Raspberry Pi-based all-sky camera (Raspberry Pi 4 or newer recommended)
-- the standard allsky software and web interface by Thomas Jacquin
+- the standard allsky software and web interface by Thomas Jacquin or INDI AllSky
 - a working internet connection (for data upload)
-
-Support for the **INDI-Allsky** interface is planned and will be added to this library
-in the future.
 
 To join the network you need a **secret API key**.  
 You can request a key here: <https://www.allskykamera.space/machmit.php>
