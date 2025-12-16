@@ -93,14 +93,61 @@ echo "API access validated."
 echo "Camera ID from server: ${KAMERA_ID_FROM_API}"
 
 # --------------------------------------------------------------------
-# 2. Path to Thomas Jacquin allsky interface
+# 2. Which interface is installed? (TJ vs INDI)
 # --------------------------------------------------------------------
 echo
-echo "=== 2. Path to allsky interface ==="
-DEFAULT_ALLSKY_PATH="${HOME}/allsky"
-read -r -p "Path to allsky interface [default: ${DEFAULT_ALLSKY_PATH}]: " ALLSKY_PATH
-ALLSKY_PATH="${ALLSKY_PATH:-${DEFAULT_ALLSKY_PATH}}"
-echo "Using allsky path: ${ALLSKY_PATH}"
+echo "=== 2. Allsky interface selection ==="
+echo "Which interface do you use?"
+echo "  1) Thomas Jacquin allsky interface (TJ)"
+echo "  2) INDI AllSky interface"
+read -r -p "Select [1/2] (default: 1): " IFACE_CHOICE
+IFACE_CHOICE="${IFACE_CHOICE:-1}"
+
+INDI_FLAG=0
+CAMERAID_DETECTED="ccd_unknown"
+
+if [ "${IFACE_CHOICE}" = "2" ]; then
+    echo
+    echo "> INDI interface selected."
+    INDI_FLAG=1
+
+    # INDI default path
+    ALLSKY_PATH="/var/www/html/allsky"
+    INDI_IMAGES_DIR="${ALLSKY_PATH}/images"
+
+    echo "> Using INDI images dir: ${INDI_IMAGES_DIR}"
+
+    # Detect CAMERAID from directory name "ccd_*"
+    if [ -d "${INDI_IMAGES_DIR}" ]; then
+        # pick the first matching directory (sorted)
+        CCD_DIR_NAME="$(find "${INDI_IMAGES_DIR}" -maxdepth 1 -type d -name 'ccd_*' -printf '%f\n' 2>/dev/null | sort | head -n 1 || true)"
+        if [ -n "${CCD_DIR_NAME}" ]; then
+            CAMERAID_DETECTED="${CCD_DIR_NAME}"
+            echo "> Detected CAMERAID: ${CAMERAID_DETECTED}"
+        else
+            echo "> WARNING: No directory starting with 'ccd_' found in ${INDI_IMAGES_DIR}."
+            echo "> CAMERAID will remain '${CAMERAID_DETECTED}'."
+        fi
+    else
+        echo "> WARNING: INDI images directory not found: ${INDI_IMAGES_DIR}"
+        echo "> CAMERAID will remain '${CAMERAID_DETECTED}'."
+    fi
+else
+    echo
+    echo "> TJ interface selected."
+    INDI_FLAG=0
+    CAMERAID_DETECTED="ccd_unknown"
+
+    echo
+    echo "=== 2. Path to allsky interface ==="
+    DEFAULT_ALLSKY_PATH="${HOME}/allsky"
+    read -r -p "Path to allsky interface [default: ${DEFAULT_ALLSKY_PATH}]: " ALLSKY_PATH
+    ALLSKY_PATH="${ALLSKY_PATH:-${DEFAULT_ALLSKY_PATH}}"
+fi
+
+echo "Using ALLSKY_PATH: ${ALLSKY_PATH}"
+echo "INDI flag: ${INDI_FLAG}"
+echo "CAMERAID: ${CAMERAID_DETECTED}"
 
 # --------------------------------------------------------------------
 # 3. Install system packages
@@ -200,8 +247,8 @@ LONGITUDE      = 13.0
 ALLSKY_PATH     = "${ALLSKY_PATH}"
 IMAGE_BASE_PATH = "images"
 IMAGE_PATH      = "tmp"
-INDI            = 0
-CAMERAID        = "ccd_unknown"
+INDI            = ${INDI_FLAG}
+CAMERAID        = "${CAMERAID_DETECTED}"
 
 # Optics and SQM defaults
 PIX_SIZE_MM    = 0.00155
@@ -355,6 +402,7 @@ FTP_KEOGRAM_DIR    = "keogram"
 FTP_STARTRAIL_DIR  = "startrails"
 FTP_SQM_DIR        = "sqm"
 FTP_ANALEMMA_DIR   = "analemma"
+FTP_STARTRAILSVIDEO_DIR = "startrailsvideo"
 
 from askutils.utils.load_secrets import load_remote_secrets
 _secrets = load_remote_secrets(API_KEY, API_URL)

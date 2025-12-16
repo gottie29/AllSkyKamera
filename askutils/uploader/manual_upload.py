@@ -12,6 +12,10 @@ def log(msg: str) -> None:
     print(f"[{t}] {msg}", flush=True)
 
 
+def _truthy(v) -> bool:
+    return str(v).strip().lower() in ("1", "true", "yes", "on")
+
+
 def _upload_file(ftp: ftplib.FTP, local_path: str, remote_subdir: str, root_dir: str) -> None:
     """Atomic Upload: erst temporaer, dann rename auf Zielname (Originalname)."""
     try:
@@ -50,14 +54,22 @@ def _latest(glob_pattern: str) -> Optional[str]:
     return cand[-1]
 
 
-def _remote_name_for(local_path: str, date_str: str) -> Optional[str]:
-    """Zielname nach Typ-Regel."""
+def _remote_name_for(local_path: str, date_str: str, *, for_startrail_video: bool = False) -> Optional[str]:
+    """
+    Zielname nach Typ-Regel.
+    for_startrail_video=True: fuer startrail_timelapse.mp4 -> startrail_timelapse-<date>.mp4
+    """
     name = os.path.basename(local_path).lower()
+
+    if for_startrail_video and name.endswith(".mp4") and "startrail_timelapse" in name:
+        return f"startrail_timelapse-{date_str}.mp4"
+
     if name.endswith(".jpg") and "startrail" in name:
         return f"startrails-{date_str}.jpg"
     if name.endswith(".jpg") and "keogram" in name:
         return f"keogram-{date_str}.jpg"
     if name.endswith(".mp4") and ("timelapse" in name or "allsky" in name):
+        # Achtung: das umfasst auch "startrail_timelapse" – daher wird das oben separat behandelt.
         return f"allsky-{date_str}.mp4"
     return None
 
@@ -78,6 +90,12 @@ def upload_manual_batch(date_str: str) -> bool:
     Kein Alters- oder Stabilitaets-Check – nur: Datei vorhanden und > 0 Byte.
     Nutzt dieselbe Logik wie nightly_upload (inkl. INDI-Unterstuetzung),
     greift aber NICHT auf nightly_upload.py zurueck.
+
+    INDI:
+      - nutzt CAMERAID aus config.py (z.B. "ccd_....")
+      - nimmt Dateien unter:
+        <images_base>/<CAMERAID>/timelapse/<YYYYMMDD>/
+      - zusaetzlich: allsky-startrail_timelapse_*.mp4 -> FTP_STARTRAILSVIDEO_DIR (remote)
     """
     # Datum validieren
     try:
@@ -92,29 +110,30 @@ def upload_manual_batch(date_str: str) -> bool:
     images_base   = os.path.join(config.ALLSKY_PATH, config.IMAGE_BASE_PATH)
     analemma_base = os.path.join(config.A_PATH)
 
-    indi_flag = getattr(config, "INDI", 0)
+    indi_flag = _truthy(getattr(config, "INDI", 0))
 
     if not indi_flag:
         # Klassischer Pfad (nicht INDI)
         files = [
-            (os.path.join(images_base, date_str, f"allsky-{date_str}.mp4"),                  config.FTP_VIDEO_DIR),
-            (os.path.join(images_base, date_str, "keogram",    f"keogram-{date_str}.jpg"),  config.FTP_KEOGRAM_DIR),
-            (os.path.join(images_base, date_str, "startrails", f"startrails-{date_str}.jpg"), config.FTP_STARTRAIL_DIR),
-            (os.path.join(analemma_base, f"analemma-{date_str}_used.jpg"),                  config.FTP_ANALEMMA_DIR),
-            (os.path.join(analemma_base, f"analemma-{date_str}_unused.jpg"),                config.FTP_ANALEMMA_DIR),
+            (os.path.join(images_base, date_str, f"allsky-{date_str}.mp4"),                    config.FTP_VIDEO_DIR),
+            (os.path.join(images_base, date_str, "keogram",    f"keogram-{date_str}.jpg"),     config.FTP_KEOGRAM_DIR),
+            (os.path.join(images_base, date_str, "startrails", f"startrails-{date_str}.jpg"),  config.FTP_STARTRAIL_DIR),
+            (os.path.join(analemma_base, f"analemma-{date_str}_used.jpg"),                     config.FTP_ANALEMMA_DIR),
+            (os.path.join(analemma_base, f"analemma-{date_str}_unused.jpg"),                   config.FTP_ANALEMMA_DIR),
         ]
     else:
-        # INDI-Modus: ersten ccd_* finden
-        ccd_candidates = [
-            d for d in glob.glob(os.path.join(images_base, "ccd_*"))
-            if os.path.isdir(d)
-        ]
-        if not ccd_candidates:
-            log(f"Kein 'ccd_*' unter {images_base} gefunden.")
+        # === INDI: CAMERAID aus config verwenden ===
+        cam_id = getattr(config, "CAMERAID", None)
+        if not cam_id:
+            log("INDI ist aktiv, aber config.CAMERAID ist nicht gesetzt.")
             return False
 
-        indi_cam_dir = sorted(ccd_candidates)[0]
-        log(f"Verwende INDI Kameraordner: {indi_cam_dir}")
+        indi_cam_dir = os.path.join(images_base, cam_id)
+        if not os.path.isdir(indi_cam_dir):
+            log(f"INDI Kameraordner nicht gefunden: {indi_cam_dir}")
+            return False
+
+        log(f"Verwende INDI Kameraordner (aus config.CAMERAID): {indi_cam_dir}")
 
         date_dir = os.path.join(indi_cam_dir, "timelapse", date_str)
         if not os.path.isdir(date_dir):
@@ -124,11 +143,19 @@ def upload_manual_batch(date_str: str) -> bool:
         st  = _latest(os.path.join(date_dir, f"allsky-startrail_*_{date_str}_night_*.jpg"))
         mp4 = _latest(os.path.join(date_dir, f"allsky-timelapse_*_{date_str}_night_*.mp4"))
 
+        # NEU: Startrail-Timelapse (zusaetzlich)
+        stv = _latest(os.path.join(date_dir, f"allsky-startrail_timelapse_*_{date_str}_night_*.mp4"))
+
         log(
             f"Gefunden: keogram={os.path.basename(keo) if keo else '—'}, "
             f"startrail={os.path.basename(st) if st else '—'}, "
-            f"timelapse={os.path.basename(mp4) if mp4 else '—'}"
+            f"timelapse={os.path.basename(mp4) if mp4 else '—'}, "
+            f"startrail_video={os.path.basename(stv) if stv else '—'}"
         )
+
+        # Zielordner auf dem Server:
+        # - fuer stv brauchst du in config.py: FTP_STARTRAILSVIDEO_DIR = "startrailsvideo"
+        startrailsvideo_dir = getattr(config, "FTP_STARTRAILSVIDEO_DIR", "startrailsvideo")
 
         files = []
         if mp4:
@@ -137,11 +164,13 @@ def upload_manual_batch(date_str: str) -> bool:
             files.append((keo, config.FTP_KEOGRAM_DIR))
         if st:
             files.append((st, config.FTP_STARTRAIL_DIR))
+        if stv:
+            files.append((stv, startrailsvideo_dir))
 
         # Analemma optional
         files.extend([
-            (os.path.join(analemma_base, f"analemma-{date_str}_used.jpg"),   config.FTP_ANALEMMA_DIR),
-            (os.path.join(analemma_base, f"analemma-{date_str}_unused.jpg"), config.FTP_ANALEMMA_DIR),
+            (os.path.join(analemma_base, f"analemma-{date_str}_used.jpg"),    config.FTP_ANALEMMA_DIR),
+            (os.path.join(analemma_base, f"analemma-{date_str}_unused.jpg"),  config.FTP_ANALEMMA_DIR),
         ])
 
     try:
@@ -164,7 +193,11 @@ def upload_manual_batch(date_str: str) -> bool:
                     continue
 
                 # Nach dem Upload serverseitig auf Zielnamen umbenennen
-                desired = _remote_name_for(local_path, date_str)
+                is_startrail_video = os.path.basename(local_path).lower().endswith(".mp4") and \
+                                     "startrail_timelapse" in os.path.basename(local_path).lower() and \
+                                     _truthy(getattr(config, "INDI", 0))
+
+                desired = _remote_name_for(local_path, date_str, for_startrail_video=is_startrail_video)
                 if desired:
                     try:
                         prev = ftp.pwd()
