@@ -1,6 +1,10 @@
 Version history
 ----------------
 
+# v2025.12.17_01
+
+- Installation is running also on OS TRIXIE (tested with INDI-Interface)
+
 # v2025.12.16_02
 
 - INDI-Allsky-Integration - AllSky-Cameras with the software INDI-Allsky can now integrated into the network
