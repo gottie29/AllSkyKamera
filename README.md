@@ -3,7 +3,7 @@
 Python library for all-sky cameras in the **AllSkyKamera** network  
 (<https://allskykamera.space>)
 
-Version: v2025.12.12_01
+Version: v2025.12.17_01
 
 ## Further documentation and Wiki
 
