@@ -235,6 +235,13 @@ Depending on the camera configuration, the library may also upload:
 
 All uploads follow the directory structure used by the AllSkyKamera server.
 
+You can choose different file- and video-types.
+The Website is working with that types.
+
+We recommend the follow filetypes:
+- MP4 for vidoe (webm is possible, but the browser buffering is not so good for webm formated files)
+- JPG for images
+
 ---
 
 ## Supported sensors
