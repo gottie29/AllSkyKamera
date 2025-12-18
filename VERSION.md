@@ -1,9 +1,10 @@
 Version history
 ----------------
 
-# v2025.12.18_1
+# v2025.12.18_2
 
 - delete special characters from upload scripts
+- integrate webm timelapse extension into upload scripts
 
 # v2025.12.17_01
 

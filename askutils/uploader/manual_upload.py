@@ -2,7 +2,7 @@ import os
 import glob
 import ftplib
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 from askutils import config
 
 
@@ -54,23 +54,39 @@ def _latest(glob_pattern: str) -> Optional[str]:
     return cand[-1]
 
 
+def _latest_multi(patterns: List[str]) -> Optional[str]:
+    """Neueste Datei über mehrere Glob-Patterns hinweg."""
+    all_files = []
+    for pat in patterns:
+        all_files.extend(glob.glob(pat))
+    if not all_files:
+        return None
+    all_files.sort(key=lambda p: os.path.getmtime(p))
+    return all_files[-1]
+
+
 def _remote_name_for(local_path: str, date_str: str, *, for_startrail_video: bool = False) -> Optional[str]:
     """
     Zielname nach Typ-Regel.
-    for_startrail_video=True: fuer startrail_timelapse.mp4 -> startrail_timelapse-<date>.mp4
+    - Für Videos (mp4/webm): Endung beibehalten.
+    - for_startrail_video=True: startrail_timelapse -> startrail_timelapse-<date>.<ext>
     """
-    name = os.path.basename(local_path).lower()
+    base = os.path.basename(local_path)
+    low  = base.lower()
+    ext  = os.path.splitext(low)[1]  # ".mp4" oder ".webm" etc.
 
-    if for_startrail_video and name.endswith(".mp4") and "startrail_timelapse" in name:
-        return f"startrail_timelapse-{date_str}.mp4"
+    if for_startrail_video and ext in (".mp4", ".webm") and "startrail_timelapse" in low:
+        return f"startrail_timelapse-{date_str}{ext}"
 
-    if name.endswith(".jpg") and "startrail" in name:
+    if low.endswith(".jpg") and "startrail" in low:
         return f"startrails-{date_str}.jpg"
-    if name.endswith(".jpg") and "keogram" in name:
+    if low.endswith(".jpg") and "keogram" in low:
         return f"keogram-{date_str}.jpg"
-    if name.endswith(".mp4") and ("timelapse" in name or "allsky" in name):
+
+    if ext in (".mp4", ".webm") and ("timelapse" in low or "allsky" in low):
         # Achtung: das umfasst auch "startrail_timelapse" – daher wird das oben separat behandelt.
-        return f"allsky-{date_str}.mp4"
+        return f"allsky-{date_str}{ext}"
+
     return None
 
 
@@ -95,7 +111,7 @@ def upload_manual_batch(date_str: str) -> bool:
       - nutzt CAMERAID aus config.py (z.B. "ccd_....")
       - nimmt Dateien unter:
         <images_base>/<CAMERAID>/timelapse/<YYYYMMDD>/
-      - zusaetzlich: allsky-startrail_timelapse_*.mp4 -> FTP_STARTRAILSVIDEO_DIR (remote)
+      - zusaetzlich: allsky-startrail_timelapse_*.mp4/.webm -> FTP_STARTRAILSVIDEO_DIR (remote)
     """
     # Datum validieren
     try:
@@ -113,9 +129,17 @@ def upload_manual_batch(date_str: str) -> bool:
     indi_flag = _truthy(getattr(config, "INDI", 0))
 
     if not indi_flag:
-        # Klassischer Pfad (nicht INDI)
+        # Klassischer Pfad (nicht INDI): Video kann mp4 oder webm sein
+        video = None
+        mp4_path  = os.path.join(images_base, date_str, f"allsky-{date_str}.mp4")
+        webm_path = os.path.join(images_base, date_str, f"allsky-{date_str}.webm")
+        if os.path.isfile(mp4_path):
+            video = mp4_path
+        elif os.path.isfile(webm_path):
+            video = webm_path
+
         files = [
-            (os.path.join(images_base, date_str, f"allsky-{date_str}.mp4"),                    config.FTP_VIDEO_DIR),
+            (video,                                                       config.FTP_VIDEO_DIR),
             (os.path.join(images_base, date_str, "keogram",    f"keogram-{date_str}.jpg"),     config.FTP_KEOGRAM_DIR),
             (os.path.join(images_base, date_str, "startrails", f"startrails-{date_str}.jpg"),  config.FTP_STARTRAIL_DIR),
             (os.path.join(analemma_base, f"analemma-{date_str}_used.jpg"),                     config.FTP_ANALEMMA_DIR),
@@ -141,10 +165,18 @@ def upload_manual_batch(date_str: str) -> bool:
 
         keo = _latest(os.path.join(date_dir, f"allsky-keogram_*_{date_str}_night_*.jpg"))
         st  = _latest(os.path.join(date_dir, f"allsky-startrail_*_{date_str}_night_*.jpg"))
-        mp4 = _latest(os.path.join(date_dir, f"allsky-timelapse_*_{date_str}_night_*.mp4"))
 
-        # NEU: Startrail-Timelapse (zusaetzlich)
-        stv = _latest(os.path.join(date_dir, f"allsky-startrail_timelapse_*_{date_str}_night_*.mp4"))
+        # Timelapse (mp4 oder webm)
+        mp4 = _latest_multi([
+            os.path.join(date_dir, f"allsky-timelapse_*_{date_str}_night_*.mp4"),
+            os.path.join(date_dir, f"allsky-timelapse_*_{date_str}_night_*.webm"),
+        ])
+
+        # Startrail-Timelapse (mp4 oder webm)
+        stv = _latest_multi([
+            os.path.join(date_dir, f"allsky-startrail_timelapse_*_{date_str}_night_*.mp4"),
+            os.path.join(date_dir, f"allsky-startrail_timelapse_*_{date_str}_night_*.webm"),
+        ])
 
         log(
             f"Gefunden: keogram={os.path.basename(keo) if keo else '-'}, "
@@ -182,7 +214,7 @@ def upload_manual_batch(date_str: str) -> bool:
             for local_path, remote_subdir in files:
                 log(f"Pruefe Datei: {local_path}")
 
-                if not _file_available(local_path):
+                if not local_path or not _file_available(local_path):
                     log(f"Datei fehlt oder ist leer, uebersprungen: {local_path}")
                     continue
 
@@ -193,8 +225,9 @@ def upload_manual_batch(date_str: str) -> bool:
                     continue
 
                 # Nach dem Upload serverseitig auf Zielnamen umbenennen
-                is_startrail_video = os.path.basename(local_path).lower().endswith(".mp4") and \
-                                     "startrail_timelapse" in os.path.basename(local_path).lower() and \
+                lp = os.path.basename(local_path).lower()
+                is_startrail_video = lp.endswith((".mp4", ".webm")) and \
+                                     "startrail_timelapse" in lp and \
                                      _truthy(getattr(config, "INDI", 0))
 
                 desired = _remote_name_for(local_path, date_str, for_startrail_video=is_startrail_video)
