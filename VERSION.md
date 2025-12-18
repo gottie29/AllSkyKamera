@@ -1,6 +1,10 @@
 Version history
 ----------------
 
+# v2025.12.18_1
+
+- delete special characters from upload scripts
+
 # v2025.12.17_01
 
 - Installation is running also on OS TRIXIE (tested with INDI-Interface)

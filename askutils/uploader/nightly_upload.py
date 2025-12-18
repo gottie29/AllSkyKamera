@@ -195,10 +195,10 @@ def upload_nightly_batch(date_str: str = None) -> bool:
         stv = _latest(os.path.join(date_dir, f"allsky-startrail_timelapse_*_{date_str}_night_*.mp4"))
 
         log(
-            f"Gefunden: keogram={os.path.basename(keo) if keo else '—'}, "
-            f"startrail={os.path.basename(st) if st else '—'}, "
-            f"timelapse={os.path.basename(mp4) if mp4 else '—'}, "
-            f"startrail_video={os.path.basename(stv) if stv else '—'}"
+            f"Gefunden: keogram={os.path.basename(keo) if keo else '-'}, "
+            f"startrail={os.path.basename(st) if st else '-'}, "
+            f"timelapse={os.path.basename(mp4) if mp4 else '-'}, "
+            f"startrail_video={os.path.basename(stv) if stv else '-'}"
         )
 
         # Zielordner auf dem Server:
