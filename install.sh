@@ -111,27 +111,37 @@ if [ "${IFACE_CHOICE}" = "2" ]; then
     echo "> INDI interface selected."
     INDI_FLAG=1
 
-    # INDI default path
-    ALLSKY_PATH="/var/www/html/allsky"
-    INDI_IMAGES_DIR="${ALLSKY_PATH}/images"
+    DEFAULT_ALLSKY_PATH="/var/www/html/allsky"
 
-    echo "> Using INDI images dir: ${INDI_IMAGES_DIR}"
+    while true; do
+        echo
+        read -r -p "Path to INDI allsky interface [default: ${DEFAULT_ALLSKY_PATH}]: " ALLSKY_PATH
+        ALLSKY_PATH="${ALLSKY_PATH:-${DEFAULT_ALLSKY_PATH}}"
 
-    # Detect CAMERAID from directory name "ccd_*"
-    if [ -d "${INDI_IMAGES_DIR}" ]; then
-        # pick the first matching directory (sorted)
+        INDI_IMAGES_DIR="${ALLSKY_PATH}/images"
+
+        echo "> Checking INDI images dir: ${INDI_IMAGES_DIR}"
+
+        if [ ! -d "${INDI_IMAGES_DIR}" ]; then
+            echo "❌ Directory not found: ${INDI_IMAGES_DIR}"
+            read -r -p "Try another path? (y/n): " RETRY
+            [[ "${RETRY}" =~ ^[Yy]$ ]] || exit 1
+            continue
+        fi
+
+        # Detect CAMERAID from directory name "ccd_*"
         CCD_DIR_NAME="$(find "${INDI_IMAGES_DIR}" -maxdepth 1 -type d -name 'ccd_*' -printf '%f\n' 2>/dev/null | sort | head -n 1 || true)"
+
         if [ -n "${CCD_DIR_NAME}" ]; then
             CAMERAID_DETECTED="${CCD_DIR_NAME}"
-            echo "> Detected CAMERAID: ${CAMERAID_DETECTED}"
+            echo "✅ Detected CAMERAID: ${CAMERAID_DETECTED}"
+            break
         else
-            echo "> WARNING: No directory starting with 'ccd_' found in ${INDI_IMAGES_DIR}."
-            echo "> CAMERAID will remain '${CAMERAID_DETECTED}'."
+            echo "❌ No directory starting with 'ccd_' found in ${INDI_IMAGES_DIR}"
+            read -r -p "Try another path? (y/n): " RETRY
+            [[ "${RETRY}" =~ ^[Yy]$ ]] || exit 1
         fi
-    else
-        echo "> WARNING: INDI images directory not found: ${INDI_IMAGES_DIR}"
-        echo "> CAMERAID will remain '${CAMERAID_DETECTED}'."
-    fi
+    done
 else
     echo
     echo "> TJ interface selected."

@@ -5,6 +5,7 @@ Version history
 
 - delete special characters from upload scripts
 - integrate webm timelapse extension into upload scripts (recommended is MP4)
+- Installation with INDI path definition to change when the user has installed INDI at another position
 
 # v2025.12.17_01
 
