@@ -2,10 +2,6 @@
 """
 MLX90614 CloudWatcher Standalone mit Online-Learning (ASCII only)
 
-- Keine Sonderzeichen (ASCII only)
-- Kein askutils
-- Kein config.py
-- Kein Influx
 - Ausgabe nur auf Konsole
 
 Phase 1:
