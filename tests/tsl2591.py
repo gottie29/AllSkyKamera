@@ -1,17 +1,22 @@
 #!/usr/bin/env python3
 """
-TSL2591 light sensor test script (standalone)
+TSL2591 light sensor test script (standalone) with auto-range
 
 - Interface: I2C (busio + Adafruit Blinka)
 - Reads lux, visible, IR, full spectrum
-- Computes sky brightness (mag/arcsec^2)
-- Standalone test mode only
-- CLI parameters:
+- Reads RAW channels CH0/CH1 (raw_luminosity) if available
+- Computes SQM-like value (mag/arcsec^2) from CH0:
+    SQM = sqm_const - 2.5 * log10(CH0)
+  (sqm_const is a calibration constant; default 22.0 for test scaling)
+
+- CLI:
     --gain        low|med|high|max
     --exposure    100|200|300|400|500|600   (ms integration time)
     --samples     number of samples (default 5)
     --interval    seconds between samples (default 2.0)
     --auto-range  enable automatic gain/exposure selection
+    --auto-verbose print scan details
+    --sqm-const   constant C in SQM = C - 2.5*log10(CH0)
 
 ASCII-only, English-only output.
 """
@@ -52,14 +57,8 @@ def safe_value(x, fallback=0.0001):
         return fallback
 
 
-def compute_sky_brightness(lux):
-    # mag/arcsec^2 = 22 - 2.5 * log10(lux)
-    lux = safe_value(lux)
-    return 22.0 - 2.5 * math.log10(lux)
-
-
 def parse_args():
-    p = argparse.ArgumentParser(description="TSL2591 standalone test (gain + exposure + auto-range).")
+    p = argparse.ArgumentParser(description="TSL2591 standalone test (gain + exposure + auto-range + SQM-from-RAW).")
     p.add_argument("--gain", default="med", choices=["low", "med", "high", "max"],
                    help="Sensor gain (default: med)")
     p.add_argument("--exposure", type=int, default=200, choices=[100, 200, 300, 400, 500, 600],
@@ -69,7 +68,9 @@ def parse_args():
     p.add_argument("--auto-range", action="store_true",
                    help="Automatically choose gain/exposure to avoid saturation and improve signal.")
     p.add_argument("--auto-verbose", action="store_true",
-                   help="Print auto-range test details.")
+                   help="Print auto-range scan details.")
+    p.add_argument("--sqm-const", type=float, default=22.0,
+                   help="SQM constant C for SQM = C - 2.5*log10(CH0). Default: 22.0")
     return p.parse_args()
 
 
@@ -88,8 +89,6 @@ def set_gain_and_exposure(sensor, gain_str: str, exposure_ms: int):
         500: adafruit_tsl2591.INTEGRATIONTIME_500MS,
         600: adafruit_tsl2591.INTEGRATIONTIME_600MS,
     }
-
-    # Apply settings (best effort)
     sensor.gain = gain_map[gain_str]
     sensor.integration_time = it_map[exposure_ms]
 
@@ -110,11 +109,10 @@ def get_current_settings(sensor):
 
 def read_raw_counts(sensor):
     """
-    Try to read raw channels if library supports it.
-    Returns (ch0, ch1) or (None, None).
+    Returns (ch0, ch1) or (None, None) if not available.
     """
     try:
-        raw = sensor.raw_luminosity  # often tuple (ch0, ch1)
+        raw = sensor.raw_luminosity  # expected tuple (ch0, ch1)
         if isinstance(raw, tuple) and len(raw) >= 2:
             ch0 = int(raw[0])
             ch1 = int(raw[1])
@@ -125,29 +123,33 @@ def read_raw_counts(sensor):
 
 
 def settle_for_integration(exposure_ms: int):
-    # Wait slightly longer than integration time so a fresh sample is ready
     time.sleep(exposure_ms / 1000.0 + 0.05)
+
+
+def compute_sqm_from_ch0(ch0: int, sqm_const: float) -> float:
+    """
+    SQM-like value from CH0 counts.
+    """
+    if ch0 is None or ch0 <= 0:
+        return float("nan")
+    return sqm_const - 2.5 * math.log10(float(ch0))
 
 
 def auto_range(sensor, verbose: bool = False):
     """
     Auto-select gain and exposure by scanning combinations from low sensitivity
-    to high sensitivity, aiming for raw counts in a target window.
+    to high sensitivity, aiming for CH0 counts in a target window.
     """
-    # Approximate gain factors for sorting by sensitivity
     gain_factors = {"low": 1, "med": 25, "high": 428, "max": 9876}
     gains = ["low", "med", "high", "max"]
     exposures = [100, 200, 300, 400, 500, 600]
 
-    # Sensitivity score (for ordering)
     combos = []
     for g in gains:
         for e in exposures:
             combos.append((gain_factors[g] * e, g, e))
     combos.sort(key=lambda x: x[0])  # low -> high sensitivity
 
-    # Target window for CH0 counts (heuristic)
-    # We want: not saturated, but not too low.
     TARGET_LOW = 2000
     TARGET_HIGH = 45000
     SAT_THRESHOLD = 65000  # near 16-bit max
@@ -167,71 +169,53 @@ def auto_range(sensor, verbose: bool = False):
             continue
 
         settle_for_integration(e)
-
         ch0, ch1 = read_raw_counts(sensor)
 
-        # If raw not available, fall back to a weaker heuristic using full_spectrum
         if ch0 is None:
+            # No raw support; fallback to "lux exists" heuristic (weak but better than nothing)
             try:
-                full = safe_value(sensor.full_spectrum)
-                lux = sensor.lux
-                # Heuristic: prefer nonzero lux and a moderate full-spectrum number
-                # (full is not counts; still helps to avoid extreme settings)
-                if lux is None or lux <= 0:
-                    metric = 0.0
-                else:
-                    metric = full
+                lux = safe_value(sensor.lux, fallback=0.0)
             except Exception:
-                metric = 0.0
-
-            # Score: prefer metric in a mid range, avoid zeros
-            if metric <= 0:
-                score = -1
-            else:
-                # "closer to 10000 is better" arbitrary
-                score = -abs(metric - 10000.0)
-
+                lux = 0.0
+            score = lux  # prefer non-zero lux
             if verbose:
-                print(f"  gain={g:4s} exp={e:3d}ms  metric={metric:.1f}  score={score:.1f}")
-
+                print(f"  gain={g:4s} exp={e:3d}ms  (no raw) lux={lux:.3f} score={score:.3f}")
             if best_score is None or score > best_score:
                 best_score = score
                 best = (g, e)
-
             continue
 
-        # Raw-based evaluation
         saturated = (ch0 >= SAT_THRESHOLD) or (ch1 >= SAT_THRESHOLD)
         too_dark = (ch0 < TARGET_LOW)
         in_window = (TARGET_LOW <= ch0 <= TARGET_HIGH) and not saturated
 
         if verbose:
-            print(f"  gain={g:4s} exp={e:3d}ms  CH0={ch0:5d} CH1={ch1:5d}  "
-                  f"{'SAT' if saturated else ''}{'DARK' if too_dark else ''}{'OK' if in_window else ''}")
+            flags = []
+            if saturated:
+                flags.append("SAT")
+            if too_dark:
+                flags.append("DARK")
+            if in_window:
+                flags.append("OK")
+            print(f"  gain={g:4s} exp={e:3d}ms  CH0={ch0:5d} CH1={ch1:5d}  {' '.join(flags)}")
 
         if in_window:
-            # First OK in ascending sensitivity is usually best
             return g, e
 
-        # Track best fallback:
-        # - if everything is too dark -> choose highest sensitivity (max ch0 without saturation)
-        # - if everything saturates -> choose lowest sensitivity that is not saturated (or minimal)
+        # Fallback scoring
         if saturated:
-            # Penalize saturation strongly
             score = -10_000_000 - ch0
         else:
-            # Prefer larger counts (more SNR) up to TARGET_HIGH
-            # If too dark, higher is better; if too bright but not saturated, closer to TARGET_HIGH is better
+            # prefer higher CH0 without going too high
             if ch0 <= TARGET_HIGH:
                 score = ch0
             else:
-                score = TARGET_HIGH - (ch0 - TARGET_HIGH)  # degrade if beyond target
+                score = TARGET_HIGH - (ch0 - TARGET_HIGH)
 
         if best_score is None or score > best_score:
             best_score = score
             best = (g, e)
 
-    # If nothing hit window, return best fallback
     if best is None:
         return "med", 200
     return best
@@ -245,6 +229,7 @@ def main():
     print(f"Requested: gain={args.gain}, exposure={args.exposure}ms, samples={args.samples}, interval={args.interval}s")
     if args.auto_range:
         print("Mode: auto-range enabled")
+    print(f"SQM model: SQM = {args.sqm_const:.2f} - 2.5*log10(CH0)")
     print("This test reads a few samples and then exits.\n")
 
     # Open I2C
@@ -275,12 +260,14 @@ def main():
         except Exception as ex:
             print("ERROR: Auto-range selected settings could not be applied:", ex)
             sys.exit(1)
+        settle_for_integration(e)
     else:
         try:
             set_gain_and_exposure(sensor, args.gain, args.exposure)
         except Exception as ex:
             print("ERROR: Could not set gain/exposure:", ex)
             sys.exit(1)
+        settle_for_integration(args.exposure)
 
     g_now, it_now = get_current_settings(sensor)
     print(f"Active settings: gain={g_now}, integration_time={it_now}\n")
@@ -288,6 +275,7 @@ def main():
     for i in range(args.samples):
         try:
             lux = safe_value(sensor.lux)
+            # Keep these for info only (they can be scaled/driver values)
             visible = safe_value(sensor.visible)
             infrared = safe_value(sensor.infrared)
             full = safe_value(sensor.full_spectrum)
@@ -297,24 +285,22 @@ def main():
             print("Hint: check wiring, power, and run 'i2cdetect -y 1'.")
             break
 
-        skybright = compute_sky_brightness(lux)
-        skybright2 = compute_sky_brightness(visible)
-
-        # Keep your original behavior
-        if skybright2 < 6.0:
-            skybright2 = 0.0001
-
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
 
         print(f"[{timestamp}] Sample {i+1}/{args.samples}")
-        print(f"  Lux        : {lux:.3f} lx")
-        print(f"  Visible    : {visible:.3f}")
-        print(f"  Infrared   : {infrared:.3f}")
-        print(f"  Full spec  : {full:.3f}")
         if ch0 is not None:
-            print(f"  Raw CH0/CH1 : {ch0}/{ch1}")
-        print(f"  SkyBright  : {skybright:.2f} mag/arcsec^2")
-        print(f"  SkyBrightVis: {skybright2:.2f} mag/arcsec^2")
+            sqm = compute_sqm_from_ch0(ch0, args.sqm_const)
+            # Saturation check (simple)
+            sat = (ch0 >= 65000) or (ch1 >= 65000)
+            print(f"  Raw CH0/CH1 : {ch0}/{ch1}" + ("  (SATURATED)" if sat else ""))
+            print(f"  SQM (CH0)   : {sqm:.2f} mag/arcsec^2")
+        else:
+            print("  Raw CH0/CH1 : not available in this library version")
+
+        print(f"  Lux         : {lux:.3f} lx (info)")
+        print(f"  Visible     : {visible:.3f} (info)")
+        print(f"  Infrared    : {infrared:.3f} (info)")
+        print(f"  Full spec   : {full:.3f} (info)")
         print()
 
         time.sleep(max(0.0, args.interval))
