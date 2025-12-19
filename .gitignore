@@ -170,4 +170,5 @@ askutils/utils/netstatus_state.json
 askutils/config.old.py
 askutils/ASKsecret.py.bak
 askutils/config.py.bak
-
+tests/mlx90614_coeffs.json
+tests/*.csv
