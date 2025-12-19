@@ -1,22 +1,23 @@
 #!/usr/bin/env python3
 """
-tsl2591_kalibration.py
+tsl2591_kalibration.py (robust)
 
-Standalone calibration helper for TSL2591 using a nearby reference SQM value (e.g., TESS).
+Standalone calibration helper for TSL2591 using a nearby SQM reference (e.g., TESS).
 
-Key points:
-- AUTO-RANGE is always enabled (based on RAW CH0/CH1).
-- Prompts the user for SQM reference at startup (press Enter to skip).
-- Computes SQM-like from CH0:
+Core:
+- Auto-range is always enabled (night-aware).
+- Prompts for SQM reference at startup (press Enter to skip calibration).
+- SQM model from RAW CH0:
     SQM = sqm_const - 2.5*log10(CH0)
-- If SQM_ref provided, computes per-sample calibration constant:
+- If SQM_ref is provided:
     C_i = SQM_ref + 2.5*log10(CH0)
-  Stores to CSV and recommends sqm_const (median).
+  Store calibration samples in CSV and recommend sqm_const (median).
 
-Robustness improvements:
-- Retries reads when CH0/CH1 == 0/0 (invalid).
-- Optional min CH0 threshold to avoid extremely noisy samples.
-- If too many invalid samples in a row, re-runs auto-range.
+Robustness:
+- 0/0 reads are treated as INVALID and ignored.
+- Warmup after range changes (discard N reads).
+- Sensor reset after many invalid reads (re-init sensor; optional re-init I2C).
+- Auto-range chooses settings that give VALID reads and CH0 in a target window.
 
 No config, no influx. ASCII-only, English-only output.
 """
@@ -29,7 +30,6 @@ import statistics
 import sys
 import time
 
-# Try imports
 try:
     import board
     import busio
@@ -48,6 +48,9 @@ except ImportError:
     sys.exit(1)
 
 
+# -----------------------------
+# Small utilities
+# -----------------------------
 def safe_float(x, fallback=None):
     try:
         if x is None:
@@ -64,19 +67,13 @@ def safe_value(x, fallback=0.0001):
     return v
 
 
-def read_raw_counts(sensor):
-    try:
-        raw = sensor.raw_luminosity
-        if isinstance(raw, tuple) and len(raw) >= 2:
-            return int(raw[0]), int(raw[1])
-    except Exception:
-        pass
-    return None, None
+def ts_now():
+    return time.strftime("%Y-%m-%d %H:%M:%S")
 
 
 def settle_for_integration(integration_ms: int):
-    """Wait slightly longer than integration time to ensure fresh data."""
-    time.sleep(integration_ms / 1000.0 + 0.06)
+    # slightly longer than integration time
+    time.sleep(integration_ms / 1000.0 + 0.08)
 
 
 def compute_sqm_from_ch0(ch0: int, sqm_const: float) -> float:
@@ -91,40 +88,39 @@ def compute_const_from_ref(ch0: int, sqm_ref: float) -> float:
     return float(sqm_ref) + 2.5 * math.log10(float(ch0))
 
 
+# -----------------------------
+# CSV handling
+# -----------------------------
+CSV_FIELDS = [
+    "timestamp",
+    "gain",
+    "exposure_ms",
+    "ch0",
+    "ch1",
+    "lux",
+    "sqm_ref",
+    "const_ci",
+    "valid",
+    "note",
+]
+
+
 def ensure_csv_header(path: str):
     if os.path.exists(path) and os.path.getsize(path) > 0:
         return
     with open(path, "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
-        w.writerow([
-            "timestamp",
-            "gain",
-            "exposure_ms",
-            "ch0",
-            "ch1",
-            "lux",
-            "sqm_ref",
-            "const_ci",
-        ])
+        w.writerow(CSV_FIELDS)
 
 
-def append_calib_row(path: str, row: dict):
+def append_csv(path: str, row: dict):
     ensure_csv_header(path)
     with open(path, "a", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
-        w.writerow([
-            row.get("timestamp", ""),
-            row.get("gain", ""),
-            row.get("exposure_ms", ""),
-            row.get("ch0", ""),
-            row.get("ch1", ""),
-            row.get("lux", ""),
-            row.get("sqm_ref", ""),
-            row.get("const_ci", ""),
-        ])
+        w.writerow([row.get(k, "") for k in CSV_FIELDS])
 
 
-def load_consts_from_csv(path: str):
+def load_all_time_consts(path: str):
     consts = []
     if not os.path.exists(path):
         return consts
@@ -133,6 +129,8 @@ def load_consts_from_csv(path: str):
             r = csv.DictReader(f)
             for row in r:
                 try:
+                    if str(row.get("valid", "")).strip().lower() not in ("1", "true", "yes"):
+                        continue
                     v = float(row.get("const_ci", "") or "nan")
                     if math.isfinite(v):
                         consts.append(v)
@@ -141,6 +139,19 @@ def load_consts_from_csv(path: str):
     except Exception:
         return consts
     return consts
+
+
+# -----------------------------
+# Sensor read + settings
+# -----------------------------
+def read_raw_counts(sensor):
+    try:
+        raw = sensor.raw_luminosity
+        if isinstance(raw, tuple) and len(raw) >= 2:
+            return int(raw[0]), int(raw[1])
+    except Exception:
+        pass
+    return None, None
 
 
 def set_gain_and_exposure(sensor, gain_str: str, exposure_ms: int):
@@ -176,11 +187,65 @@ def get_current_settings(sensor):
     return g, it
 
 
-def auto_range(sensor, verbose: bool = False):
+def warmup(sensor, exposure_ms: int, warmup_reads: int):
+    # discard first N reads after changing settings
+    for _ in range(max(0, warmup_reads)):
+        settle_for_integration(exposure_ms)
+        _ = read_raw_counts(sensor)
+
+
+def read_valid_raw(sensor, exposure_ms: int, read_retries: int, retry_delay: float,
+                   min_ch0: int, sat_threshold: int):
     """
-    Scan gain/exposure from low to high sensitivity and pick first "OK"
-    based on CH0 counts. Falls back to best candidate if none OK.
+    Returns (ch0, ch1, note) or (None, None, note) after retries.
+    Invalid:
+      - raw missing
+      - 0/0
+      - saturated
+      - ch0 < min_ch0 (optional)
     """
+    last_note = "invalid"
+    for _ in range(max(1, read_retries)):
+        ch0, ch1 = read_raw_counts(sensor)
+        if ch0 is None:
+            return None, None, "raw_missing"
+
+        if ch0 == 0 and ch1 == 0:
+            last_note = "zero_read"
+            time.sleep(retry_delay)
+            settle_for_integration(exposure_ms)
+            continue
+
+        if ch0 >= sat_threshold or ch1 >= sat_threshold:
+            return None, None, "saturated"
+
+        if min_ch0 > 0 and ch0 < min_ch0:
+            last_note = "too_low"
+            time.sleep(retry_delay)
+            settle_for_integration(exposure_ms)
+            continue
+
+        return ch0, ch1, "ok"
+
+    return None, None, last_note
+
+
+# -----------------------------
+# Night-aware auto-range
+# -----------------------------
+def auto_range_night(sensor, verbose: bool, sat_threshold: int,
+                     target_low: int, target_high: int,
+                     min_ch0_for_valid: int,
+                     warmup_reads: int):
+    """
+    Choose gain/exposure with these goals:
+    1) Must produce VALID reads (not 0/0, not saturated, ch0 >= min_ch0_for_valid)
+    2) Prefer CH0 within [target_low, target_high]
+    3) Otherwise choose the highest CH0 below target_high (best SNR), or the closest.
+
+    Returns (gain_str, exposure_ms).
+    """
+
     gain_factors = {"low": 1, "med": 25, "high": 428, "max": 9876}
     gains = ["low", "med", "high", "max"]
     exposures = [100, 200, 300, 400, 500, 600]
@@ -189,17 +254,16 @@ def auto_range(sensor, verbose: bool = False):
     for g in gains:
         for e in exposures:
             combos.append((gain_factors[g] * e, g, e))
-    combos.sort(key=lambda x: x[0])
 
-    TARGET_LOW = 2000
-    TARGET_HIGH = 45000
-    SAT_THRESHOLD = 65000
+    # We want to find something that works in the dark => scan from HIGH sensitivity first
+    combos.sort(key=lambda x: x[0], reverse=True)
 
     best = None
     best_score = None
 
     if verbose:
-        print("Auto-range: scanning gain/exposure combinations...")
+        print("Auto-range (night): scanning gain/exposure combinations (high -> low sensitivity)...")
+        print(f"  Target CH0 window: {target_low}..{target_high} (sat>={sat_threshold}, valid if CH0>={min_ch0_for_valid})")
 
     for _, g, e in combos:
         try:
@@ -209,76 +273,62 @@ def auto_range(sensor, verbose: bool = False):
                 print(f"  skip gain={g} exp={e}ms (set failed): {ex}")
             continue
 
+        warmup(sensor, e, warmup_reads)
+
         settle_for_integration(e)
         ch0, ch1 = read_raw_counts(sensor)
 
+        # raw missing => cannot range
         if ch0 is None:
             if verbose:
-                print(f"  gain={g:4s} exp={e:3d}ms  RAW not available -> using this setting")
+                print(f"  gain={g:4s} exp={e:3d}ms  RAW missing -> using this setting")
             return g, e
 
+        # invalid read
         if ch0 == 0 and ch1 == 0:
             if verbose:
                 print(f"  gain={g:4s} exp={e:3d}ms  CH0/CH1=0/0 INVALID")
             continue
 
-        saturated = (ch0 >= SAT_THRESHOLD) or (ch1 >= SAT_THRESHOLD)
-        too_dark = (ch0 < TARGET_LOW)
-        in_window = (TARGET_LOW <= ch0 <= TARGET_HIGH) and not saturated
+        # saturated
+        if ch0 >= sat_threshold or ch1 >= sat_threshold:
+            if verbose:
+                print(f"  gain={g:4s} exp={e:3d}ms  CH0={ch0:5d} CH1={ch1:5d} SAT")
+            continue
 
+        # too low to be meaningful
+        if min_ch0_for_valid > 0 and ch0 < min_ch0_for_valid:
+            if verbose:
+                print(f"  gain={g:4s} exp={e:3d}ms  CH0={ch0:5d} CH1={ch1:5d} TOO_LOW")
+            continue
+
+        in_window = (target_low <= ch0 <= target_high)
         if verbose:
-            flags = []
-            if saturated:
-                flags.append("SAT")
-            if too_dark:
-                flags.append("DARK")
-            if in_window:
-                flags.append("OK")
-            print(f"  gain={g:4s} exp={e:3d}ms  CH0={ch0:5d} CH1={ch1:5d}  {' '.join(flags)}")
+            print(f"  gain={g:4s} exp={e:3d}ms  CH0={ch0:5d} CH1={ch1:5d}  {'OK' if in_window else 'VALID'}")
 
         if in_window:
             return g, e
 
-        if saturated:
-            score = -10_000_000 - ch0
+        # scoring: prefer CH0 close to target_high but not above it
+        if ch0 <= target_high:
+            score = ch0  # maximize counts for SNR
         else:
-            if ch0 <= TARGET_HIGH:
-                score = ch0
-            else:
-                score = TARGET_HIGH - (ch0 - TARGET_HIGH)
+            score = target_high - (ch0 - target_high)  # penalize above target
 
         if best_score is None or score > best_score:
             best_score = score
             best = (g, e)
 
-    if best is None:
-        return "med", 200
-    return best
+    # If we found at least one VALID non-saturated setting, use best; otherwise fall back to max/600
+    if best is not None:
+        return best
+
+    return "max", 600
 
 
-def read_valid_raw(sensor, exposure_ms: int, read_retries: int, retry_delay: float, min_ch0: int):
-    """
-    Returns (ch0, ch1) or (None, None) after retries.
-    Filters:
-      - invalid 0/0
-      - optional min_ch0 threshold
-    """
-    for _ in range(max(1, read_retries)):
-        ch0, ch1 = read_raw_counts(sensor)
-        if ch0 is None:
-            return None, None
-        if ch0 == 0 and ch1 == 0:
-            time.sleep(retry_delay)
-            settle_for_integration(exposure_ms)
-            continue
-        if min_ch0 > 0 and ch0 < min_ch0:
-            time.sleep(retry_delay)
-            settle_for_integration(exposure_ms)
-            continue
-        return ch0, ch1
-    return None, None
-
-
+# -----------------------------
+# Prompt + CLI
+# -----------------------------
 def prompt_sqm_ref():
     try:
         s = input("Enter SQM reference from TESS (mag/arcsec^2) or press Enter to skip: ").strip()
@@ -297,19 +347,48 @@ def prompt_sqm_ref():
 
 
 def parse_args():
-    p = argparse.ArgumentParser(description="TSL2591 calibration (auto-range + prompt + robust reads).")
-    p.add_argument("--samples", type=int, default=10, help="Number of samples to record (default: 10)")
+    p = argparse.ArgumentParser(description="TSL2591 calibration (robust, night-aware auto-range).")
+
+    p.add_argument("--samples", type=int, default=10, help="Number of samples (default: 10)")
     p.add_argument("--interval", type=float, default=2.0, help="Seconds between samples (default: 2.0)")
     p.add_argument("--sqm-const", type=float, default=22.0, help="Starting SQM constant C (default: 22.0)")
-    p.add_argument("--calib-file", default="tsl2591_calibration_samples.csv",
-                   help="CSV file to store calibration samples")
+    p.add_argument("--calib-file", default="tsl2591_calibration_samples.csv", help="CSV file for calibration samples")
+
+    # Read robustness
+    p.add_argument("--read-retries", type=int, default=6, help="Retries for invalid reads (default: 6)")
+    p.add_argument("--read-retry-delay", type=float, default=0.20, help="Delay between retries (default: 0.20s)")
+    p.add_argument("--min-ch0", type=int, default=50, help="Min CH0 to accept in normal sampling (default: 50; 0 disables)")
+    p.add_argument("--sat-threshold", type=int, default=65000, help="Saturation threshold (default: 65000)")
+
+    # Auto-range (night)
+    p.add_argument("--target-ch0-low", type=int, default=80, help="Auto-range target CH0 low (default: 80)")
+    p.add_argument("--target-ch0-high", type=int, default=8000, help="Auto-range target CH0 high (default: 8000)")
+    p.add_argument("--min-ch0-valid", type=int, default=20, help="Minimum CH0 for a setting to be considered VALID in auto-range (default: 20)")
+    p.add_argument("--warmup-reads", type=int, default=2, help="Discard N reads after changing settings (default: 2)")
+
+    # Resets / re-range policy
+    p.add_argument("--rerange-after-invalid", type=int, default=3, help="Re-run auto-range after N invalid samples in a row (default: 3)")
+    p.add_argument("--reset-after-invalid", type=int, default=8, help="Reset sensor after N invalid samples in a row (default: 8)")
+    p.add_argument("--reset-i2c", action="store_true", help="Also re-init I2C on reset (slower, but may help)")
+
+    # Verbose
     p.add_argument("--auto-verbose", action="store_true", help="Print auto-range scan details")
-    p.add_argument("--read-retries", type=int, default=5, help="Retries for invalid reads (default: 5)")
-    p.add_argument("--read-retry-delay", type=float, default=0.15, help="Delay between read retries (default: 0.15s)")
-    p.add_argument("--min-ch0", type=int, default=50, help="Minimum CH0 to accept as valid (default: 50; set 0 to disable)")
-    p.add_argument("--rerange-after-invalid", type=int, default=3,
-                   help="Re-run auto-range after N invalid samples in a row (default: 3)")
+
     return p.parse_args()
+
+
+def init_i2c_and_sensor(reset_i2c: bool, i2c_obj, sensor_obj):
+    """
+    Re-initialize sensor; optionally also re-initialize I2C.
+    Returns (i2c, sensor).
+    """
+    if reset_i2c or i2c_obj is None:
+        i2c = busio.I2C(board.SCL, board.SDA)
+    else:
+        i2c = i2c_obj
+
+    sensor = adafruit_tsl2591.TSL2591(i2c)
+    return i2c, sensor
 
 
 def main():
@@ -317,11 +396,13 @@ def main():
 
     print("=== TSL2591 Calibration Test ===")
     print("Interface: I2C (SCL/SDA)")
-    print("Mode: auto-range always enabled")
+    print("Mode: auto-range always enabled (night-aware)")
     print(f"Samples: {args.samples}, interval: {args.interval}s")
     print(f"Starting SQM constant: {args.sqm_const:.2f}")
     print(f"Calibration CSV: {args.calib_file}")
-    print(f"Read retries: {args.read_retries}, min_ch0: {args.min_ch0}, rerange_after_invalid: {args.rerange_after_invalid}")
+    print(f"Read retries: {args.read_retries}, min_ch0: {args.min_ch0}, sat_threshold: {args.sat_threshold}")
+    print(f"Auto-range target CH0: {args.target_ch0_low}..{args.target_ch0_high}, warmup_reads: {args.warmup_reads}")
+    print(f"Policies: rerange_after_invalid={args.rerange_after_invalid}, reset_after_invalid={args.reset_after_invalid}, reset_i2c={args.reset_i2c}")
     print()
 
     sqm_ref = prompt_sqm_ref()
@@ -331,23 +412,26 @@ def main():
         print("Calibration disabled (no SQM_ref provided).")
     print()
 
+    # init i2c + sensor
     try:
-        i2c = busio.I2C(board.SCL, board.SDA)
+        i2c, sensor = init_i2c_and_sensor(reset_i2c=True, i2c_obj=None, sensor_obj=None)
     except Exception as e:
-        print("ERROR: Could not open I2C interface.")
-        print("Hint: enable I2C using 'sudo raspi-config'.")
-        print("Exception:", e)
-        sys.exit(1)
-
-    try:
-        sensor = adafruit_tsl2591.TSL2591(i2c)
-    except Exception as e:
-        print("ERROR: Could not initialize TSL2591 sensor.")
+        print("ERROR: Could not initialize I2C/sensor.")
         print("Hint: run 'i2cdetect -y 1' and look for '29'.")
         print("Exception:", e)
         sys.exit(1)
 
-    gain_sel, exp_sel = auto_range(sensor, verbose=args.auto_verbose)
+    # choose settings via night-aware auto-range
+    gain_sel, exp_sel = auto_range_night(
+        sensor=sensor,
+        verbose=args.auto_verbose,
+        sat_threshold=args.sat_threshold,
+        target_low=args.target_ch0_low,
+        target_high=args.target_ch0_high,
+        min_ch0_for_valid=args.min_ch0_valid,
+        warmup_reads=args.warmup_reads,
+    )
+
     print(f"Auto-range selected: gain={gain_sel}, exposure={exp_sel}ms")
     try:
         set_gain_and_exposure(sensor, gain_sel, exp_sel)
@@ -355,89 +439,180 @@ def main():
         print("ERROR: Could not apply auto-range settings:", ex)
         sys.exit(1)
 
+    warmup(sensor, exp_sel, args.warmup_reads)
     settle_for_integration(exp_sel)
+
     g_now, it_now = get_current_settings(sensor)
     print(f"Active settings: gain={g_now}, integration_time={it_now}")
     print()
 
-    existing_consts = load_consts_from_csv(args.calib_file) if sqm_ref is not None else []
-    new_consts = []
+    # Calibration stats
+    all_time_consts = load_all_time_consts(args.calib_file) if sqm_ref is not None else []
+    session_consts = []
+
     invalid_streak = 0
 
-    for i in range(args.samples):
-        timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+    for idx in range(args.samples):
+        timestamp = ts_now()
 
+        # Lux is just informational (may be 0 at night)
         try:
             lux = safe_value(sensor.lux)
-            ch0, ch1 = read_valid_raw(sensor, exp_sel, args.read_retries, args.read_retry_delay, args.min_ch0)
+        except Exception:
+            lux = 0.0
+
+        # robust raw read
+        try:
+            ch0, ch1, note = read_valid_raw(
+                sensor=sensor,
+                exposure_ms=exp_sel,
+                read_retries=args.read_retries,
+                retry_delay=args.read_retry_delay,
+                min_ch0=args.min_ch0,
+                sat_threshold=args.sat_threshold,
+            )
         except Exception as e:
             print("ERROR: Failed to read sensor:", e)
             break
 
-        print(f"[{timestamp}] Sample {i+1}/{args.samples}")
+        print(f"[{timestamp}] Sample {idx+1}/{args.samples}")
 
         if ch0 is None:
             invalid_streak += 1
-            print("  Raw CH0/CH1 : invalid (0/0 or too low after retries)")
+            print("  Raw CH0/CH1 : invalid (0/0, saturated, or too low after retries)")
             print(f"  Lux         : {lux:.3f} lx (info)")
+            print(f"  Note        : {note}")
             print()
 
-            if args.rerange_after_invalid > 0 and invalid_streak >= args.rerange_after_invalid:
-                print("  Action      : too many invalid reads -> re-running auto-range ...")
-                gain_sel, exp_sel = auto_range(sensor, verbose=args.auto_verbose)
+            # Log invalid sample (optional, helpful for debugging)
+            if sqm_ref is not None:
+                append_csv(args.calib_file, {
+                    "timestamp": timestamp,
+                    "gain": gain_sel,
+                    "exposure_ms": exp_sel,
+                    "ch0": "",
+                    "ch1": "",
+                    "lux": f"{lux:.6f}",
+                    "sqm_ref": f"{sqm_ref:.3f}",
+                    "const_ci": "",
+                    "valid": "false",
+                    "note": note,
+                })
+
+            # Reset if invalid streak is large
+            if args.reset_after_invalid > 0 and invalid_streak >= args.reset_after_invalid:
+                print("  Action      : invalid streak -> resetting sensor ...")
+                try:
+                    i2c, sensor = init_i2c_and_sensor(args.reset_i2c, i2c, sensor)
+                except Exception as e:
+                    print("ERROR: Sensor reset failed:", e)
+                    break
+
+                # Re-run auto-range after reset
+                gain_sel, exp_sel = auto_range_night(
+                    sensor=sensor,
+                    verbose=args.auto_verbose,
+                    sat_threshold=args.sat_threshold,
+                    target_low=args.target_ch0_low,
+                    target_high=args.target_ch0_high,
+                    min_ch0_for_valid=args.min_ch0_valid,
+                    warmup_reads=args.warmup_reads,
+                )
                 print(f"  New range   : gain={gain_sel}, exposure={exp_sel}ms")
                 try:
                     set_gain_and_exposure(sensor, gain_sel, exp_sel)
                 except Exception as ex:
-                    print("ERROR: Could not apply new auto-range settings:", ex)
+                    print("ERROR: Could not apply new settings:", ex)
                     break
+                warmup(sensor, exp_sel, args.warmup_reads)
                 settle_for_integration(exp_sel)
                 invalid_streak = 0
                 print()
+
+            # Otherwise rerange sooner
+            elif args.rerange_after_invalid > 0 and invalid_streak >= args.rerange_after_invalid:
+                print("  Action      : too many invalid reads -> re-running auto-range ...")
+                gain_sel, exp_sel = auto_range_night(
+                    sensor=sensor,
+                    verbose=args.auto_verbose,
+                    sat_threshold=args.sat_threshold,
+                    target_low=args.target_ch0_low,
+                    target_high=args.target_ch0_high,
+                    min_ch0_for_valid=args.min_ch0_valid,
+                    warmup_reads=args.warmup_reads,
+                )
+                print(f"  New range   : gain={gain_sel}, exposure={exp_sel}ms")
+                try:
+                    set_gain_and_exposure(sensor, gain_sel, exp_sel)
+                except Exception as ex:
+                    print("ERROR: Could not apply new settings:", ex)
+                    break
+                warmup(sensor, exp_sel, args.warmup_reads)
+                settle_for_integration(exp_sel)
+                invalid_streak = 0
+                print()
+
             time.sleep(max(0.0, args.interval))
             continue
 
+        # valid sample
         invalid_streak = 0
 
-        sat = (ch0 >= 65000) or (ch1 >= 65000)
         sqm_pred = compute_sqm_from_ch0(ch0, args.sqm_const)
-
-        print(f"  Raw CH0/CH1 : {ch0}/{ch1}" + ("  (SATURATED)" if sat else ""))
+        print(f"  Raw CH0/CH1 : {ch0}/{ch1}")
         print(f"  SQM (CH0)   : {sqm_pred:.2f} mag/arcsec^2   (using C={args.sqm_const:.2f})")
         print(f"  Lux         : {lux:.3f} lx (info)")
 
-        if sqm_ref is not None and (not sat) and ch0 > 0:
+        if sqm_ref is not None:
             ci = compute_const_from_ref(ch0, sqm_ref)
             if math.isfinite(ci):
-                new_consts.append(ci)
-                append_calib_row(args.calib_file, {
+                session_consts.append(ci)
+                append_csv(args.calib_file, {
                     "timestamp": timestamp,
                     "gain": gain_sel,
                     "exposure_ms": exp_sel,
-                    "ch0": ch0,
-                    "ch1": ch1,
+                    "ch0": str(ch0),
+                    "ch1": str(ch1),
                     "lux": f"{lux:.6f}",
                     "sqm_ref": f"{sqm_ref:.3f}",
                     "const_ci": f"{ci:.6f}",
+                    "valid": "true",
+                    "note": "ok",
                 })
                 print(f"  Calib C_i   : {ci:.4f}")
+
         print()
         time.sleep(max(0.0, args.interval))
 
+    # Summary
     if sqm_ref is not None:
-        all_consts = existing_consts + new_consts
         print("=== Calibration Summary ===")
-        if len(all_consts) == 0:
-            print("No usable calibration samples recorded.")
+
+        if len(session_consts) == 0:
+            print("Session: no usable calibration samples.")
         else:
-            med = statistics.median(all_consts)
-            stdev = statistics.pstdev(all_consts) if len(all_consts) >= 2 else float("nan")
-            print(f"Usable samples total: {len(all_consts)}")
-            print(f"Recommended sqm_const (median): {med:.4f}")
-            if math.isfinite(stdev):
-                print(f"Spread (population stdev): {stdev:.4f}")
-            print(f"Test with: python3 tsl2591_kalibration.py --sqm-const {med:.4f}")
-            print(f"Later config: TSL2591_SQM_CONSTANT = {med:.4f}")
+            session_med = statistics.median(session_consts)
+            session_sd = statistics.pstdev(session_consts) if len(session_consts) >= 2 else float("nan")
+            print(f"Session usable samples: {len(session_consts)}")
+            print(f"Session recommended sqm_const (median): {session_med:.4f}")
+            if math.isfinite(session_sd):
+                print(f"Session spread (stdev): {session_sd:.4f}")
+
+        # Re-load all-time after writing
+        all_time_consts2 = load_all_time_consts(args.calib_file)
+        if len(all_time_consts2) == 0:
+            print("All-time: no usable samples in CSV.")
+        else:
+            all_med = statistics.median(all_time_consts2)
+            all_sd = statistics.pstdev(all_time_consts2) if len(all_time_consts2) >= 2 else float("nan")
+            print(f"All-time usable samples: {len(all_time_consts2)}")
+            print(f"All-time recommended sqm_const (median): {all_med:.4f}")
+            if math.isfinite(all_sd):
+                print(f"All-time spread (stdev): {all_sd:.4f}")
+
+            print()
+            print(f"Test with: python3 tsl2591_kalibration.py --sqm-const {all_med:.4f}")
+            print(f"Later config: TSL2591_SQM_CONSTANT = {all_med:.4f}")
 
     print("\nTSL2591 calibration test finished.")
 
