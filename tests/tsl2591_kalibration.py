@@ -74,8 +74,8 @@ def read_raw_counts(sensor):
     return None, None
 
 
-def settle_for_inucker(integration_ms: int):
-    # wait slightly longer than integration time
+def settle_for_integration(integration_ms: int):
+    """Wait slightly longer than integration time to ensure fresh data."""
     time.sleep(integration_ms / 1000.0 + 0.06)
 
 
@@ -177,6 +177,10 @@ def get_current_settings(sensor):
 
 
 def auto_range(sensor, verbose: bool = False):
+    """
+    Scan gain/exposure from low to high sensitivity and pick first "OK"
+    based on CH0 counts. Falls back to best candidate if none OK.
+    """
     gain_factors = {"low": 1, "med": 25, "high": 428, "max": 9876}
     gains = ["low", "med", "high", "max"]
     exposures = [100, 200, 300, 400, 500, 600]
@@ -213,7 +217,6 @@ def auto_range(sensor, verbose: bool = False):
                 print(f"  gain={g:4s} exp={e:3d}ms  RAW not available -> using this setting")
             return g, e
 
-        # Treat 0/0 as invalid, not "too dark"
         if ch0 == 0 and ch1 == 0:
             if verbose:
                 print(f"  gain={g:4s} exp={e:3d}ms  CH0/CH1=0/0 INVALID")
@@ -269,7 +272,6 @@ def read_valid_raw(sensor, exposure_ms: int, read_retries: int, retry_delay: flo
             settle_for_integration(exposure_ms)
             continue
         if min_ch0 > 0 and ch0 < min_ch0:
-            # Treat extremely low counts as unstable/noisy (optional)
             time.sleep(retry_delay)
             settle_for_integration(exposure_ms)
             continue
@@ -329,7 +331,6 @@ def main():
         print("Calibration disabled (no SQM_ref provided).")
     print()
 
-    # Open I2C
     try:
         i2c = busio.I2C(board.SCL, board.SDA)
     except Exception as e:
@@ -338,7 +339,6 @@ def main():
         print("Exception:", e)
         sys.exit(1)
 
-    # Init sensor
     try:
         sensor = adafruit_tsl2591.TSL2591(i2c)
     except Exception as e:
@@ -347,7 +347,6 @@ def main():
         print("Exception:", e)
         sys.exit(1)
 
-    # Initial auto-range selection
     gain_sel, exp_sel = auto_range(sensor, verbose=args.auto_verbose)
     print(f"Auto-range selected: gain={gain_sel}, exposure={exp_sel}ms")
     try:
@@ -363,13 +362,11 @@ def main():
 
     existing_consts = load_consts_from_csv(args.calib_file) if sqm_ref is not None else []
     new_consts = []
-
     invalid_streak = 0
 
     for i in range(args.samples):
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
 
-        # read lux (info) + robust raw
         try:
             lux = safe_value(sensor.lux)
             ch0, ch1 = read_valid_raw(sensor, exp_sel, args.read_retries, args.read_retry_delay, args.min_ch0)
@@ -388,7 +385,7 @@ def main():
             if args.rerange_after_invalid > 0 and invalid_streak >= args.rerange_after_invalid:
                 print("  Action      : too many invalid reads -> re-running auto-range ...")
                 gain_sel, exp_sel = auto_range(sensor, verbose=args.auto_verbose)
-                print(f"  New range    : gain={gain_sel}, exposure={exp_sel}ms")
+                print(f"  New range   : gain={gain_sel}, exposure={exp_sel}ms")
                 try:
                     set_gain_and_exposure(sensor, gain_sel, exp_sel)
                 except Exception as ex:
