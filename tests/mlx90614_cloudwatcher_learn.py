@@ -2,31 +2,18 @@
 """
 MLX90614 CloudWatcher Standalone mit Online-Learning (ASCII only)
 
-- Keine Sonderzeichen (ASCII only)
-- Kein askutils
-- Kein config.py
-- Kein Influx
-- Ausgabe nur auf Konsole
+Behavior change (requested):
+- If coeffs say frozen=true, ask the user on each run:
+  "Do you want to continue learning now?"
+  - If yes: set frozen=false (and clear freeze_timestamp_iso) and continue learning
+  - If no: keep frozen=true and do not update parameters
 
-Phase 1:
-- Schwellenwerte thr_clear/thr_light/thr_heavy werden nach jedem Lauf leicht angepasst
-
-Phase 2:
-- Wenn genug Samples vorhanden sind, werden K1 und K2 minimal angepasst
-
-Phase 3:
-- Wenn sehr viele Samples vorhanden sind, werden K3..K7 minimal angepasst
-- Sehr konservativ: nur wenn Loss besser wird, mit engen Bounds
-
-Freeze:
-- Wenn das Modell "stabil genug" ist (genug Daten + gute Accuracy + Parameter aendern sich kaum noch),
-  dann wird "frozen": True gesetzt und ab dann werden keine Updates mehr gemacht.
-- Unfreeze: in mlx90614_coeffs.json "frozen": false setzen.
+After learning continues, freeze can automatically engage again once stable.
 
 Files:
 - Coeffs:  mlx90614_coeffs.json
 - Samples: mlx90614_samples.csv
-- History: mlx90614_coeffs_history.jsonl  (wird automatisch angelegt)
+- History: mlx90614_coeffs_history.jsonl
 """
 
 import time
@@ -41,16 +28,10 @@ try:
 except ImportError:
     smbus = None
 
-# -------------------------------------------------
-# Files
-# -------------------------------------------------
 COEFFS_FILE = "mlx90614_coeffs.json"
 SAMPLES_FILE = "mlx90614_samples.csv"
 HISTORY_FILE = "mlx90614_coeffs_history.jsonl"
 
-# -------------------------------------------------
-# I2C defaults
-# -------------------------------------------------
 I2C_BUS = 1
 I2C_ADDR = 0x5A
 
@@ -59,9 +40,6 @@ REG_TOBJ1 = 0x07
 
 _bus = None
 
-# -------------------------------------------------
-# Default coeffs (used when coeff file does not exist)
-# -------------------------------------------------
 DEFAULT_COEFFS = {
     "K1": 100.0,
     "K2": 0.0,
@@ -77,24 +55,20 @@ DEFAULT_COEFFS = {
 
     "learn_rate_thr": 0.15,
 
-    # Phase 2
     "phase2_enabled": True,
     "min_samples_k": 80,
     "learn_rate_k": 0.02,
 
-    # Bounds for K1/K2
     "k1_min": 50.0,
     "k1_max": 150.0,
     "k2_min": -400.0,
     "k2_max": 400.0,
 
-    # Targets for labels (heuristic)
     "target_tsky_clear": -30.0,
     "target_tsky_light": -21.0,
     "target_tsky_heavy": -15.0,
     "target_tsky_overcast": -6.0,
 
-    # Quality thresholds (tunable)
     "quality_min_samples_thr": 80,
     "quality_min_samples_k": 250,
     "quality_min_acc50_thr": 0.75,
@@ -105,13 +79,11 @@ DEFAULT_COEFFS = {
     "quality_min_ta_range_k": 12.0,
     "quality_min_class_count": 10,
 
-    # Phase 3 (very conservative)
     "phase3_enabled": True,
     "min_samples_phase3": 1500,
     "learn_rate_phase3": 0.005,
     "phase3_max_rows": 6000,
 
-    # Bounds for K3..K7
     "k3_min": 0.0,
     "k3_max": 200.0,
     "k4_min": 0.0,
@@ -123,29 +95,24 @@ DEFAULT_COEFFS = {
     "k7_min": -200.0,
     "k7_max": 200.0,
 
-    # Freeze (stability lock)
     "freeze_enabled": True,
     "frozen": False,
     "freeze_timestamp_iso": "",
 
-    # Freeze criteria
-    "freeze_min_samples": 800,          # require enough samples
-    "freeze_min_acc200": 0.82,          # require good rolling accuracy
-    "freeze_history_window": 30,         # last N updates stable
-    "freeze_eps_thr": 0.25,              # thresholds stable (max delta)
-    "freeze_eps_k1": 0.50,               # K1 stable (max delta)
-    "freeze_eps_k2": 2.00,               # K2 stable (max delta)
-    "freeze_eps_k3": 1.00,               # K3 stable
-    "freeze_eps_k4": 6.00,               # K4 stable
-    "freeze_eps_k5": 1.00,               # K5 stable
-    "freeze_eps_k6": 1.00,               # K6 stable
-    "freeze_eps_k7": 1.00                # K7 stable
+    "freeze_min_samples": 800,
+    "freeze_min_acc200": 0.82,
+    "freeze_history_window": 30,
+    "freeze_eps_thr": 0.25,
+    "freeze_eps_k1": 0.50,
+    "freeze_eps_k2": 2.00,
+    "freeze_eps_k3": 1.00,
+    "freeze_eps_k4": 6.00,
+    "freeze_eps_k5": 1.00,
+    "freeze_eps_k6": 1.00,
+    "freeze_eps_k7": 1.00
 }
 
 
-# -------------------------------------------------
-# Helpers
-# -------------------------------------------------
 def clamp(x, lo, hi):
     if x < lo:
         return lo
@@ -163,9 +130,6 @@ def enforce_threshold_order(c):
     return c
 
 
-# -------------------------------------------------
-# Coeffs file bootstrap/load/save
-# -------------------------------------------------
 def ensure_coeffs_file():
     if os.path.exists(COEFFS_FILE):
         return
@@ -176,14 +140,10 @@ def ensure_coeffs_file():
 
 def load_coeffs():
     ensure_coeffs_file()
-
     with open(COEFFS_FILE, "r", encoding="utf-8") as f:
         c = json.load(f)
-
-    # Upgrade-safe: add missing keys
     for k, v in DEFAULT_COEFFS.items():
         c.setdefault(k, v)
-
     c = enforce_threshold_order(c)
     return c
 
@@ -191,11 +151,9 @@ def load_coeffs():
 def save_coeffs(c):
     c = enforce_threshold_order(c)
 
-    # clamp K1/K2
     c["K1"] = clamp(float(c["K1"]), float(c["k1_min"]), float(c["k1_max"]))
     c["K2"] = clamp(float(c["K2"]), float(c["k2_min"]), float(c["k2_max"]))
 
-    # clamp K3..K7
     c["K3"] = clamp(float(c["K3"]), float(c["k3_min"]), float(c["k3_max"]))
     c["K4"] = clamp(float(c["K4"]), float(c["k4_min"]), float(c["k4_max"]))
     c["K5"] = clamp(float(c["K5"]), float(c["k5_min"]), float(c["k5_max"]))
@@ -206,9 +164,6 @@ def save_coeffs(c):
         json.dump(c, f, indent=2, sort_keys=True)
 
 
-# -------------------------------------------------
-# History (for Freeze)
-# -------------------------------------------------
 def append_history(coeffs, total_samples, acc200):
     entry = {
         "ts": datetime.now().isoformat(timespec="seconds"),
@@ -230,14 +185,12 @@ def append_history(coeffs, total_samples, acc200):
         with open(HISTORY_FILE, "a", encoding="utf-8") as f:
             f.write(json.dumps(entry, sort_keys=True) + "\n")
     except Exception:
-        # history is helpful but not critical
         pass
 
 
 def read_history_last_n(n):
     if n <= 0 or not os.path.exists(HISTORY_FILE):
         return []
-    # Read last ~n lines without heavy libs: read all if file small; else tail approach
     try:
         with open(HISTORY_FILE, "r", encoding="utf-8") as f:
             lines = f.readlines()
@@ -292,7 +245,6 @@ def maybe_freeze(coeffs, samples, acc200):
         return coeffs, False, "Freeze not ready (acc200 too low)"
 
     hist = read_history_last_n(window)
-    # Need at least 2 entries to measure deltas
     if len(hist) < max(10, window // 2):
         return coeffs, False, "Freeze not ready (history too short)"
 
@@ -318,7 +270,6 @@ def maybe_freeze(coeffs, samples, acc200):
         "K7": max_abs_delta(hist, "K7"),
     }
 
-    # If any delta is missing, do not freeze
     for k, v in deltas.items():
         if v is None:
             return coeffs, False, "Freeze not ready (missing delta data)"
@@ -341,9 +292,6 @@ def maybe_freeze(coeffs, samples, acc200):
     return coeffs, True, "Frozen (model locked)"
 
 
-# -------------------------------------------------
-# MLX90614 low-level
-# -------------------------------------------------
 def get_bus():
     global _bus
     if _bus is None:
@@ -397,9 +345,6 @@ def read_mlx90614_avg():
     return Ta, Ts
 
 
-# -------------------------------------------------
-# CloudWatcher model
-# -------------------------------------------------
 def sgn(x: float) -> int:
     if x > 0:
         return 1
@@ -437,9 +382,6 @@ def classify_by_thresholds(Tsky, thr_clear, thr_light, thr_heavy) -> int:
     return 3
 
 
-# -------------------------------------------------
-# Logging / Reading samples
-# -------------------------------------------------
 def append_sample(ts_iso, Ta, Ts, delta, Tsky, pred, label, coeffs):
     file_exists = os.path.exists(SAMPLES_FILE)
     with open(SAMPLES_FILE, "a", newline="", encoding="utf-8") as f:
@@ -481,9 +423,6 @@ def read_samples(max_rows=4000):
     return rows
 
 
-# -------------------------------------------------
-# Phase 1: thresholds update
-# -------------------------------------------------
 def update_thresholds(coeffs, pred, label):
     lr = float(coeffs.get("learn_rate_thr", 0.15))
 
@@ -513,9 +452,6 @@ def update_thresholds(coeffs, pred, label):
     return coeffs
 
 
-# -------------------------------------------------
-# Loss / Targets for Phase 2+3
-# -------------------------------------------------
 def label_to_target(coeffs, label):
     if label == 0:
         return float(coeffs["target_tsky_clear"])
@@ -541,9 +477,6 @@ def loss_mse(coeffs, samples, K1, K2, K3, K4, K5, K6, K7):
     return s / float(n)
 
 
-# -------------------------------------------------
-# Phase 2: learn K1/K2
-# -------------------------------------------------
 def phase2_update_k1k2(coeffs, samples):
     if not coeffs.get("phase2_enabled", True):
         return coeffs, False, "Phase2 disabled"
@@ -593,9 +526,6 @@ def phase2_update_k1k2(coeffs, samples):
         return coeffs, False, "Phase2 skipped (no improvement)"
 
 
-# -------------------------------------------------
-# Phase 3: learn K3..K7 (very conservative)
-# -------------------------------------------------
 def phase3_update_k3k7(coeffs, samples):
     if not coeffs.get("phase3_enabled", True):
         return coeffs, False, "Phase3 disabled"
@@ -671,9 +601,6 @@ def phase3_update_k3k7(coeffs, samples):
         return coeffs, False, "Phase3 skipped (no improvement)"
 
 
-# -------------------------------------------------
-# Quality report
-# -------------------------------------------------
 def rolling_accuracy(samples, last_n):
     if not samples:
         return None
@@ -688,137 +615,40 @@ def rolling_accuracy(samples, last_n):
     return ok / float(n)
 
 
-def class_counts(samples):
-    c = {0: 0, 1: 0, 2: 0, 3: 0}
-    for (_Ta, _Ts, label, _pred) in samples:
-        if label in c:
-            c[label] += 1
-    return c
-
-
-def ta_range(samples):
-    if not samples:
-        return None
-    tas = [x[0] for x in samples]
-    return (min(tas), max(tas), max(tas) - min(tas))
-
-
-def balance_score(counts):
-    total = sum(counts.values())
-    if total <= 0:
-        return 0.0
-    ideal = total / 4.0
-    dev = 0.0
-    for k in (0, 1, 2, 3):
-        dev += abs(counts[k] - ideal)
-    score = 1.0 - (dev / (2.0 * total))
-    if score < 0.0:
-        score = 0.0
-    return score
-
-
-def amp(ok):
-    return "GREEN" if ok else "YELLOW"
-
-
 def quality_report(coeffs, samples):
     total = len(samples)
-    cnt = class_counts(samples)
-    acc50 = rolling_accuracy(samples, 50)
     acc200 = rolling_accuracy(samples, 200)
-    tr = ta_range(samples)
-    bal = balance_score(cnt)
 
     print("")
-    print("Quality Report")
+    print("Status")
     print("Samples total:", total)
-    print("Samples per class: c0=", cnt[0], "c1=", cnt[1], "c2=", cnt[2], "c3=", cnt[3])
-
-    if tr is None:
-        print("Ta range: n/a")
-        ta_span = 0.0
-    else:
-        ta_span = tr[2]
-        print("Ta min:", round(tr[0], 2), "Ta max:", round(tr[1], 2), "Ta span:", round(ta_span, 2), "GradC")
-
-    if acc50 is not None:
-        print("Rolling accuracy last50 :", round(acc50, 3))
-    else:
-        print("Rolling accuracy last50 : n/a")
-
+    print("Frozen:", "YES" if coeffs.get("frozen", False) else "NO")
+    if coeffs.get("frozen", False) and coeffs.get("freeze_timestamp_iso", ""):
+        print("Freeze timestamp:", coeffs.get("freeze_timestamp_iso", ""))
     if acc200 is not None:
         print("Rolling accuracy last200:", round(acc200, 3))
     else:
         print("Rolling accuracy last200: n/a")
-
-    print("Label balance score (0..1):", round(bal, 3))
-
-    # Phase1 readiness
-    min_samples_thr = int(coeffs["quality_min_samples_thr"])
-    min_acc50_thr = float(coeffs["quality_min_acc50_thr"])
-    min_acc200_thr = float(coeffs["quality_min_acc200_thr"])
-    min_ta_span_thr = float(coeffs["quality_min_ta_range_thr"])
-    min_class_count = int(coeffs["quality_min_class_count"])
-
-    classes_with_enough = sum(1 for k in (0, 1, 2, 3) if cnt[k] >= min_class_count)
-
-    ok_thr = True
-    if total < min_samples_thr:
-        ok_thr = False
-    if acc50 is None or acc50 < min_acc50_thr:
-        ok_thr = False
-    if acc200 is None or acc200 < min_acc200_thr:
-        ok_thr = False
-    if ta_span < min_ta_span_thr:
-        ok_thr = False
-    if classes_with_enough < 2:
-        ok_thr = False
-
-    # Phase2 readiness
-    min_samples_k = int(coeffs["quality_min_samples_k"])
-    min_acc50_k = float(coeffs["quality_min_acc50_k"])
-    min_acc200_k = float(coeffs["quality_min_acc200_k"])
-    min_ta_span_k = float(coeffs["quality_min_ta_range_k"])
-
-    ok_k = True
-    if total < min_samples_k:
-        ok_k = False
-    if acc50 is None or acc50 < min_acc50_k:
-        ok_k = False
-    if acc200 is None or acc200 < min_acc200_k:
-        ok_k = False
-    if ta_span < min_ta_span_k:
-        ok_k = False
-    if classes_with_enough < 3:
-        ok_k = False
-
-    # Phase3 readiness (very strict)
-    min_samples_p3 = int(coeffs.get("min_samples_phase3", 1500))
-    ok_p3 = True
-    if total < min_samples_p3:
-        ok_p3 = False
-    if acc200 is None or acc200 < 0.78:
-        ok_p3 = False
-    if ta_span < 15.0:
-        ok_p3 = False
-    if classes_with_enough < 3:
-        ok_p3 = False
-
     print("")
-    print("Readiness")
-    print("Thresholds (Phase1) :", amp(ok_thr))
-    print("K1/K2 (Phase2)      :", amp(ok_k))
-    print("K3..K7 (Phase3)     :", amp(ok_p3))
-    print("Freeze enabled      :", "YES" if coeffs.get("freeze_enabled", True) else "NO")
-    print("Frozen              :", "YES" if coeffs.get("frozen", False) else "NO")
-    if coeffs.get("frozen", False) and coeffs.get("freeze_timestamp_iso", ""):
-        print("Freeze timestamp    :", coeffs.get("freeze_timestamp_iso", ""))
-    print("")
+    return acc200
 
 
-# -------------------------------------------------
-# User prompt
-# -------------------------------------------------
+def prompt_yes_no(prompt, default_no=True):
+    if default_no:
+        suffix = " [y/N]: "
+    else:
+        suffix = " [Y/n]: "
+    while True:
+        s = input(prompt + suffix).strip().lower()
+        if s == "":
+            return (not default_no)
+        if s in ("y", "yes"):
+            return True
+        if s in ("n", "no"):
+            return False
+        print("Please answer y or n.")
+
+
 def prompt_label():
     print("")
     print("Please enter true cloud status:")
@@ -837,11 +667,19 @@ def prompt_label():
 
 def main():
     coeffs = load_coeffs()
-
-    # report before measurement (uses existing samples)
     samples_report = read_samples(max_rows=4000)
-    acc200_before = rolling_accuracy(samples_report, 200)
-    quality_report(coeffs, samples_report)
+    acc200_before = quality_report(coeffs, samples_report)
+
+    # If frozen: ask user whether to continue learning
+    if coeffs.get("frozen", False):
+        want = prompt_yes_no("Model is frozen. Continue learning now?", default_no=True)
+        if want:
+            coeffs["frozen"] = False
+            coeffs["freeze_timestamp_iso"] = ""
+            save_coeffs(coeffs)
+            print("Info: Unfroze model. Learning will continue.")
+        else:
+            print("Info: Keeping model frozen. No parameter updates will be made.")
 
     print("Current Model")
     print("K1=", coeffs["K1"], "K2=", coeffs["K2"], "K3=", coeffs["K3"],
@@ -876,11 +714,11 @@ def main():
         print("Abort without learning.")
         return
 
-    # log sample with coeffs BEFORE updates
+    # Log sample with coeffs BEFORE updates
     ts_iso = datetime.now().isoformat(timespec="seconds")
     append_sample(ts_iso, Ta, Ts, delta, Tsky, pred, label, coeffs)
 
-    # reload samples after append (for training and freeze decisions)
+    # Reload samples for training and freeze decisions
     p3_max_rows = int(coeffs.get("phase3_max_rows", 6000))
     samples_train = read_samples(max_rows=p3_max_rows)
     acc200_after = rolling_accuracy(samples_train, 200)
@@ -890,27 +728,20 @@ def main():
     msg3 = "n/a"
     freeze_msg = "n/a"
 
-    # If frozen: do NOT update parameters, only log + history
     if coeffs.get("frozen", False):
         msg1 = "Phase1 skipped (frozen)"
         msg2 = "Phase2 skipped (frozen)"
         msg3 = "Phase3 skipped (frozen)"
         freeze_msg = "Frozen (no updates)"
     else:
-        # Phase 1 update thresholds
         coeffs = update_thresholds(coeffs, pred, label)
         msg1 = "Phase1 updated"
 
-        # Phase 2 update K1/K2
         coeffs, _changed2, msg2 = phase2_update_k1k2(coeffs, samples_train)
-
-        # Phase 3 update K3..K7
         coeffs, _changed3, msg3 = phase3_update_k3k7(coeffs, samples_train)
 
-        # Maybe freeze now
-        coeffs, froze, freeze_msg = maybe_freeze(coeffs, samples_train, acc200_after)
+        coeffs, _froze, freeze_msg = maybe_freeze(coeffs, samples_train, acc200_after)
 
-    # write coeffs + history
     save_coeffs(coeffs)
     append_history(coeffs, len(samples_train), acc200_after)
 
