@@ -2,15 +2,21 @@
 """
 tsl2591_kalibration.py
 
-Standalone calibration helper for TSL2591 using a nearby reference SQM value (e.g., TESS meter).
+Standalone calibration helper for TSL2591 using a nearby reference SQM value (e.g., TESS).
 
-- Always uses AUTO-RANGE to pick gain/exposure (based on RAW CH0/CH1).
-- Prompts the user for SQM reference value at startup (press Enter to skip).
-- Computes SQM from RAW CH0:
+Key points:
+- AUTO-RANGE is always enabled (based on RAW CH0/CH1).
+- Prompts the user for SQM reference at startup (press Enter to skip).
+- Computes SQM-like from CH0:
     SQM = sqm_const - 2.5*log10(CH0)
-- If SQM_ref is provided, computes per-sample calibration constant:
+- If SQM_ref provided, computes per-sample calibration constant:
     C_i = SQM_ref + 2.5*log10(CH0)
-  and stores samples in CSV. Prints recommended sqm_const (median).
+  Stores to CSV and recommends sqm_const (median).
+
+Robustness improvements:
+- Retries reads when CH0/CH1 == 0/0 (invalid).
+- Optional min CH0 threshold to avoid extremely noisy samples.
+- If too many invalid samples in a row, re-runs auto-range.
 
 No config, no influx. ASCII-only, English-only output.
 """
@@ -42,9 +48,6 @@ except ImportError:
     sys.exit(1)
 
 
-# -----------------------------
-# Helpers
-# -----------------------------
 def safe_float(x, fallback=None):
     try:
         if x is None:
@@ -62,9 +65,6 @@ def safe_value(x, fallback=0.0001):
 
 
 def read_raw_counts(sensor):
-    """
-    Returns (ch0, ch1) or (None, None) if not available.
-    """
     try:
         raw = sensor.raw_luminosity
         if isinstance(raw, tuple) and len(raw) >= 2:
@@ -74,9 +74,9 @@ def read_raw_counts(sensor):
     return None, None
 
 
-def settle_for_integration(exposure_ms: int):
-    # Wait slightly longer than integration time so a fresh sample is ready
-    time.sleep(exposure_ms / 1000.0 + 0.06)
+def settle_for_inucker(integration_ms: int):
+    # wait slightly longer than integration time
+    time.sleep(integration_ms / 1000.0 + 0.06)
 
 
 def compute_sqm_from_ch0(ch0: int, sqm_const: float) -> float:
@@ -86,7 +86,6 @@ def compute_sqm_from_ch0(ch0: int, sqm_const: float) -> float:
 
 
 def compute_const_from_ref(ch0: int, sqm_ref: float) -> float:
-    # C_i = SQM_ref + 2.5*log10(CH0)
     if ch0 is None or ch0 <= 0:
         return float("nan")
     return float(sqm_ref) + 2.5 * math.log10(float(ch0))
@@ -177,14 +176,7 @@ def get_current_settings(sensor):
     return g, it
 
 
-# -----------------------------
-# Auto-range (always on)
-# -----------------------------
 def auto_range(sensor, verbose: bool = False):
-    """
-    Scan gain/exposure combinations from low to high sensitivity and pick first "OK"
-    based on CH0 counts (raw). Falls back to best candidate if none are OK.
-    """
     gain_factors = {"low": 1, "med": 25, "high": 428, "max": 9876}
     gains = ["low", "med", "high", "max"]
     exposures = [100, 200, 300, 400, 500, 600]
@@ -193,7 +185,7 @@ def auto_range(sensor, verbose: bool = False):
     for g in gains:
         for e in exposures:
             combos.append((gain_factors[g] * e, g, e))
-    combos.sort(key=lambda x: x[0])  # low -> high sensitivity
+    combos.sort(key=lambda x: x[0])
 
     TARGET_LOW = 2000
     TARGET_HIGH = 45000
@@ -217,11 +209,15 @@ def auto_range(sensor, verbose: bool = False):
         ch0, ch1 = read_raw_counts(sensor)
 
         if ch0 is None:
-            # If raw is missing, we cannot range reliably.
-            # Choose first workable setting and stop.
             if verbose:
                 print(f"  gain={g:4s} exp={e:3d}ms  RAW not available -> using this setting")
             return g, e
+
+        # Treat 0/0 as invalid, not "too dark"
+        if ch0 == 0 and ch1 == 0:
+            if verbose:
+                print(f"  gain={g:4s} exp={e:3d}ms  CH0/CH1=0/0 INVALID")
+            continue
 
         saturated = (ch0 >= SAT_THRESHOLD) or (ch1 >= SAT_THRESHOLD)
         too_dark = (ch0 < TARGET_LOW)
@@ -240,7 +236,6 @@ def auto_range(sensor, verbose: bool = False):
         if in_window:
             return g, e
 
-        # Fallback scoring
         if saturated:
             score = -10_000_000 - ch0
         else:
@@ -258,41 +253,61 @@ def auto_range(sensor, verbose: bool = False):
     return best
 
 
-# -----------------------------
-# CLI + prompt
-# -----------------------------
-def parse_args():
-    p = argparse.ArgumentParser(description="TSL2591 calibration script (auto-range + prompt for SQM ref).")
-    p.add_argument("--samples", type=int, default=10, help="Number of samples to record (default: 10)")
-    p.add_argument("--interval", type=float, default=2.0, help="Seconds between samples (default: 2.0)")
-    p.add_argument("--sqm-const", type=float, default=22.0,
-                   help="Starting SQM constant for SQM = C - 2.5*log10(CH0) (default: 22.0)")
-    p.add_argument("--calib-file", default="tsl2591_calibration_samples.csv",
-                   help="CSV file to store calibration samples (default: tsl2591_calibration_samples.csv)")
-    p.add_argument("--auto-verbose", action="store_true",
-                   help="Print auto-range scan details.")
-    return p.parse_args()
+def read_valid_raw(sensor, exposure_ms: int, read_retries: int, retry_delay: float, min_ch0: int):
+    """
+    Returns (ch0, ch1) or (None, None) after retries.
+    Filters:
+      - invalid 0/0
+      - optional min_ch0 threshold
+    """
+    for _ in range(max(1, read_retries)):
+        ch0, ch1 = read_raw_counts(sensor)
+        if ch0 is None:
+            return None, None
+        if ch0 == 0 and ch1 == 0:
+            time.sleep(retry_delay)
+            settle_for_integration(exposure_ms)
+            continue
+        if min_ch0 > 0 and ch0 < min_ch0:
+            # Treat extremely low counts as unstable/noisy (optional)
+            time.sleep(retry_delay)
+            settle_for_integration(exposure_ms)
+            continue
+        return ch0, ch1
+    return None, None
 
 
 def prompt_sqm_ref():
-    """
-    Ask user for SQM reference value. Returns float or None.
-    """
     try:
         s = input("Enter SQM reference from TESS (mag/arcsec^2) or press Enter to skip: ").strip()
     except EOFError:
         return None
     if not s:
         return None
-    s = s.replace(",", ".")  # allow German decimal comma
+    s = s.replace(",", ".")
     v = safe_float(s, None)
     if v is None:
         print("WARNING: Invalid SQM reference input. Skipping calibration.")
         return None
-    # sanity check (very broad)
     if v < 10 or v > 25:
         print("WARNING: SQM ref value looks unusual (expected roughly 14..22 at night). Using it anyway.")
     return v
+
+
+def parse_args():
+    p = argparse.ArgumentParser(description="TSL2591 calibration (auto-range + prompt + robust reads).")
+    p.add_argument("--samples", type=int, default=10, help="Number of samples to record (default: 10)")
+    p.add_argument("--interval", type=float, default=2.0, help="Seconds between samples (default: 2.0)")
+    p.add_argument("--sqm-const", type=float, default=22.0, help="Starting SQM constant C (default: 22.0)")
+    p.add_argument("--calib-file", default="tsl2591_calibration_samples.csv",
+                   help="CSV file to store calibration samples")
+    p.add_argument("--auto-verbose", action="store_true", help="Print auto-range scan details")
+    p.add_argument("--read-retries", type=int, default=5, help="Retries for invalid reads (default: 5)")
+    p.add_argument("--read-retry-delay", type=float, default=0.15, help="Delay between read retries (default: 0.15s)")
+    p.add_argument("--min-ch0", type=int, default=50, help="Minimum CH0 to accept as valid (default: 50; set 0 to disable)")
+    p.add_argument("--rerange-after-invalid", type=int, default=3,
+                   help="Re-run auto-range after N invalid samples in a row (default: 3)")
+    return p.parse_args()
 
 
 def main():
@@ -304,6 +319,7 @@ def main():
     print(f"Samples: {args.samples}, interval: {args.interval}s")
     print(f"Starting SQM constant: {args.sqm_const:.2f}")
     print(f"Calibration CSV: {args.calib_file}")
+    print(f"Read retries: {args.read_retries}, min_ch0: {args.min_ch0}, rerange_after_invalid: {args.rerange_after_invalid}")
     print()
 
     sqm_ref = prompt_sqm_ref()
@@ -327,12 +343,11 @@ def main():
         sensor = adafruit_tsl2591.TSL2591(i2c)
     except Exception as e:
         print("ERROR: Could not initialize TSL2591 sensor.")
-        print("Check wiring and address (default 0x29).")
         print("Hint: run 'i2cdetect -y 1' and look for '29'.")
         print("Exception:", e)
         sys.exit(1)
 
-    # Auto-range selection
+    # Initial auto-range selection
     gain_sel, exp_sel = auto_range(sensor, verbose=args.auto_verbose)
     print(f"Auto-range selected: gain={gain_sel}, exposure={exp_sel}ms")
     try:
@@ -346,16 +361,18 @@ def main():
     print(f"Active settings: gain={g_now}, integration_time={it_now}")
     print()
 
-    # Load existing calibration constants (if calibration enabled)
     existing_consts = load_consts_from_csv(args.calib_file) if sqm_ref is not None else []
     new_consts = []
+
+    invalid_streak = 0
 
     for i in range(args.samples):
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
 
+        # read lux (info) + robust raw
         try:
             lux = safe_value(sensor.lux)
-            ch0, ch1 = read_raw_counts(sensor)
+            ch0, ch1 = read_valid_raw(sensor, exp_sel, args.read_retries, args.read_retry_delay, args.min_ch0)
         except Exception as e:
             print("ERROR: Failed to read sensor:", e)
             break
@@ -363,11 +380,27 @@ def main():
         print(f"[{timestamp}] Sample {i+1}/{args.samples}")
 
         if ch0 is None:
-            print("  Raw CH0/CH1 : not available in this library version (cannot calibrate reliably)")
+            invalid_streak += 1
+            print("  Raw CH0/CH1 : invalid (0/0 or too low after retries)")
             print(f"  Lux         : {lux:.3f} lx (info)")
             print()
+
+            if args.rerange_after_invalid > 0 and invalid_streak >= args.rerange_after_invalid:
+                print("  Action      : too many invalid reads -> re-running auto-range ...")
+                gain_sel, exp_sel = auto_range(sensor, verbose=args.auto_verbose)
+                print(f"  New range    : gain={gain_sel}, exposure={exp_sel}ms")
+                try:
+                    set_gain_and_exposure(sensor, gain_sel, exp_sel)
+                except Exception as ex:
+                    print("ERROR: Could not apply new auto-range settings:", ex)
+                    break
+                settle_for_integration(exp_sel)
+                invalid_streak = 0
+                print()
             time.sleep(max(0.0, args.interval))
             continue
+
+        invalid_streak = 0
 
         sat = (ch0 >= 65000) or (ch1 >= 65000)
         sqm_pred = compute_sqm_from_ch0(ch0, args.sqm_const)
@@ -390,40 +423,24 @@ def main():
                     "sqm_ref": f"{sqm_ref:.3f}",
                     "const_ci": f"{ci:.6f}",
                 })
-                print(f"  Calib C_i   : {ci:.4f}  (C_i = SQM_ref + 2.5*log10(CH0))")
-            else:
-                print("  Calib C_i   : n/a (invalid)")
-        elif sqm_ref is not None and sat:
-            print("  Calib       : skipped (saturated)")
-
+                print(f"  Calib C_i   : {ci:.4f}")
         print()
         time.sleep(max(0.0, args.interval))
 
-    # Summary
     if sqm_ref is not None:
         all_consts = existing_consts + new_consts
         print("=== Calibration Summary ===")
         if len(all_consts) == 0:
-            print("No usable calibration samples recorded (saturated or missing raw).")
+            print("No usable calibration samples recorded.")
         else:
             med = statistics.median(all_consts)
-            try:
-                stdev = statistics.pstdev(all_consts) if len(all_consts) >= 2 else float("nan")
-            except Exception:
-                stdev = float("nan")
-
+            stdev = statistics.pstdev(all_consts) if len(all_consts) >= 2 else float("nan")
             print(f"Usable samples total: {len(all_consts)}")
             print(f"Recommended sqm_const (median): {med:.4f}")
             if math.isfinite(stdev):
-                print(f"Spread (population stdev): {stdev:.4f}  (lower is better)")
-            if len(all_consts) < 10:
-                print("Tip: collect more points (different nights/conditions) for better stability.")
-            print()
-            print("Use for testing:")
-            print(f"  python3 tsl2591_kalibration.py --sqm-const {med:.4f}")
-            print()
-            print("Later config suggestion:")
-            print(f"  TSL2591_SQM_CONSTANT = {med:.4f}")
+                print(f"Spread (population stdev): {stdev:.4f}")
+            print(f"Test with: python3 tsl2591_kalibration.py --sqm-const {med:.4f}")
+            print(f"Later config: TSL2591_SQM_CONSTANT = {med:.4f}")
 
     print("\nTSL2591 calibration test finished.")
 
