@@ -3,8 +3,46 @@
 import json
 import ftplib
 import os
+import time
+import random
 from askutils import config
 from askutils.utils.logger import log, error
+
+# Influx Writer (wie bei raspi_status)
+try:
+    from askutils.utils import influx_writer
+except Exception:
+    influx_writer = None
+
+
+def _log_upload_status_to_influx(value: int) -> None:
+    """
+    Schreibt Upload-Status in Influx:
+    measurement = uploadstatus
+    tag kamera = ASKxxx
+    field configupload:
+      1 = upload_ok
+      2 = upload_aborted_or_failed
+      3 = file_not_found
+      4 = file_too_old  (optional, falls du den Check aktivierst)
+    """
+    try:
+        if influx_writer is None:
+            return
+
+        kamera_id = getattr(config, "KAMERA_ID", None) or getattr(config, "KAMERA", None)
+        if not kamera_id:
+            return
+
+        influx_writer.log_metric(
+            "uploadstatus",
+            {"configupload": float(value)},
+            tags={"host": "host1", "kamera": str(kamera_id)}
+        )
+    except Exception:
+        # Logging darf nie den Upload abbrechen
+        pass
+
 
 # Nur diese Felder werden oeffentlich exportiert
 EXPORT_FIELDS = [
@@ -133,6 +171,39 @@ OPTIONAL_FIELDS = [
 ]
 
 
+def _safe_int(val, default: int) -> int:
+    try:
+        return int(val)
+    except Exception:
+        return default
+
+
+def _apply_initial_jitter() -> None:
+    """
+    Jitter vor dem Upload, um gleichzeitige Peaks zu vermeiden.
+    Default: 180 Sekunden
+    Konfig: CONFIG_UPLOAD_JITTER_MAX_SECONDS
+    """
+    max_s = _safe_int(getattr(config, "CONFIG_UPLOAD_JITTER_MAX_SECONDS", 180), 180)
+    if max_s <= 0:
+        return
+
+    delay = random.randint(0, max_s)
+    if delay > 0:
+        log(f"config_upload jitter_seconds={delay}")
+        time.sleep(delay)
+
+
+def _sleep_retry_window(min_s: int = 120, max_s: int = 300) -> int:
+    """
+    Wartefenster zwischen Retries, standardmaessig 2-5 Minuten.
+    """
+    delay = random.randint(min_s, max_s)
+    log(f"config_upload retry_sleep_seconds={delay}")
+    time.sleep(delay)
+    return delay
+
+
 def get_version():
     # version liegt im Projekt-root (cd ROOT && python3 -m scripts.upload_config_json)
     version_file = os.path.join("version")
@@ -195,14 +266,43 @@ def create_config_json(filename="config.json"):
     try:
         with open(filename, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
-        log(f"config.json wurde erstellt: {filename}")
+        log(f"config_upload created_json file={filename}")
         return filename
     except Exception as e:
         error(f"Fehler beim Schreiben der config.json: {e}")
         return None
 
 
-def upload_to_ftp(filepath: str):
+def _upload_once(filepath: str) -> None:
+    """
+    Fuehrt einen einzelnen FTP Upload aus oder wirft Exception.
+    """
+    with ftplib.FTP(config.FTP_SERVER) as ftp:
+        # kleine Timeouts helfen gegen haengende Verbindungen
+        try:
+            ftp.connect(host=config.FTP_SERVER, timeout=30)
+            ftp.login(config.FTP_USER, config.FTP_PASS)
+        except TypeError:
+            ftp.login(config.FTP_USER, config.FTP_PASS)
+
+        ftp.cwd(config.FTP_REMOTE_DIR)
+        with open(filepath, "rb") as f:
+            ftp.storbinary(f"STOR {os.path.basename(filepath)}", f)
+
+
+def upload_to_ftp(filepath: str) -> bool:
+    """
+    Upload mit:
+    - Initial Jitter (Default 180s)
+    - Retry bei Fehler mit Pause 2-5 Minuten
+
+    Konfig-Parameter (optional in config.py):
+    - CONFIG_UPLOAD_JITTER_MAX_SECONDS (Default 180)
+    - CONFIG_UPLOAD_MAX_RETRIES (Default 3)
+    - CONFIG_UPLOAD_RETRY_MIN_SECONDS (Default 120)
+    - CONFIG_UPLOAD_RETRY_MAX_SECONDS (Default 300)
+    """
+
     # Schutz: FTP-Konfig muss vorhanden sein
     missing = []
     for k in ("FTP_SERVER", "FTP_USER", "FTP_PASS", "FTP_REMOTE_DIR"):
@@ -211,16 +311,52 @@ def upload_to_ftp(filepath: str):
 
     if missing:
         error(f"FTP-Upload abgebrochen: folgende config-Werte fehlen/leer: {', '.join(missing)}")
+        _log_upload_status_to_influx(2)
         return False
 
-    try:
-        with ftplib.FTP(config.FTP_SERVER) as ftp:
-            ftp.login(config.FTP_USER, config.FTP_PASS)
-            ftp.cwd(config.FTP_REMOTE_DIR)
-            with open(filepath, "rb") as f:
-                ftp.storbinary(f"STOR {os.path.basename(filepath)}", f)
-            log(f"Datei {filepath} erfolgreich per FTP hochgeladen.")
-        return True
-    except Exception as e:
-        error(f"FTP-Upload fehlgeschlagen: {e}")
+    if not filepath or not os.path.isfile(filepath):
+        error(f"FTP-Upload abgebrochen: Datei nicht gefunden: {filepath}")
+        _log_upload_status_to_influx(3)
         return False
+
+    # Optionaler "zu alt" Check (deaktiviert wenn <= 0)
+    # Falls du das nutzen willst: CONFIG_UPLOAD_MAX_AGE_SECONDS in config.py setzen.
+    max_age = _safe_int(getattr(config, "CONFIG_UPLOAD_MAX_AGE_SECONDS", 0), 0)
+    if max_age > 0:
+        try:
+            age = time.time() - os.path.getmtime(filepath)
+            if age > max_age:
+                error(f"config_upload file_too_old age_seconds={int(age)} max_age_seconds={max_age} file={filepath}")
+                _log_upload_status_to_influx(4)
+                return False
+        except Exception:
+            # Wenn mtime nicht lesbar, lieber normal weitermachen
+            pass
+
+    # Initial Jitter (einmal pro Aufruf)
+    _apply_initial_jitter()
+
+    max_retries = _safe_int(getattr(config, "CONFIG_UPLOAD_MAX_RETRIES", 3), 3)
+    retry_min_s = _safe_int(getattr(config, "CONFIG_UPLOAD_RETRY_MIN_SECONDS", 120), 120)
+    retry_max_s = _safe_int(getattr(config, "CONFIG_UPLOAD_RETRY_MAX_SECONDS", 300), 300)
+    if retry_max_s < retry_min_s:
+        retry_max_s = retry_min_s
+
+    attempt = 0
+    while True:
+        attempt += 1
+        try:
+            _upload_once(filepath)
+            log(f"config_upload upload_ok attempt={attempt} file={os.path.basename(filepath)} remote_dir={config.FTP_REMOTE_DIR}")
+            _log_upload_status_to_influx(1)
+            return True
+        except Exception as e:
+            error(f"config_upload upload_fail attempt={attempt} error={e}")
+
+            if attempt > max_retries:
+                error(f"config_upload giving_up attempts={attempt} max_retries={max_retries}")
+                _log_upload_status_to_influx(2)
+                return False
+
+            # Pause 2-5 Minuten (oder konfiguriert)
+            _sleep_retry_window(retry_min_s, retry_max_s)
