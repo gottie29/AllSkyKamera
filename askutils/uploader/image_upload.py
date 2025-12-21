@@ -3,6 +3,8 @@
 import os
 import ftplib
 import tempfile
+import time
+import random
 from askutils import config
 
 
@@ -45,6 +47,28 @@ def _png_to_temp_jpg(png_path: str) -> str:
     # Qualität/Optimierung: guter Kompromiss
     img.save(tmp_path, format="JPEG", quality=90, optimize=True)
     return tmp_path
+
+
+def _apply_upload_jitter() -> None:
+    """
+    Verteilt Lastspitzen: wartet zufällig 0..N Sekunden vor dem FTP-Login.
+    Wichtig für den 2-Minuten-Upload: Default ist bewusst klein (30s),
+    damit keine Cron-Überlappung entsteht.
+    """
+    max_s = getattr(config, "IMAGE_UPLOAD_JITTER_MAX_SECONDS", 30)
+
+    try:
+        max_s = int(max_s)
+    except Exception:
+        max_s = 30
+
+    if max_s <= 0:
+        return
+
+    delay = random.randint(0, max_s)
+    if delay > 0:
+        print(f"Jitter: warte {delay}s vor FTP-Upload ...")
+        time.sleep(delay)
 
 
 def upload_image(image_path: str = None) -> bool:
@@ -95,6 +119,9 @@ def upload_image(image_path: str = None) -> bool:
         # --- Ziel-Dateiname auf dem Server (immer JPG) ---
         remote_name = "image.jpg"
         tmp_name = remote_name + ".tmp"
+
+        # --- Jitter vor FTP-Login (gegen gleichzeitige Peaks) ---
+        _apply_upload_jitter()
 
         with ftplib.FTP(config.FTP_SERVER) as ftp:
             ftp.login(config.FTP_USER, config.FTP_PASS)

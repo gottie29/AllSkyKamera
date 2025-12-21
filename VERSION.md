@@ -1,6 +1,11 @@
 Version history
 ----------------
 
+# v2025.12.21_01
+
+- integrate a jitter for stable ftp upload into image_upload
+
+
 # v2025.12.18_2
 
 - delete special characters from upload scripts
