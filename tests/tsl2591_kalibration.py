@@ -19,6 +19,11 @@ Robustness:
 - Sensor reset after many invalid reads (re-init sensor; optional re-init I2C).
 - Auto-range chooses settings that give VALID reads and CH0 in a target window.
 
+Portability:
+- Works with both Adafruit API styles:
+  - newer enum API (Gain, IntegrationTime)
+  - older constants API (GAIN_LOW, INTEGRATIONTIME_100MS, ...)
+
 No config, no influx. ASCII-only, English-only output.
 """
 
@@ -46,6 +51,58 @@ except ImportError:
     print("Install with:")
     print("  sudo pip3 install adafruit-circuitpython-tsl2591")
     sys.exit(1)
+
+# -----------------------------
+# Adafruit API compatibility
+# -----------------------------
+# Newer libraries export: TSL2591, Gain, IntegrationTime
+# Older libraries use: GAIN_* and INTEGRATIONTIME_* constants
+try:
+    from adafruit_tsl2591 import Gain as _Gain, IntegrationTime as _IntegrationTime  # type: ignore
+    _API_STYLE = "enum"
+except Exception:
+    _Gain = None
+    _IntegrationTime = None
+    _API_STYLE = "const"
+
+
+def _resolve_gain_value(gain_str: str):
+    g = gain_str.strip().lower()
+    if _API_STYLE == "enum" and _Gain is not None:
+        return {
+            "low": _Gain.LOW,
+            "med": _Gain.MED,
+            "high": _Gain.HIGH,
+            "max": _Gain.MAX,
+        }[g]
+    # constants style
+    return {
+        "low": adafruit_tsl2591.GAIN_LOW,
+        "med": adafruit_tsl2591.GAIN_MED,
+        "high": adafruit_tsl2591.GAIN_HIGH,
+        "max": adafruit_tsl2591.GAIN_MAX,
+    }[g]
+
+
+def _resolve_integration_value(exposure_ms: int):
+    if _API_STYLE == "enum" and _IntegrationTime is not None:
+        return {
+            100: _IntegrationTime.TIME_100MS,
+            200: _IntegrationTime.TIME_200MS,
+            300: _IntegrationTime.TIME_300MS,
+            400: _IntegrationTime.TIME_400MS,
+            500: _IntegrationTime.TIME_500MS,
+            600: _IntegrationTime.TIME_600MS,
+        }[exposure_ms]
+    # constants style
+    return {
+        100: adafruit_tsl2591.INTEGRATIONTIME_100MS,
+        200: adafruit_tsl2591.INTEGRATIONTIME_200MS,
+        300: adafruit_tsl2591.INTEGRATIONTIME_300MS,
+        400: adafruit_tsl2591.INTEGRATIONTIME_400MS,
+        500: adafruit_tsl2591.INTEGRATIONTIME_500MS,
+        600: adafruit_tsl2591.INTEGRATIONTIME_600MS,
+    }[exposure_ms]
 
 
 # -----------------------------
@@ -155,22 +212,8 @@ def read_raw_counts(sensor):
 
 
 def set_gain_and_exposure(sensor, gain_str: str, exposure_ms: int):
-    gain_map = {
-        "low": adafruit_tsl2591.GAIN_LOW,
-        "med": adafruit_tsl2591.GAIN_MED,
-        "high": adafruit_tsl2591.GAIN_HIGH,
-        "max": adafruit_tsl2591.GAIN_MAX,
-    }
-    it_map = {
-        100: adafruit_tsl2591.INTEGRATIONTIME_100MS,
-        200: adafruit_tsl2591.INTEGRATIONTIME_200MS,
-        300: adafruit_tsl2591.INTEGRATIONTIME_300MS,
-        400: adafruit_tsl2591.INTEGRATIONTIME_400MS,
-        500: adafruit_tsl2591.INTEGRATIONTIME_500MS,
-        600: adafruit_tsl2591.INTEGRATIONTIME_600MS,
-    }
-    sensor.gain = gain_map[gain_str]
-    sensor.integration_time = it_map[exposure_ms]
+    sensor.gain = _resolve_gain_value(gain_str)
+    sensor.integration_time = _resolve_integration_value(exposure_ms)
 
 
 def get_current_settings(sensor):
@@ -243,9 +286,11 @@ def auto_range_night(sensor, verbose: bool, sat_threshold: int,
     2) Prefer CH0 within [target_low, target_high]
     3) Otherwise choose the highest CH0 below target_high (best SNR), or the closest.
 
+    IMPORTANT CHANGE:
+    - We validate using read_valid_raw (small retry count) instead of a single raw read.
+
     Returns (gain_str, exposure_ms).
     """
-
     gain_factors = {"low": 1, "med": 25, "high": 428, "max": 9876}
     gains = ["low", "med", "high", "max"]
     exposures = [100, 200, 300, 400, 500, 600]
@@ -255,7 +300,7 @@ def auto_range_night(sensor, verbose: bool, sat_threshold: int,
         for e in exposures:
             combos.append((gain_factors[g] * e, g, e))
 
-    # We want to find something that works in the dark => scan from HIGH sensitivity first
+    # high sensitivity first (good for dark nights)
     combos.sort(key=lambda x: x[0], reverse=True)
 
     best = None
@@ -275,31 +320,19 @@ def auto_range_night(sensor, verbose: bool, sat_threshold: int,
 
         warmup(sensor, e, warmup_reads)
 
-        settle_for_integration(e)
-        ch0, ch1 = read_raw_counts(sensor)
+        # validate with a short retry loop (more robust than a single read)
+        ch0, ch1, note = read_valid_raw(
+            sensor=sensor,
+            exposure_ms=e,
+            read_retries=2,
+            retry_delay=0.10,
+            min_ch0=min_ch0_for_valid,
+            sat_threshold=sat_threshold,
+        )
 
-        # raw missing => cannot range
         if ch0 is None:
             if verbose:
-                print(f"  gain={g:4s} exp={e:3d}ms  RAW missing -> using this setting")
-            return g, e
-
-        # invalid read
-        if ch0 == 0 and ch1 == 0:
-            if verbose:
-                print(f"  gain={g:4s} exp={e:3d}ms  CH0/CH1=0/0 INVALID")
-            continue
-
-        # saturated
-        if ch0 >= sat_threshold or ch1 >= sat_threshold:
-            if verbose:
-                print(f"  gain={g:4s} exp={e:3d}ms  CH0={ch0:5d} CH1={ch1:5d} SAT")
-            continue
-
-        # too low to be meaningful
-        if min_ch0_for_valid > 0 and ch0 < min_ch0_for_valid:
-            if verbose:
-                print(f"  gain={g:4s} exp={e:3d}ms  CH0={ch0:5d} CH1={ch1:5d} TOO_LOW")
+                print(f"  gain={g:4s} exp={e:3d}ms  INVALID ({note})")
             continue
 
         in_window = (target_low <= ch0 <= target_high)
@@ -319,7 +352,6 @@ def auto_range_night(sensor, verbose: bool, sat_threshold: int,
             best_score = score
             best = (g, e)
 
-    # If we found at least one VALID non-saturated setting, use best; otherwise fall back to max/600
     if best is not None:
         return best
 
@@ -354,16 +386,16 @@ def parse_args():
     p.add_argument("--sqm-const", type=float, default=22.0, help="Starting SQM constant C (default: 22.0)")
     p.add_argument("--calib-file", default="tsl2591_calibration_samples.csv", help="CSV file for calibration samples")
 
-    # Read robustness
+    # Read robustness (IMPORTANT DEFAULT CHANGE: min-ch0 now 5 for night operation)
     p.add_argument("--read-retries", type=int, default=6, help="Retries for invalid reads (default: 6)")
     p.add_argument("--read-retry-delay", type=float, default=0.20, help="Delay between retries (default: 0.20s)")
-    p.add_argument("--min-ch0", type=int, default=50, help="Min CH0 to accept in normal sampling (default: 50; 0 disables)")
+    p.add_argument("--min-ch0", type=int, default=5, help="Min CH0 to accept in normal sampling (default: 5; 0 disables)")
     p.add_argument("--sat-threshold", type=int, default=65000, help="Saturation threshold (default: 65000)")
 
-    # Auto-range (night)
-    p.add_argument("--target-ch0-low", type=int, default=80, help="Auto-range target CH0 low (default: 80)")
+    # Auto-range (night) (IMPORTANT DEFAULT CHANGES)
+    p.add_argument("--target-ch0-low", type=int, default=10, help="Auto-range target CH0 low (default: 10)")
     p.add_argument("--target-ch0-high", type=int, default=8000, help="Auto-range target CH0 high (default: 8000)")
-    p.add_argument("--min-ch0-valid", type=int, default=20, help="Minimum CH0 for a setting to be considered VALID in auto-range (default: 20)")
+    p.add_argument("--min-ch0-valid", type=int, default=5, help="Minimum CH0 for a setting to be considered VALID in auto-range (default: 5)")
     p.add_argument("--warmup-reads", type=int, default=2, help="Discard N reads after changing settings (default: 2)")
 
     # Resets / re-range policy
@@ -377,7 +409,7 @@ def parse_args():
     return p.parse_args()
 
 
-def init_i2c_and_sensor(reset_i2c: bool, i2c_obj, sensor_obj):
+def init_i2c_and_sensor(reset_i2c: bool, i2c_obj):
     """
     Re-initialize sensor; optionally also re-initialize I2C.
     Returns (i2c, sensor).
@@ -403,6 +435,7 @@ def main():
     print(f"Read retries: {args.read_retries}, min_ch0: {args.min_ch0}, sat_threshold: {args.sat_threshold}")
     print(f"Auto-range target CH0: {args.target_ch0_low}..{args.target_ch0_high}, warmup_reads: {args.warmup_reads}")
     print(f"Policies: rerange_after_invalid={args.rerange_after_invalid}, reset_after_invalid={args.reset_after_invalid}, reset_i2c={args.reset_i2c}")
+    print(f"Adafruit API style: {_API_STYLE}")
     print()
 
     sqm_ref = prompt_sqm_ref()
@@ -414,7 +447,7 @@ def main():
 
     # init i2c + sensor
     try:
-        i2c, sensor = init_i2c_and_sensor(reset_i2c=True, i2c_obj=None, sensor_obj=None)
+        i2c, sensor = init_i2c_and_sensor(reset_i2c=True, i2c_obj=None)
     except Exception as e:
         print("ERROR: Could not initialize I2C/sensor.")
         print("Hint: run 'i2cdetect -y 1' and look for '29'.")
@@ -447,15 +480,13 @@ def main():
     print()
 
     # Calibration stats
-    all_time_consts = load_all_time_consts(args.calib_file) if sqm_ref is not None else []
     session_consts = []
-
     invalid_streak = 0
 
     for idx in range(args.samples):
         timestamp = ts_now()
 
-        # Lux is just informational (may be 0 at night)
+        # Lux is informational (may be 0 at night)
         try:
             lux = safe_value(sensor.lux)
         except Exception:
@@ -484,26 +515,25 @@ def main():
             print(f"  Note        : {note}")
             print()
 
-            # Log invalid sample (optional, helpful for debugging)
-            if sqm_ref is not None:
-                append_csv(args.calib_file, {
-                    "timestamp": timestamp,
-                    "gain": gain_sel,
-                    "exposure_ms": exp_sel,
-                    "ch0": "",
-                    "ch1": "",
-                    "lux": f"{lux:.6f}",
-                    "sqm_ref": f"{sqm_ref:.3f}",
-                    "const_ci": "",
-                    "valid": "false",
-                    "note": note,
-                })
+            # Optional CSV logging: log invalid rows even without SQM_ref (debugging)
+            append_csv(args.calib_file, {
+                "timestamp": timestamp,
+                "gain": gain_sel,
+                "exposure_ms": exp_sel,
+                "ch0": "",
+                "ch1": "",
+                "lux": f"{lux:.6f}",
+                "sqm_ref": f"{sqm_ref:.3f}" if sqm_ref is not None else "",
+                "const_ci": "",
+                "valid": "false",
+                "note": note,
+            })
 
             # Reset if invalid streak is large
             if args.reset_after_invalid > 0 and invalid_streak >= args.reset_after_invalid:
                 print("  Action      : invalid streak -> resetting sensor ...")
                 try:
-                    i2c, sensor = init_i2c_and_sensor(args.reset_i2c, i2c, sensor)
+                    i2c, sensor = init_i2c_and_sensor(args.reset_i2c, i2c)
                 except Exception as e:
                     print("ERROR: Sensor reset failed:", e)
                     break
@@ -563,23 +593,30 @@ def main():
         print(f"  SQM (CH0)   : {sqm_pred:.2f} mag/arcsec^2   (using C={args.sqm_const:.2f})")
         print(f"  Lux         : {lux:.3f} lx (info)")
 
+        const_ci = ""
+        valid_flag = "true"
+
         if sqm_ref is not None:
             ci = compute_const_from_ref(ch0, sqm_ref)
             if math.isfinite(ci):
                 session_consts.append(ci)
-                append_csv(args.calib_file, {
-                    "timestamp": timestamp,
-                    "gain": gain_sel,
-                    "exposure_ms": exp_sel,
-                    "ch0": str(ch0),
-                    "ch1": str(ch1),
-                    "lux": f"{lux:.6f}",
-                    "sqm_ref": f"{sqm_ref:.3f}",
-                    "const_ci": f"{ci:.6f}",
-                    "valid": "true",
-                    "note": "ok",
-                })
+                const_ci = f"{ci:.6f}"
                 print(f"  Calib C_i   : {ci:.4f}")
+            else:
+                valid_flag = "false"
+
+        append_csv(args.calib_file, {
+            "timestamp": timestamp,
+            "gain": gain_sel,
+            "exposure_ms": exp_sel,
+            "ch0": str(ch0),
+            "ch1": str(ch1),
+            "lux": f"{lux:.6f}",
+            "sqm_ref": f"{sqm_ref:.3f}" if sqm_ref is not None else "",
+            "const_ci": const_ci,
+            "valid": valid_flag if sqm_ref is not None else "true",
+            "note": "ok",
+        })
 
         print()
         time.sleep(max(0.0, args.interval))

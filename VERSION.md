@@ -3,7 +3,9 @@ Version history
 
 # v2025.12.21_01
 
-- integrate a jitter for stable ftp upload into image_upload
+- integrate jitter for stable ftp upload into image_upload
+- integrate jitter for stable ftp upload into upload_config
+- integrate sending status to the database for image upload and config upload
 
 
 # v2025.12.18_2
