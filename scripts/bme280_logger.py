@@ -2,12 +2,32 @@
 import sys
 import os
 import json
+import datetime
+
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from askutils import config
 from askutils.sensors import bme280
 from askutils.utils.logger import log, warn, error
 from askutils.utils import influx_writer
+
+
+def _iso_now_utc() -> str:
+    import datetime
+    return (
+        datetime.datetime
+        .now(datetime.timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
+
+def _atomic_write_json(path: str, data: dict):
+    tmp = path + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(data, f, indent=2)
+    os.replace(tmp, path)
+
 
 def main():
     if not config.BME280_ENABLED:
@@ -40,6 +60,23 @@ def main():
             "dewpoint": float(taupunkt),
         }, tags={"host": "host1"})
 
+        # ---------------------------
+        # NEU: Sensor-JSON in tmp/env/
+        # ---------------------------
+        env_dir = os.path.join(os.path.dirname(__file__), "..", "tmp", "env")
+        os.makedirs(env_dir, exist_ok=True)
+        env_path = os.path.join(env_dir, "bme280.json")
+
+        env_data = {
+            "ts": _iso_now_utc(),
+            "temp_c": float(temp),
+            "rh": float(hum),
+            "pressure_hpa": float(pressure),
+            "dewpoint_c": float(taupunkt),
+        }
+
+        _atomic_write_json(env_path, env_data)
+
         # Overlay schreiben, wenn aktiviert
         if config.BME280_OVERLAY:
             overlay_dir = os.path.join(config.ALLSKY_PATH, "config", "overlay", "extra")
@@ -64,6 +101,7 @@ def main():
 
     except Exception as e:
         error(f" Fehler beim Auslesen oder Schreiben der BME280-Daten: {e}")
+
 
 if __name__ == "__main__":
     main()

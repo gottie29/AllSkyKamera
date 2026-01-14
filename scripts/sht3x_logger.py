@@ -2,6 +2,7 @@
 import sys
 import os
 import json
+import datetime
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
@@ -9,6 +10,23 @@ from askutils import config
 from askutils.sensors.sht3x import SHT3x, calculate_dew_point
 from askutils.utils.logger import log, warn, error
 from askutils.utils import influx_writer
+
+
+ddef _iso_now_utc() -> str:
+    import datetime
+    return (
+        datetime.datetime
+        .now(datetime.timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
+
+def _atomic_write_json(path: str, data: dict):
+    tmp = path + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(data, f, indent=2)
+    os.replace(tmp, path)
 
 
 def main():
@@ -42,23 +60,34 @@ def main():
             tags={"host": "host1"},
         )
 
+        # ---------------------------
+        # NEU: Sensor-JSON in tmp/env/
+        # ---------------------------
+        try:
+            env_dir = os.path.join(os.path.dirname(__file__), "..", "tmp", "env")
+            os.makedirs(env_dir, exist_ok=True)
+            env_path = os.path.join(env_dir, "sht3x.json")
+
+            env_data = {
+                "ts": _iso_now_utc(),
+                "temp_c": float(temp),
+                "rh": float(hum),
+                "dewpoint_c": float(dewpoint),
+            }
+
+            _atomic_write_json(env_path, env_data)
+        except Exception as e:
+            warn(f"Could not write sht3x.json: {e}")
+
         # Optional overlay file for AllSky overlays
         if getattr(config, "SHT3X_OVERLAY", False):
-            overlay_dir = os.path.join(
-                config.ALLSKY_PATH, "config", "overlay", "extra"
-            )
+            overlay_dir = os.path.join(config.ALLSKY_PATH, "config", "overlay", "extra")
             os.makedirs(overlay_dir, exist_ok=True)
 
             overlay_path = os.path.join(overlay_dir, "sht3x_overlay.json")
             overlay_data = {
-                "SHT3X_TEMP": {
-                    "value": f"{temp:.1f}",
-                    "format": "{:.1f}",
-                },
-                "SHT3X_HUM": {
-                    "value": f"{hum:.1f}",
-                    "format": "{:.1f}",
-                },
+                "SHT3X_TEMP": {"value": f"{temp:.1f}", "format": "{:.1f}"},
+                "SHT3X_HUM":  {"value": f"{hum:.1f}",  "format": "{:.1f}"},
             }
 
             with open(overlay_path, "w") as f:

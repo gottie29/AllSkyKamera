@@ -1,12 +1,16 @@
 Version history
 ----------------
 
+# v2026.01.14_01
+
+- integrate jitter for stable upload into nightly upload
+- more checks inside the upload scripts for nightly upload
+
 # v2025.12.21_01
 
 - integrate jitter for stable ftp upload into image_upload
 - integrate jitter for stable ftp upload into upload_config
 - integrate sending status to the database for image upload and config upload
-
 
 # v2025.12.18_2
 
