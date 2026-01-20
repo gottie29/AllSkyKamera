@@ -1,6 +1,11 @@
 Version history
 ----------------
 
+# v2026.01.20_01
+- integrate image uploads with timestamp e.g. images from 19.1.2026 22:00 - 20.01.2026 02:00
+  - call is: cd ~/AllSkyKamera && python3 -m scripts.run_tmpimages_upload 20260119 17:00 18:00
+
+
 # v2026.01.14_01
 
 - integrate jitter for stable upload into nightly upload
