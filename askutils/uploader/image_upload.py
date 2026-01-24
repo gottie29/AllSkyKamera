@@ -5,6 +5,7 @@ import ftplib
 import tempfile
 import time
 import random
+from typing import Optional
 from askutils import config
 
 # Influx Writer (wie bei raspi_status)
@@ -49,7 +50,7 @@ def _log_upload_status_to_influx(value: int) -> None:
 # -----------------------------
 # Helpers
 # -----------------------------
-def _choose_newest_existing(*candidates: str) -> str | None:
+def _choose_newest_existing(*candidates: str) -> Optional[str]:
     """
     Gibt den existierenden Kandidaten mit dem neuesten mtime zurück.
     Beachtet damit Fälle wie: altes JPG + aktuelles PNG (oder umgekehrt).
@@ -170,7 +171,7 @@ def upload_image(image_path: str = None) -> bool:
 
     # --- Age-Check (zu alt?) ---
     if _is_file_too_old(image_path):
-        print(f"Datei zu alt, Upload wird übersprungen: {image_path}")
+        print(f"Datei zu alt, Upload wird uebersprungen: {image_path}")
         _log_upload_status_to_influx(4)
         return False
 

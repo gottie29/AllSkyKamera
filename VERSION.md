@@ -1,6 +1,9 @@
 Version history
 ----------------
 
+# v2026.01.24_01
+- simple Bugfix at image_upload for Python Version 3.7
+
 # v2026.01.20_01
 - integrate image uploads with timestamp e.g. images from 19.1.2026 22:00 - 20.01.2026 02:00
   - call is: cd ~/AllSkyKamera && python3 -m scripts.run_tmpimages_upload 20260119 17:00 18:00
