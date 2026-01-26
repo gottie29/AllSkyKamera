@@ -5,6 +5,7 @@ import ftplib
 import os
 import time
 import random
+import subprocess  # NEU
 from askutils import config
 from askutils.utils.logger import log, error
 
@@ -178,12 +179,19 @@ def _safe_int(val, default: int) -> int:
         return default
 
 
-def _apply_initial_jitter() -> None:
+def _apply_initial_jitter(use_jitter: bool = True) -> None:
     """
     Jitter vor dem Upload, um gleichzeitige Peaks zu vermeiden.
     Default: 180 Sekunden
     Konfig: CONFIG_UPLOAD_JITTER_MAX_SECONDS
+
+    NEU:
+    - use_jitter=True (Default): Jitter wird angewendet
+    - use_jitter=False: kein Jitter
     """
+    if not use_jitter:
+        return
+
     max_s = _safe_int(getattr(config, "CONFIG_UPLOAD_JITTER_MAX_SECONDS", 180), 180)
     if max_s <= 0:
         return
@@ -215,24 +223,86 @@ def get_version():
         return None
 
 
-def _json_safe(value):
+def _read_autocron_entries():
+    """
+    NEU:
+    Liest crontab -l und extrahiert AUTOCRON-Bloecke:
+      # AUTOCRON: <Name>
+      <schedule> <command>
+    Gibt eine Liste von Dicts zurueck.
+    """
+    try:
+        res = subprocess.run(
+            ["crontab", "-l"],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        if res.returncode != 0:
+            return []
+
+        lines = res.stdout.splitlines()
+        out = []
+        i = 0
+        while i < len(lines):
+            line = lines[i].strip()
+            if line.startswith("# AUTOCRON:"):
+                name = line.split(":", 1)[1].strip() if ":" in line else ""
+                schedule_cmd = ""
+                # naechste nicht-leere, nicht-kommentar-zeile (falls vorhanden)
+                j = i + 1
+                while j < len(lines):
+                    cand = lines[j].strip()
+                    if cand and not cand.startswith("#"):
+                        schedule_cmd = cand
+                        break
+                    j += 1
+
+                schedule = ""
+                command = ""
+                if schedule_cmd:
+                    parts = schedule_cmd.split()
+                    # cron hat 5 Felder + der Rest ist command
+                    if len(parts) >= 6:
+                        schedule = " ".join(parts[:5])
+                        command = " ".join(parts[5:])
+                    else:
+                        # fallback: ungewoehnliches Format
+                        command = schedule_cmd
+
+                out.append({
+                    "name": name,
+                    "schedule": schedule,
+                    "command": command
+                })
+                i = j + 1 if j > i else i + 1
+                continue
+            i += 1
+
+        return out
+    except Exception:
+        return []
+
+
+def _json_safe(value, key: str = ""):
     """
     Macht Werte JSON-sicher:
     - bytes -> decode
-    - I2C-Adressen (int) -> hex-string ("0x76")
+    - LATITUDE/LONGITUDE -> float mit 4 Nachkommazeichen
+    - I2C-Adressen (int, nur *_I2C_ADDRESS) -> hex-string ("0x76")
     - sonst: unveraendert
     """
     try:
         if isinstance(value, (bytes, bytearray)):
             return value.decode("utf-8", errors="replace")
 
-        # I2C Adressen: in config.py sind sie i.d.R. int-Literale (0x76 -> 118).
-        # Exportieren wollen wir gerne "0x76" als String.
-        if isinstance(value, int):
-            # Heuristik: typische I2C 7-bit Range
-            if 0x03 <= value <= 0x77:
-                return f"0x{value:02x}"
-            return value
+        # LAT/LON immer als float mit 4 Nachkommazeichen (numerisch in JSON)
+        if key in ("LATITUDE", "LONGITUDE"):
+            return round(float(value), 4)
+
+        # Nur echte I2C-Adressen als Hex exportieren
+        if isinstance(value, int) and key.endswith("_I2C_ADDRESS"):
+            return f"0x{value:02x}"
 
         return value
     except Exception:
@@ -245,17 +315,22 @@ def extract_config_data():
     # Pflichtfelder
     for key in EXPORT_FIELDS:
         if hasattr(config, key):
-            data[key] = _json_safe(getattr(config, key))
+            data[key] = _json_safe(getattr(config, key), key)
 
     # Optionale Felder
     for opt in OPTIONAL_FIELDS:
         if hasattr(config, opt):
-            data[opt] = _json_safe(getattr(config, opt))
+            data[opt] = _json_safe(getattr(config, opt), opt)
 
     # Version hinzufuegen
     version = get_version()
     if version:
         data["VERSION"] = version
+
+    # NEU: Cronjobs mitloggen (AUTOCRON)
+    autocron = _read_autocron_entries()
+    if autocron:
+        data["AUTOCRON"] = autocron
 
     return data
 
@@ -290,7 +365,7 @@ def _upload_once(filepath: str) -> None:
             ftp.storbinary(f"STOR {os.path.basename(filepath)}", f)
 
 
-def upload_to_ftp(filepath: str) -> bool:
+def upload_to_ftp(filepath: str, use_jitter: bool = True) -> bool:
     """
     Upload mit:
     - Initial Jitter (Default 180s)
@@ -301,6 +376,10 @@ def upload_to_ftp(filepath: str) -> bool:
     - CONFIG_UPLOAD_MAX_RETRIES (Default 3)
     - CONFIG_UPLOAD_RETRY_MIN_SECONDS (Default 120)
     - CONFIG_UPLOAD_RETRY_MAX_SECONDS (Default 300)
+
+    NEU:
+    - use_jitter=True (Default): Jitter wird angewendet
+    - use_jitter=False: kein Jitter
     """
 
     # Schutz: FTP-Konfig muss vorhanden sein
@@ -334,7 +413,7 @@ def upload_to_ftp(filepath: str) -> bool:
             pass
 
     # Initial Jitter (einmal pro Aufruf)
-    _apply_initial_jitter()
+    _apply_initial_jitter(use_jitter=use_jitter)
 
     max_retries = _safe_int(getattr(config, "CONFIG_UPLOAD_MAX_RETRIES", 3), 3)
     retry_min_s = _safe_int(getattr(config, "CONFIG_UPLOAD_RETRY_MIN_SECONDS", 120), 120)

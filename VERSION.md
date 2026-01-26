@@ -1,6 +1,12 @@
 Version history
 ----------------
 
+# v2026.01.26_01
+
+- repair config upload with long and lat
+- Integrate cronjobs into config.json
+- Integrate --no-jitter for config upload script, manual call: python3 -m scripts.upload_config_json --no-jitter
+
 # v2026.01.24_01
 - simple Bugfix at image_upload for Python Version 3.7
 
