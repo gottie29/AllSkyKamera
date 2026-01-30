@@ -5,6 +5,7 @@ import ftplib
 import os
 import time
 import random
+import datetime
 import subprocess  # NEU
 from askutils import config
 from askutils.utils.logger import log, error
@@ -15,6 +16,55 @@ try:
 except Exception:
     influx_writer = None
 
+def _get_system_time_info():
+    """
+    Liefert Zeitzone + lokale Zeit + UTC.
+    Robust auch ohne timedatectl.
+    """
+    tz_name = None
+
+    # 1) Best guess: /etc/timezone (Debian/RPiOS)
+    try:
+        with open("/etc/timezone", "r", encoding="utf-8") as f:
+            tz_name = f.read().strip() or None
+    except Exception:
+        pass
+
+    # 2) Fallback: timedatectl
+    if not tz_name:
+        try:
+            res = subprocess.run(
+                ["timedatectl", "show", "-p", "Timezone", "--value"],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            if res.returncode == 0:
+                tz_name = (res.stdout or "").strip() or None
+        except Exception:
+            pass
+
+    # 3) Local/UTC timestamps
+    try:
+        # epoch
+        now = time.time()
+
+        # local time with offset
+        local_dt = datetime.datetime.now().astimezone()
+        utc_dt = datetime.datetime.now(datetime.timezone.utc)
+
+        return {
+            "timezone_name": tz_name,
+            "epoch": int(now),
+            "local_iso": local_dt.isoformat(timespec="seconds"),
+            "utc_iso": utc_dt.isoformat(timespec="seconds").replace("+00:00", "Z"),
+            "offset_seconds": int(local_dt.utcoffset().total_seconds()) if local_dt.utcoffset() else 0,
+        }
+    except Exception:
+        return {
+            "timezone_name": tz_name,
+            "epoch": int(time.time()),
+        }
 
 def _log_upload_status_to_influx(value: int) -> None:
     """
@@ -180,16 +230,8 @@ def _safe_int(val, default: int) -> int:
 
 
 def _apply_initial_jitter(use_jitter: bool = True) -> None:
-    """
-    Jitter vor dem Upload, um gleichzeitige Peaks zu vermeiden.
-    Default: 180 Sekunden
-    Konfig: CONFIG_UPLOAD_JITTER_MAX_SECONDS
-
-    NEU:
-    - use_jitter=True (Default): Jitter wird angewendet
-    - use_jitter=False: kein Jitter
-    """
     if not use_jitter:
+        log("config_upload jitter_disabled")
         return
 
     max_s = _safe_int(getattr(config, "CONFIG_UPLOAD_JITTER_MAX_SECONDS", 180), 180)
@@ -200,7 +242,6 @@ def _apply_initial_jitter(use_jitter: bool = True) -> None:
     if delay > 0:
         log(f"config_upload jitter_seconds={delay}")
         time.sleep(delay)
-
 
 def _sleep_retry_window(min_s: int = 120, max_s: int = 300) -> int:
     """
@@ -331,6 +372,13 @@ def extract_config_data():
     autocron = _read_autocron_entries()
     if autocron:
         data["AUTOCRON"] = autocron
+
+    # NEU: Zeitzone + lokale Zeit + UTC
+    try:
+        data["SYSTEM_TIME"] = _get_system_time_info()
+    except Exception:
+        pass
+
 
     return data
 
