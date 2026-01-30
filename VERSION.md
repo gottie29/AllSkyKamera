@@ -1,6 +1,11 @@
 Version history
 ----------------
 
+# v2026.01.30_01
+- Integrate the copy of TJ-Interface settings to the server
+- Local Time and timezone is integrated into config.json
+- No-Jitter Option by upload config
+
 # v2026.01.26_01
 
 - repair config upload with long and lat

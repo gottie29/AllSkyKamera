@@ -2401,6 +2401,16 @@ CRONTABS = [
     },
 ]
 
+# TJ Interface: regelmaessig capture_args.txt als JSON exportieren + hochladen
+# Nur wenn NICHT INDI (INDI == 0)
+if not INDI:
+    CRONTABS.append({
+        "comment": "TJ Settings Upload",
+        "schedule": "*/10 * * * *",
+        "command": "cd ${ROOT_DIR} && python3 -m scripts.run_tj_settings_upload",
+    })
+
+
 # Sensor-Logger-Cronjobs dynamisch je nach Enabled-Status
 if BME280_ENABLED:
     CRONTABS.append({
@@ -2505,7 +2515,7 @@ fi
 
 cd "$ROOT_DIR" || exit 1
 
-if python3 -m scripts.upload_config_json; then
+if python3 -m scripts.upload_config_json --no-jitter; then
   if [ "$LANG_CODE" = "de" ]; then
     whiptail --title "Upload erfolgreich" --msgbox "Die Konfiguration wurde erfolgreich auf den Server uebertragen." 8 70
   else
