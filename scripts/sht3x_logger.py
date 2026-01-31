@@ -12,7 +12,7 @@ from askutils.utils.logger import log, warn, error
 from askutils.utils import influx_writer
 
 
-ddef _iso_now_utc() -> str:
+def _iso_now_utc() -> str:
     import datetime
     return (
         datetime.datetime
