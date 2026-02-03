@@ -1,6 +1,10 @@
 Version history
 ----------------
 
+# v2026.02.03_01
+- Bugfix in KP-INDEX (wenn KPIndex is true and Overlay was False, he didnt send the data to the database)
+- More (all) settings from TJ-Interface (without remoteserversettings and other personel settings)
+
 # v2026.01.30_01
 - Integrate the copy of TJ-Interface settings to the server
 - Local Time and timezone is integrated into config.json

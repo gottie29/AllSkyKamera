@@ -4,48 +4,81 @@ import os
 import json
 from datetime import datetime, timedelta
 import requests
+
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from askutils import config
 from askutils.utils.logger import log, warn, error
 from askutils.utils import influx_writer
 
+
+def _fetch_latest_kp(hours_back: int = 10) -> float:
+    start = datetime.utcnow() - timedelta(hours=hours_back)
+    end = datetime.utcnow()
+
+    time_string = (
+        "start=" + start.strftime('%Y-%m-%dT%H:%M:%SZ') +
+        "&end=" + end.strftime('%Y-%m-%dT%H:%M:%SZ')
+    )
+    url = "https://kp.gfz-potsdam.de/app/json/?" + time_string + "&index=Kp"
+
+    r = requests.get(url, timeout=15)
+    r.raise_for_status()
+    j = r.json()
+
+    kp_list = j.get("Kp")
+    if not isinstance(kp_list, list) or not kp_list:
+        raise ValueError("Antwort enthält kein gültiges 'Kp' Array")
+
+    kp = kp_list[-1]
+    return float(kp)
+
+
+def _write_overlay(kp_value: float) -> None:
+    overlay_dir = os.path.join(config.ALLSKY_PATH, "config", "overlay", "extra")
+    os.makedirs(overlay_dir, exist_ok=True)
+    overlay_path = os.path.join(overlay_dir, "kpindex_overlay.json")
+
+    overlay_data = {
+        "KPINDEX": {
+            "value": f"{kp_value:.1f}",
+            "format": "{:.1f}"
+        }
+    }
+    with open(overlay_path, "w") as f:
+        json.dump(overlay_data, f, indent=2)
+
+
 def main():
     try:
-        if config.KPINDEX_OVERLAY:
-            
-            start       = datetime.now() - timedelta(hours = 10)
-            end         = datetime.now()
-            time_string = "start=" + start.strftime('%Y-%m-%dT%H:%M:%SZ') + "&end=" + end.strftime('%Y-%m-%dT%H:%M:%SZ')
-            url         = 'https://kp.gfz-potsdam.de/app/json/?' + time_string + "&index=Kp"
-            response    = requests.get(url)
-            response.raise_for_status()
-            data        = response.json()
-            data        = {"kp_index": data["Kp"][-1]}
+        # Overlay ist optional; Influx-Logging darf davon NICHT abhängen
+        overlay_enabled = bool(getattr(config, "KPINDEX_OVERLAY", False))
 
-            with open("kpindex.json", 'w') as f:
-                print("KP Index: " + str(data))
-                #json.dump(data, f)
+        kp = _fetch_latest_kp(hours_back=10)
 
-            influx_writer.log_metric("kpindex", {
-                "kp_index": float(data['kp_index']),
-            }, tags={"host": "host1"})
+        # optional: debug file (falls du es wirklich willst)
+        try:
+            with open("kpindex.json", "w") as f:
+                json.dump({"kp_index": kp}, f, indent=2)
+        except Exception as e:
+            warn(f"Konnte kpindex.json nicht schreiben: {e}")
 
-            overlay_dir = os.path.join(config.ALLSKY_PATH, "config", "overlay", "extra")
-            os.makedirs(overlay_dir, exist_ok=True)
-            overlay_path = os.path.join(overlay_dir, "kpindex_overlay.json")
-            overlay_data = {
-                "KPINDEX": {
-                    "value": f"{data['kp_index']:.1f}",
-                    "format": "{:.1f}"
-                },
-            }
-            with open(overlay_path, "w") as f:
-                json.dump(overlay_data, f, indent=2)
-            
+        print(f"KP Index: {kp:.2f}")
+
+        # Influx immer schreiben
+        influx_writer.log_metric(
+            "kpindex",
+            {"kp_index": float(kp)},
+            tags={"host": "host1"}
+        )
+
+        # Overlay nur wenn aktiviert
+        if overlay_enabled:
+            _write_overlay(kp)
+
     except Exception as e:
-        error(f"Fehler beim Auslesen oder Schreiben der KPIndex-Daten: {e}")
+        error(f"Fehler beim Auslesen/Schreiben der KPIndex-Daten: {e}")
+
 
 if __name__ == "__main__":
     main()
-
