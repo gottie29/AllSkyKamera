@@ -82,13 +82,26 @@ def _sleep_retry_window(min_s: int = 120, max_s: int = 300) -> int:
 # ============================================================
 def _indi_allsky_config_py() -> str:
     """
-    Pfad zum offiziellen INDI-allsky CLI config Tool
+    Pfad zum INDI-allsky config.py, ohne Hardcoding auf /home/pi.
+    Priorität:
+      1) config.INDI_ALLSKY_CONFIG_PY (wenn gesetzt)
+      2) ~/indi-allsky/config.py
+      3) /home/pi/indi-allsky/config.py (nur als letzter Legacy-Fallback)
     """
+    # 1) explizit aus deiner askutils/config.py
     p = getattr(config, "INDI_ALLSKY_CONFIG_PY", "") or ""
-    if p.strip():
-        return str(p)
-    return "/home/pi/indi-allsky/config.py"
+    p = str(p).strip()
+    if p:
+        return os.path.realpath(os.path.expanduser(p))
 
+    # 2) Home des aktuellen Users
+    home = os.path.expanduser("~")
+    cand = os.path.join(home, "indi-allsky", "config.py")
+    if os.path.isfile(cand):
+        return os.path.realpath(cand)
+
+    # 3) Legacy fallback (falls jemand doch noch pi nutzt)
+    return "/home/pi/indi-allsky/config.py"
 
 def _run_indi_dump() -> str:
     cfg_py = _indi_allsky_config_py()

@@ -1,10 +1,11 @@
 Version history
 ----------------
 
-# v2026.02.03_01
+# v2026.02.03_01 (02)
 - Bugfix in KP-INDEX (wenn KPIndex is true and Overlay was False, he didnt send the data to the database)
 - More (all) settings from TJ-Interface (without remoteserversettings and other personel settings)
 - Integrate the upload also for INDI-AllSky
+- with small Bugfixes at INDI-Allsky
 
 # v2026.01.30_01
 - Integrate the copy of TJ-Interface settings to the server
