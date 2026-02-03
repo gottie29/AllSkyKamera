@@ -2410,6 +2410,12 @@ if not INDI:
         "command": "cd ${ROOT_DIR} && python3 -m scripts.run_tj_settings_upload",
     })
 
+if INDI:
+    CRONTABS.append({
+        "comment": "INDI Settings Upload",
+        "schedule": "*/10 * * * *",
+        "command": "cd ${ROOT_DIR} && python3 -m scripts.run_indi_settings_upload",
+    })
 
 # Sensor-Logger-Cronjobs dynamisch je nach Enabled-Status
 if BME280_ENABLED:
