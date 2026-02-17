@@ -164,11 +164,19 @@ echo "CAMERAID: ${CAMERAID_DETECTED}"
 # --------------------------------------------------------------------
 echo
 echo "=== 3. Installing system packages (requires sudo) ==="
+
+# --- Recovery: handle interrupted dpkg state ---
+echo "> Checking dpkg state..."
+if ! sudo dpkg --audit >/dev/null 2>&1; then
+  echo "> dpkg reports issues. Attempting recovery..."
+fi
+
+# If dpkg was interrupted previously, this will fix it
+sudo dpkg --configure -a || true
+sudo apt-get -f install -y || true
+
+# Now do the normal update/install
 sudo apt-get update
-#sudo apt-get install -y \
-#    python3-pip python3-venv python3-smbus i2c-tools raspi-config \
-#    python3-psutil libatlas-base-dev python3-pil curl dos2unix \
-#    python3-libgpiod whiptail
 
 install_if_available() {
   local pkg="$1"
@@ -188,8 +196,6 @@ sudo apt-get install -y \
 install_if_available python3-libgpiod
 install_if_available python3-gpiod
 install_if_available libopenblas-dev
-
-
 
 # --------------------------------------------------------------------
 # 4. Enable interfaces (non-interactive)

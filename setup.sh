@@ -74,6 +74,21 @@ normalize_hex_literal() {
     fi
 }
 
+# Koordinate robust normalisieren: akzeptiert "52,12", "52.12", " 52.12° " etc.
+# Gibt eine Zahl (String) zurueck oder nichts (Exit != 0)
+normalize_coord() {
+  local raw="$1"
+  python3 - "$raw" <<'PY'
+import sys, re
+s = (sys.argv[1] or "").strip().replace(",", ".")
+# erste "normale" Zahl im String finden
+m = re.search(r"[-+]?\d+(?:\.\d+)?", s)
+if not m:
+    sys.exit(1)
+print(m.group(0))
+PY
+}
+
 # bool -> Status-Text fuer Menue
 bool_to_status() {
   local val="$1"
@@ -510,8 +525,8 @@ edit_location() {
   fi
   WEBSEITE="$tmp"
 
-  # Breitengrad
-  tmp=$(whiptail --title "$title" --inputbox "$lbl_lat" 10 70 "$LATITUDE" 3>&1 1>&2 2>&3)
+  # Latitude
+  tmp=$(whiptail --title "$title" --inputbox "$lbl_lat" 10 70 -- "$LATITUDE" 3>&1 1>&2 2>&3)
   rc=$?; if [ $rc -ne 0 ]; then
     KAMERA_NAME="$OLD_KAMERA_NAME"
     STANDORT_NAME="$OLD_STANDORT_NAME"
@@ -524,8 +539,8 @@ edit_location() {
   fi
   LATITUDE="$tmp"
 
-  # Laengengrad
-  tmp=$(whiptail --title "$title" --inputbox "$lbl_lon" 10 70 "$LONGITUDE" 3>&1 1>&2 2>&3)
+  # Longitude
+  tmp=$(whiptail --title "$title" --inputbox "$lbl_lon" 10 70 -- "$LONGITUDE" 3>&1 1>&2 2>&3)
   rc=$?; if [ $rc -ne 0 ]; then
     KAMERA_NAME="$OLD_KAMERA_NAME"
     STANDORT_NAME="$OLD_STANDORT_NAME"
@@ -538,8 +553,10 @@ edit_location() {
   fi
   LONGITUDE="$tmp"
 
+  # Komma → Punkt
   LATITUDE="${LATITUDE//,/.}"
   LONGITUDE="${LONGITUDE//,/.}"
+
 }
 
 # ---------------------------------------------------
@@ -2240,6 +2257,44 @@ DHT11_NAME_ESC="$(esc_py_str "$DHT11_NAME")"
 DHT22_NAME_ESC="$(esc_py_str "$DHT22_NAME")"
 HTU21_NAME_ESC="$(esc_py_str "$HTU21_NAME")"
 SHT3X_NAME_ESC="$(esc_py_str "$SHT3X_NAME")"
+
+
+# ---------------------------------------------------
+# FINAL: LAT/LON normalisieren + validieren + ggf. swap
+# ---------------------------------------------------
+
+# Immer normalisieren (auch wenn edit_location nie geoeffnet wurde)
+LATITUDE="${LATITUDE//,/.}"
+LONGITUDE="${LONGITUDE//,/.}"
+
+LAT_NORM="$(normalize_coord "$LATITUDE" 2>/dev/null || true)"
+LON_NORM="$(normalize_coord "$LONGITUDE" 2>/dev/null || true)"
+
+# Fallbacks, damit config.py nie kaputt ist
+[ -z "$LAT_NORM" ] && LAT_NORM="52.12"
+[ -z "$LON_NORM" ] && LON_NORM="13.12"
+
+# Range-Check + Swap-Heuristik (falls vertauscht)
+# Wenn "Latitude" außerhalb ±90 aber "Longitude" innerhalb ±90 -> tauschen
+python3 - "$LAT_NORM" "$LON_NORM" <<'PY' >/tmp/coord_fixed.txt
+import sys, math
+lat = float(sys.argv[1]); lon = float(sys.argv[2])
+
+# Swap-Heuristik
+if abs(lat) > 90 and abs(lon) <= 90:
+    lat, lon = lon, lat
+
+# Hard clamp? Nein – aber Fallback wenn komplett daneben:
+if abs(lat) > 90 or abs(lon) > 180:
+    lat, lon = 52.12, 13.12
+
+print(f"{lat}\n{lon}")
+PY
+
+LATITUDE="$(sed -n '1p' /tmp/coord_fixed.txt)"
+LONGITUDE="$(sed -n '2p' /tmp/coord_fixed.txt)"
+rm -f /tmp/coord_fixed.txt
+
 
 cat > "$CFG_FILE" <<EOF
 # config.py - automatisch generiert
