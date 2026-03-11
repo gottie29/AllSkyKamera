@@ -2430,9 +2430,9 @@ CRONTABS = [
         "command": "cd ${ROOT_DIR} && python3 -m scripts.raspi_status",
     },
     {
-        "comment": "Allsky Image-Upload",
+        "comment": "Allsky Image-Upload API",
         "schedule": "*/2 * * * *",
-        "command": "cd ${ROOT_DIR} && python3 -m scripts.run_image_upload",
+        "command": "cd ${ROOT_DIR} && python3 -m scripts.run_image_upload_api",
     },
     {
         "comment": "Config Update",

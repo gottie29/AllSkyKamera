@@ -1,6 +1,11 @@
 Version history
 ----------------
 
+# v2026.02.11_01
+- Change the image upload completly
+  - reduce the scaling of the image
+  - 3 images are uploaded FullHD, Mobile, Thumb to handle the website faster
+  
 # v2026.02.03_01 (02)
 - Bugfix in KP-INDEX (wenn KPIndex is true and Overlay was False, he didnt send the data to the database)
 - More (all) settings from TJ-Interface (without remoteserversettings and other personel settings)

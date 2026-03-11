@@ -173,3 +173,4 @@ askutils/config.py.bak
 tests/mlx90614_coeffs.j*
 tests/*.csv
 tj_settings.json
+
