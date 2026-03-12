@@ -13,7 +13,6 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 
 import requests
-
 from askutils import config
 
 try:
@@ -30,13 +29,10 @@ except Exception:
 _DEFAULT_ENC_NIGHTLY_UPLOAD_API_URL = \
 "aHR0cHM6Ly9hbGxza3lrYW1lcmEuc3BhY2UvYXBpL3YxL25pZ2h0bHlfdXBsb2FkLnBocA=="
 
-
 FULLHD_WIDTH = 1920
 MOBILE_WIDTH = 960
 THUMB_WIDTH = 480
-
 JPEG_QSCALE = 2
-
 VIDEO_CRF = 24
 VIDEO_PRESET = "veryfast"
 VIDEO_CODEC = "libx264"
@@ -53,7 +49,6 @@ HTTP_CONNECT_TIMEOUT = 20
 HTTP_READ_TIMEOUT = 300
 HTTP_VERIFY_SSL = True
 
-
 # -----------------------------------------------------------
 # Logging
 # -----------------------------------------------------------
@@ -61,28 +56,22 @@ def log(msg:str):
     ts=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print(f"{ts} {msg}",flush=True)
 
-
 # -----------------------------------------------------------
 # Helper
 # -----------------------------------------------------------
 def _get_api_url():
     return base64.b64decode(_DEFAULT_ENC_NIGHTLY_UPLOAD_API_URL).decode()
 
-
 def _truthy(v):
     return str(v).lower() in ("1","true","yes","on")
 
-
 def _file_ready(path:str)->bool:
-
     if not os.path.isfile(path):
         return False
-
     try:
         mtime=os.path.getmtime(path)
     except:
         return False
-
     age=(time.time()-mtime)/60.0
     if age<MIN_FILE_AGE_MINUTES:
         return False
@@ -93,18 +82,13 @@ def _file_ready(path:str)->bool:
 
     return size1==size2 and size2>0
 
-
 def _latest(patterns):
-
     files=[]
     for p in patterns:
         files.extend(glob.glob(p))
-
     if not files:
         return None
-
     return max(files,key=os.path.getmtime)
-
 
 # -----------------------------------------------------------
 # ffmpeg helpers
@@ -112,9 +96,7 @@ def _latest(patterns):
 def _scale_filter(w):
     return f"scale='if(gt(iw,{w}),{w},iw)':-2"
 
-
 def _create_jpg(src,dst,width):
-
     cmd=[
         "ffmpeg","-hide_banner","-loglevel","error","-y",
         "-i",src,
@@ -124,12 +106,9 @@ def _create_jpg(src,dst,width):
         "-pix_fmt","yuvj420p",
         dst
     ]
-
     subprocess.check_call(cmd)
 
-
 def _create_three(src,tmp):
-
     f=os.path.join(tmp,"fullhd.jpg")
     m=os.path.join(tmp,"mobile.jpg")
     t=os.path.join(tmp,"thumb.jpg")
@@ -140,9 +119,7 @@ def _create_three(src,tmp):
 
     return dict(fullhd=f,mobile=m,thumb=t)
 
-
 def _video_duration(path):
-
     cmd=[
         "ffprobe","-v","error",
         "-show_entries","format=duration",
@@ -154,9 +131,7 @@ def _video_duration(path):
 
     return float(out)
 
-
 def _reduce_video(src,dst):
-
     cmd=[
         "ffmpeg","-hide_banner","-loglevel","error","-y",
         "-i",src,
@@ -172,9 +147,7 @@ def _reduce_video(src,dst):
 
     subprocess.check_call(cmd)
 
-
 def _video_thumb(src,dst):
-
     mid=_video_duration(src)/2.0
 
     cmd=[
@@ -189,11 +162,8 @@ def _video_thumb(src,dst):
 
     subprocess.check_call(cmd)
 
-
 def _prepare_video(src,tmp):
-
     ext=os.path.splitext(src)[1]
-
     v=os.path.join(tmp,"video"+ext)
     t=os.path.join(tmp,"thumb.jpg")
 
@@ -202,29 +172,21 @@ def _prepare_video(src,tmp):
 
     return v,t
 
-
 # -----------------------------------------------------------
 # Upload
 # -----------------------------------------------------------
 def _upload(asset,date,datafiles,publish_last):
-
     url=_get_api_url()
-
     headers={"X-API-Key":API_KEY}
-
     files={}
 
     if asset=="video":
-
         v,t=datafiles
-
         files={
             "file":(os.path.basename(v),open(v,"rb"),"video/mp4"),
             "thumb":("thumb.jpg",open(t,"rb"),"image/jpeg")
         }
-
     else:
-
         files={
             "fullhd":("fullhd.jpg",open(datafiles["fullhd"],"rb"),"image/jpeg"),
             "mobile":("mobile.jpg",open(datafiles["mobile"],"rb"),"image/jpeg"),
@@ -256,12 +218,10 @@ def _upload(asset,date,datafiles,publish_last):
 
     return j.get("ok")==True
 
-
 # -----------------------------------------------------------
 # Asset Scan
 # -----------------------------------------------------------
 def _collect(date):
-
     base=os.path.join(config.ALLSKY_PATH,config.IMAGE_BASE_PATH)
 
     keo=_latest([
@@ -275,7 +235,6 @@ def _collect(date):
     ])
 
     mp4=os.path.join(base,date,f"allsky-{date}.mp4")
-
     assets=[]
 
     if keo:
@@ -289,30 +248,22 @@ def _collect(date):
 
     return assets
 
-
 # -----------------------------------------------------------
 # Jitter
 # -----------------------------------------------------------
 def _apply_jitter(date):
 
-    window=int(getattr(config,"NIGHTLY_UPLOAD_JITTER_MAX_SECONDS",3600))
-
+    window=int(getattr(config,"NIGHTLY_UPLOAD_JITTER_MAX_SECONDS",10))
     kamera=getattr(config,"KAMERA_ID","ASK000")
-
     seed=f"{kamera}|{date}".encode()
-
     slot=int(hashlib.sha256(seed).hexdigest()[:8],16)%window
-
     log(f"jitter_seconds={slot}")
-
     time.sleep(slot)
-
 
 # -----------------------------------------------------------
 # Main
 # -----------------------------------------------------------
 def upload_nightly_batch(date=None):
-
     if date is None:
         date=(datetime.now()-timedelta(days=1)).strftime("%Y%m%d")
 
