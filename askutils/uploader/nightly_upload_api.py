@@ -175,48 +175,129 @@ def _prepare_video(src,tmp):
 # -----------------------------------------------------------
 # Upload
 # -----------------------------------------------------------
-def _upload(asset,date,datafiles,publish_last):
-    url=_get_api_url()
-    headers={"X-API-Key":API_KEY}
-    files={}
+def _upload(asset, date, datafiles, publish_last):
+    url = _get_api_url()
+    headers = {"X-API-Key": API_KEY}
 
-    if asset=="video":
-        v,t=datafiles
-        files={
-            "file":(os.path.basename(v),open(v,"rb"),"video/mp4"),
-            "thumb":("thumb.jpg",open(t,"rb"),"image/jpeg")
-        }
-    else:
-        files={
-            "fullhd":("fullhd.jpg",open(datafiles["fullhd"],"rb"),"image/jpeg"),
-            "mobile":("mobile.jpg",open(datafiles["mobile"],"rb"),"image/jpeg"),
-            "thumb":("thumb.jpg",open(datafiles["thumb"],"rb"),"image/jpeg")
-        }
+    def _video_mime(path: str) -> str:
+        ext = os.path.splitext(path)[1].lower()
+        if ext == ".webm":
+            return "video/webm"
+        return "video/mp4"
 
-    r=requests.post(
-        url,
-        headers=headers,
-        data={
-            "date":date,
-            "asset":asset,
-            "publish_last":"1" if publish_last else "0"
-        },
-        files=files,
-        timeout=(HTTP_CONNECT_TIMEOUT,HTTP_READ_TIMEOUT),
-        verify=HTTP_VERIFY_SSL
-    )
+    try:
+        if asset == "video":
+            v, t = datafiles
 
-    if r.status_code!=200:
-        log(f"upload_http_error {r.status_code}")
+            if not os.path.isfile(v):
+                log(f"upload_missing_video_file path={v}")
+                return False
+            if not os.path.isfile(t):
+                log(f"upload_missing_video_thumb path={t}")
+                return False
+
+            video_size = os.path.getsize(v)
+            thumb_size = os.path.getsize(t)
+            video_mime = _video_mime(v)
+
+            log(
+                f"upload_video_prepare file={os.path.basename(v)} "
+                f"mime={video_mime} video_size={video_size} thumb_size={thumb_size}"
+            )
+
+            with open(v, "rb") as fh_video, open(t, "rb") as fh_thumb:
+                files = {
+                    "file": (os.path.basename(v), fh_video, video_mime),
+                    "thumb": ("thumb.jpg", fh_thumb, "image/jpeg"),
+                }
+
+                r = requests.post(
+                    url,
+                    headers=headers,
+                    data={
+                        "date": date,
+                        "asset": asset,
+                        "publish_last": "1" if publish_last else "0",
+                    },
+                    files=files,
+                    timeout=(HTTP_CONNECT_TIMEOUT, HTTP_READ_TIMEOUT),
+                    verify=HTTP_VERIFY_SSL,
+                )
+
+        else:
+            fullhd = datafiles["fullhd"]
+            mobile = datafiles["mobile"]
+            thumb = datafiles["thumb"]
+
+            for p in (fullhd, mobile, thumb):
+                if not os.path.isfile(p):
+                    log(f"upload_missing_image_variant path={p}")
+                    return False
+
+            log(
+                f"upload_image_prepare asset={asset} "
+                f"fullhd_size={os.path.getsize(fullhd)} "
+                f"mobile_size={os.path.getsize(mobile)} "
+                f"thumb_size={os.path.getsize(thumb)}"
+            )
+
+            with open(fullhd, "rb") as fh_fullhd, \
+                 open(mobile, "rb") as fh_mobile, \
+                 open(thumb, "rb") as fh_thumb:
+
+                files = {
+                    "fullhd": ("fullhd.jpg", fh_fullhd, "image/jpeg"),
+                    "mobile": ("mobile.jpg", fh_mobile, "image/jpeg"),
+                    "thumb": ("thumb.jpg", fh_thumb, "image/jpeg"),
+                }
+
+                r = requests.post(
+                    url,
+                    headers=headers,
+                    data={
+                        "date": date,
+                        "asset": asset,
+                        "publish_last": "1" if publish_last else "0",
+                    },
+                    files=files,
+                    timeout=(HTTP_CONNECT_TIMEOUT, HTTP_READ_TIMEOUT),
+                    verify=HTTP_VERIFY_SSL,
+                )
+
+    except requests.RequestException as e:
+        log(f"upload_request_exception {asset} error={e}")
+        return False
+    except Exception as e:
+        log(f"upload_prepare_exception {asset} error={e}")
+        return False
+
+    if r.status_code != 200:
+        body = (r.text or "")[:1000].replace("\n", " ").replace("\r", " ")
+        log(f"upload_http_error {r.status_code} asset={asset} body={body}")
+
+        # optional: retry_after_seconds aus API auswerten
+        try:
+            j = r.json()
+            retry_after = j.get("retry_after_seconds")
+            if retry_after is not None:
+                log(f"upload_retry_after_hint {retry_after}")
+        except Exception:
+            pass
+
         return False
 
     try:
-        j=r.json()
-    except:
-        log("invalid_json")
+        j = r.json()
+    except Exception:
+        log(f"invalid_json asset={asset} body={(r.text or '')[:500]}")
         return False
 
-    return j.get("ok")==True
+    if j.get("ok") is not True:
+        log(f"upload_not_ok asset={asset} body={str(j)[:1000]}")
+        return False
+
+    log(f"upload_ok asset={asset}")
+    return True
 
 # -----------------------------------------------------------
 # Asset Scan
@@ -252,14 +333,17 @@ def _collect(date):
 # Jitter
 # -----------------------------------------------------------
 def _apply_jitter(date):
+    window = int(getattr(config, "NIGHTLY_UPLOAD_JITTER_MAX_SECONDS", 10))
+    if window <= 0:
+        log("jitter_seconds=0")
+        return
 
-    window=int(getattr(config,"NIGHTLY_UPLOAD_JITTER_MAX_SECONDS",10))
-    kamera=getattr(config,"KAMERA_ID","ASK000")
-    seed=f"{kamera}|{date}".encode()
-    slot=int(hashlib.sha256(seed).hexdigest()[:8],16)%window
+    kamera = getattr(config, "KAMERA_ID", "ASK000")
+    seed = f"{kamera}|{date}".encode()
+    slot = int(hashlib.sha256(seed).hexdigest()[:8], 16) % window
     log(f"jitter_seconds={slot}")
     time.sleep(slot)
-
+    
 # -----------------------------------------------------------
 # Main
 # -----------------------------------------------------------
@@ -330,26 +414,20 @@ def upload_nightly_batch(date=None):
         files=job["files"]
 
         attempt=0
-        ok=False
+        ok = False
 
-        while attempt<=UPLOAD_MAX_RETRIES:
+        for attempt in range(1, UPLOAD_MAX_RETRIES + 1):
+            log(f"upload {asset} attempt={attempt}/{UPLOAD_MAX_RETRIES}")
 
-            attempt+=1
-
-            log(f"upload {asset} attempt={attempt}")
-
-            if _upload(asset,date,files,True):
-
-                ok=True
+            if _upload(asset, date, files, True):
+                ok = True
                 break
 
-            if attempt<=UPLOAD_MAX_RETRIES:
-
-                delay=random.randint(
+            if attempt < UPLOAD_MAX_RETRIES:
+                delay = random.randint(
                     UPLOAD_RETRY_MIN_SECONDS,
                     UPLOAD_RETRY_MAX_SECONDS
                 )
-
                 log(f"retry_in {delay}")
                 time.sleep(delay)
 
