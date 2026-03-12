@@ -162,15 +162,26 @@ def _video_thumb(src,dst):
 
     subprocess.check_call(cmd)
 
-def _prepare_video(src,tmp):
-    ext=os.path.splitext(src)[1]
-    v=os.path.join(tmp,"video"+ext)
-    t=os.path.join(tmp,"thumb.jpg")
+def _prepare_video(src, tmp):
+    ext = os.path.splitext(src)[1].lower()
+    reduced = os.path.join(tmp, "video" + ext)
+    thumb = os.path.join(tmp, "thumb.jpg")
 
-    _reduce_video(src,v)
-    _video_thumb(v,t)
+    _reduce_video(src, reduced)
 
-    return v,t
+    src_size = os.path.getsize(src)
+    reduced_size = os.path.getsize(reduced)
+
+    if reduced_size >= src_size * 0.95:
+        final_video = os.path.join(tmp, "video_original" + ext)
+        shutil.copy2(src, final_video)
+        _video_thumb(final_video, thumb)
+        log(f"video_keep_original original_size={src_size} reduced_size={reduced_size}")
+        return final_video, thumb
+
+    _video_thumb(reduced, thumb)
+    log(f"video_use_reduced original_size={src_size} reduced_size={reduced_size}")
+    return reduced, thumb
 
 # -----------------------------------------------------------
 # Upload
