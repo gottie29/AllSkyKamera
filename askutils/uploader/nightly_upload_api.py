@@ -33,8 +33,8 @@ FULLHD_WIDTH = 1920
 MOBILE_WIDTH = 960
 THUMB_WIDTH = 480
 JPEG_QSCALE = 2
-VIDEO_CRF = 24
-VIDEO_PRESET = "veryfast"
+VIDEO_CRF = 26
+VIDEO_PRESET = "medium"
 VIDEO_CODEC = "libx264"
 VIDEO_PIXEL_FORMAT = "yuv420p"
 
@@ -141,7 +141,7 @@ def _reduce_video(src,dst):
         "-crf",str(VIDEO_CRF),
         "-pix_fmt",VIDEO_PIXEL_FORMAT,
         "-movflags","+faststart",
-        "-c:a","aac","-b:a","128k",
+        "-an",
         dst
     ]
 
