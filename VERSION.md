@@ -1,10 +1,14 @@
 Version history
 ----------------
 
-# v2026.02.11_01
+# v2026.02.11_01 & 02 & v2026.02.12_01
 - Change the image upload completly
   - reduce the scaling of the image
   - 3 images are uploaded FullHD, Mobile, Thumb to handle the website faster
+- Change the manual upload to the new HTTPS API
+  - keogram gets also a thumb, mobile and fullhd version
+  - startrail gets also a thumb, mobile and fullhd version
+  - video is reduced to FullHD and gets a thumb for the website
   
 # v2026.02.03_01 (02)
 - Bugfix in KP-INDEX (wenn KPIndex is true and Overlay was False, he didnt send the data to the database)

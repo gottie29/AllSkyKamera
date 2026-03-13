@@ -414,7 +414,7 @@ CRONTABS = [
     {
         "comment": "Nightly FTP upload",
         "schedule": "45 8 * * *",
-        "command": "cd ${PROJECT_ROOT} && python3 -m scripts.run_nightly_upload",
+        "command": "cd ${PROJECT_ROOT} && python3 -m scripts.run_nightly_upload_api",
     },
     {
         "comment": "SQM measurement",

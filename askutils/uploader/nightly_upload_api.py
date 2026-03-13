@@ -344,7 +344,7 @@ def _collect(date):
 # Jitter
 # -----------------------------------------------------------
 def _apply_jitter(date):
-    window = int(getattr(config, "NIGHTLY_UPLOAD_JITTER_MAX_SECONDS", 10))
+    window = int(getattr(config, "NIGHTLY_UPLOAD_JITTER_MAX_SECONDS", 3600))
     if window <= 0:
         log("jitter_seconds=0")
         return
