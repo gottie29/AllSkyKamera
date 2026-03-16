@@ -132,15 +132,17 @@ def _video_duration(path):
     return float(out)
 
 def _reduce_video(src,dst):
-    cmd=[
-        "ffmpeg","-hide_banner","-loglevel","error","-y",
-        "-i",src,
-        "-vf",_scale_filter(FULLHD_WIDTH),
-        "-c:v",VIDEO_CODEC,
-        "-preset",VIDEO_PRESET,
-        "-crf",str(VIDEO_CRF),
-        "-pix_fmt",VIDEO_PIXEL_FORMAT,
-        "-movflags","+faststart",
+    cmd = [
+        "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+        "-i", src,
+        "-vf", _scale_filter(FULLHD_WIDTH),
+        "-c:v", "libx264",
+        "-preset", VIDEO_PRESET,
+        "-crf", str(VIDEO_CRF),
+        "-pix_fmt", "yuv420p",
+        "-profile:v", "main",
+        "-level", "4.0",
+        "-movflags", "+faststart",
         "-an",
         dst
     ]

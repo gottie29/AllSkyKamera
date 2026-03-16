@@ -175,21 +175,18 @@ def _get_video_duration_seconds(video_path: str) -> float:
 
 def _reduce_video_to_fullhd(src: str, dst: str) -> None:
     cmd = [
-        "ffmpeg",
-        "-hide_banner",
-        "-loglevel", "error",
-        "-y",
+        "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
         "-i", src,
-        "-vf", _build_scale_filter(FULLHD_WIDTH),
-        "-c:v", VIDEO_CODEC,
+        "-vf", _scale_filter(FULLHD_WIDTH),
+        "-c:v", "libx264",
         "-preset", VIDEO_PRESET,
         "-crf", str(VIDEO_CRF),
-        "-pix_fmt", VIDEO_PIXEL_FORMAT,
+        "-pix_fmt", "yuv420p",
+        "-profile:v", "main",
+        "-level", "4.0",
         "-movflags", "+faststart",
-        "-map_metadata", "-1",
-        "-c:a", "aac",
-        "-b:a", "128k",
-        dst,
+        "-an",
+        dst
     ]
 
     result = subprocess.run(cmd, capture_output=True, text=True)
@@ -396,6 +393,12 @@ def _collect_assets(date_str: str) -> List[Tuple[str, str]]:
 
     return found
 
+
+# ---------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------
+def _scale_filter(w):
+    return f"scale='if(gt(iw,{w}),{w},iw)':-2"
 
 # ---------------------------------------------------------------------
 # Main
