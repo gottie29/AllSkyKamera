@@ -413,13 +413,24 @@ MLX_CLOUD_K7="${MLX_CLOUD_K7//,/.}"
 # - Pfade/CameraID fuer INDI automatisch korrigieren
 # (Overlays werden absichtlich NICHT hier ueberschrieben!)
 # ---------------------------------------------------
+# ---------------------------------------------------
+# INDI Fixups (Pfade + CAMERAID) NACH Defaults
+# - Bereits gesetzte Pfade NICHT überschreiben
+# - Nur fehlende Werte ergänzen
+# ---------------------------------------------------
 if [ "$INDI_ACTIVE" = "1" ]; then
-  ALLSKY_PATH="/var/www/html/allsky"
-  IMAGE_BASE_PATH="images"
-  IMAGE_PATH="tmp"
+  [ -z "$ALLSKY_PATH" ] && ALLSKY_PATH="/var/www/html/allsky"
+  [ -z "$IMAGE_BASE_PATH" ] && IMAGE_BASE_PATH="images"
+  [ -z "$IMAGE_PATH" ] && IMAGE_PATH="tmp"
 
-  # CAMERAID (ccd_*) aus INDI images Verzeichnis auslesen
-  INDI_IMAGES_DIR="${ALLSKY_PATH}/images"
+  # Bei Standardpfad liegen die Bilder unter .../images
+  # Bei Custom-Pfad ist ALLSKY_PATH bereits der Bildbasis-Pfad
+  if [ "$ALLSKY_PATH" = "/var/www/html/allsky" ]; then
+    INDI_IMAGES_DIR="${ALLSKY_PATH}/images"
+  else
+    INDI_IMAGES_DIR="${ALLSKY_PATH}"
+  fi
+
   if [ -d "${INDI_IMAGES_DIR}" ]; then
     CCD_DIR_NAME="$(find "${INDI_IMAGES_DIR}" -maxdepth 1 -type d -name 'ccd_*' -printf '%f\n' 2>/dev/null | sort | head -n 1 || true)"
     if [ -n "${CCD_DIR_NAME}" ]; then
@@ -427,7 +438,6 @@ if [ "$INDI_ACTIVE" = "1" ]; then
     fi
   fi
 fi
-
 # ---------------------------------------------------
 # Standortdaten-Dialog
 # ---------------------------------------------------
@@ -2207,21 +2217,34 @@ done
 if [ "$INDI_ACTIVE" = "1" ]; then
   INDI="1"
 
-  # Pfade fix
-  ALLSKY_PATH="/var/www/html/allsky"
-  IMAGE_BASE_PATH="images"
-  IMAGE_PATH="tmp"
+  # Standardpfad nur setzen wenn ALLSKY_PATH leer
+  [ -z "$ALLSKY_PATH" ] && ALLSKY_PATH="/var/www/html/allsky"
 
-  # CAMERAID aus /var/www/html/allsky/images/ccd_* ermitteln
-  INDI_IMAGES_DIR="${ALLSKY_PATH}/images"
-  if [ -d "${INDI_IMAGES_DIR}" ]; then
-    CCD_DIR_NAME="$(find "${INDI_IMAGES_DIR}" -maxdepth 1 -type d -name 'ccd_*' -printf '%f\n' 2>/dev/null | sort | head -n 1 || true)"
-    if [ -n "${CCD_DIR_NAME}" ]; then
-      CAMERAID="${CCD_DIR_NAME}"
-    fi
+  # IMAGE_BASE_PATH Logik
+  if [ "$ALLSKY_PATH" != "/var/www/html/allsky" ]; then
+      IMAGE_BASE_PATH=""
+  else
+      [ -z "$IMAGE_BASE_PATH" ] && IMAGE_BASE_PATH="images"
   fi
 
-  # Overlays hart aus
+  # IMAGE_PATH nur setzen wenn leer
+  [ -z "$IMAGE_PATH" ] && IMAGE_PATH="tmp"
+
+  # Kamera-ID bestimmen
+  if [ "$ALLSKY_PATH" = "/var/www/html/allsky" ]; then
+      INDI_IMAGES_DIR="${ALLSKY_PATH}/images"
+  else
+      INDI_IMAGES_DIR="${ALLSKY_PATH}"
+  fi
+
+  if [ -d "${INDI_IMAGES_DIR}" ]; then
+      CCD_DIR_NAME="$(find "${INDI_IMAGES_DIR}" -maxdepth 1 -type d -name 'ccd_*' -printf '%f\n' 2>/dev/null | sort | head -n 1 || true)"
+      if [ -n "${CCD_DIR_NAME}" ]; then
+          CAMERAID="${CCD_DIR_NAME}"
+      fi
+  fi
+
+  # Overlays bei INDI deaktivieren
   BME280_OVERLAY="False"
   TSL2591_OVERLAY="False"
   DS18B20_OVERLAY="False"
@@ -2230,6 +2253,7 @@ if [ "$INDI_ACTIVE" = "1" ]; then
   HTU21_OVERLAY="False"
   SHT3X_OVERLAY="False"
   KPINDEX_OVERLAY="False"
+
 else
   INDI="0"
 fi

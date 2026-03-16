@@ -10,7 +10,6 @@ import subprocess
 import tempfile
 import time
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple
 
 import requests
 from askutils import config
@@ -38,57 +37,257 @@ VIDEO_PRESET = "medium"
 VIDEO_CODEC = "libx264"
 VIDEO_PIXEL_FORMAT = "yuv420p"
 
-MIN_FILE_AGE_MINUTES = int(getattr(config,"NIGHTLY_MIN_FILE_AGE_MINUTES",5))
-STABLE_WINDOW_SECONDS = int(getattr(config,"NIGHTLY_STABLE_WINDOW_SECONDS",90))
+MIN_FILE_AGE_MINUTES = int(getattr(config, "NIGHTLY_MIN_FILE_AGE_MINUTES", 5))
+STABLE_WINDOW_SECONDS = int(getattr(config, "NIGHTLY_STABLE_WINDOW_SECONDS", 90))
 
-UPLOAD_MAX_RETRIES = int(getattr(config,"NIGHTLY_UPLOAD_MAX_RETRIES",5))
-UPLOAD_RETRY_MIN_SECONDS = int(getattr(config,"NIGHTLY_UPLOAD_RETRY_MIN_SECONDS",300))
-UPLOAD_RETRY_MAX_SECONDS = int(getattr(config,"NIGHTLY_UPLOAD_RETRY_MAX_SECONDS",900))
+UPLOAD_MAX_RETRIES = int(getattr(config, "NIGHTLY_UPLOAD_MAX_RETRIES", 5))
+UPLOAD_RETRY_MIN_SECONDS = int(getattr(config, "NIGHTLY_UPLOAD_RETRY_MIN_SECONDS", 300))
+UPLOAD_RETRY_MAX_SECONDS = int(getattr(config, "NIGHTLY_UPLOAD_RETRY_MAX_SECONDS", 900))
 
 HTTP_CONNECT_TIMEOUT = 20
 HTTP_READ_TIMEOUT = 300
 HTTP_VERIFY_SSL = True
 
+
 # -----------------------------------------------------------
 # Logging
 # -----------------------------------------------------------
-def log(msg:str):
-    ts=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    print(f"{ts} {msg}",flush=True)
+def log(msg):
+    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"{ts} {msg}", flush=True)
+
+
+# -----------------------------------------------------------
+# Influx Status
+# -----------------------------------------------------------
+def _log_nightly_status(value, asset):
+    try:
+        if influx_writer is None:
+            return
+        kamera_id = getattr(config, "KAMERA_ID", None) or getattr(config, "KAMERA", None)
+        if not kamera_id:
+            return
+        influx_writer.log_metric(
+            "uploadstatus",
+            {"nightlyupload_api": float(value)},
+            tags={"host": "host1", "kamera": str(kamera_id), "asset": str(asset)},
+        )
+    except Exception:
+        pass
+
 
 # -----------------------------------------------------------
 # Helper
 # -----------------------------------------------------------
 def _get_api_url():
-    return base64.b64decode(_DEFAULT_ENC_NIGHTLY_UPLOAD_API_URL).decode()
+    return base64.b64decode(_DEFAULT_ENC_NIGHTLY_UPLOAD_API_URL).decode().strip()
+
 
 def _truthy(v):
-    return str(v).lower() in ("1","true","yes","on")
+    return str(v).strip().lower() in ("1", "true", "yes", "on")
 
-def _file_ready(path:str)->bool:
-    if not os.path.isfile(path):
-        return False
-    try:
-        mtime=os.path.getmtime(path)
-    except:
-        return False
-    age=(time.time()-mtime)/60.0
-    if age<MIN_FILE_AGE_MINUTES:
-        return False
 
-    size1=os.path.getsize(path)
-    time.sleep(5)
-    size2=os.path.getsize(path)
+def _normalize_path(path):
+    return os.path.abspath(os.path.expanduser(path))
 
-    return size1==size2 and size2>0
 
 def _latest(patterns):
-    files=[]
+    files = []
     for p in patterns:
         files.extend(glob.glob(p))
     if not files:
         return None
-    return max(files,key=os.path.getmtime)
+    return max(files, key=os.path.getmtime)
+
+
+def _choose_newest_existing(*candidates):
+    files = [p for p in candidates if p and os.path.isfile(p)]
+    if not files:
+        return None
+    return max(files, key=os.path.getmtime)
+
+
+def _get_primary_base():
+    allsky_path = getattr(config, "ALLSKY_PATH", "") or ""
+    image_base_path = getattr(config, "IMAGE_BASE_PATH", "") or ""
+
+    if image_base_path:
+        base = os.path.join(allsky_path, image_base_path)
+    else:
+        base = allsky_path
+
+    base = _normalize_path(base)
+    log(f"primary_base path={base}")
+    return base
+
+
+def _is_age_ok(path, min_minutes):
+    try:
+        mtime = os.path.getmtime(path)
+    except FileNotFoundError:
+        return False
+    age_minutes = (time.time() - mtime) / 60.0
+    return age_minutes >= min_minutes
+
+
+def _is_size_stable(path, window_sec, poll_sec=5):
+    if window_sec <= 0:
+        try:
+            return os.path.getsize(path) > 0
+        except FileNotFoundError:
+            return False
+
+    try:
+        last = os.path.getsize(path)
+    except FileNotFoundError:
+        return False
+
+    stable_start = time.time()
+
+    while True:
+        time.sleep(min(poll_sec, max(1, window_sec)))
+        try:
+            now_size = os.path.getsize(path)
+        except FileNotFoundError:
+            log(f"file_missing_during_stability_check path={path}")
+            return False
+
+        if now_size != last:
+            last = now_size
+            stable_start = time.time()
+
+        elapsed = time.time() - stable_start
+        if elapsed >= window_sec and now_size > 0:
+            return True
+
+
+def _file_ready(path):
+    if not os.path.isfile(path):
+        log(f"file_not_found path={path}")
+        return False
+
+    if not _is_age_ok(path, MIN_FILE_AGE_MINUTES):
+        log(f"file_too_young path={path} required_minutes={MIN_FILE_AGE_MINUTES}")
+        return False
+
+    if not _is_size_stable(path, STABLE_WINDOW_SECONDS):
+        log(f"file_not_stable path={path} stable_window_seconds={STABLE_WINDOW_SECONDS}")
+        return False
+
+    try:
+        size = os.path.getsize(path)
+    except Exception:
+        size = -1
+
+    log(f"file_ready path={path} size={size}")
+    return True
+
+
+# -----------------------------------------------------------
+# INDI / non-INDI Asset Resolver
+# -----------------------------------------------------------
+def _check_candidate(path, label):
+    exists = os.path.isfile(path)
+    log(f"asset_check asset={label} path={path} exists={'OK' if exists else 'MISS'}")
+    return exists
+
+
+def _resolve_nonindi_assets(base, date):
+    assets = []
+
+    keo = _choose_newest_existing(
+        os.path.join(base, date, "keogram", f"keogram-{date}.jpg"),
+        os.path.join(base, date, "keogram", f"keogram-{date}.png"),
+    )
+    if keo:
+        log(f"asset_found asset=keogram path={keo}")
+        assets.append(("keogram", keo))
+
+    st = _choose_newest_existing(
+        os.path.join(base, date, "startrails", f"startrails-{date}.jpg"),
+        os.path.join(base, date, "startrails", f"startrails-{date}.png"),
+    )
+    if st:
+        log(f"asset_found asset=startrail path={st}")
+        assets.append(("startrail", st))
+
+    mp4 = os.path.join(base, date, f"allsky-{date}.mp4")
+    webm = os.path.join(base, date, f"allsky-{date}.webm")
+
+    _check_candidate(mp4, "video")
+    _check_candidate(webm, "video")
+
+    if os.path.isfile(mp4):
+        log(f"asset_found asset=video path={mp4}")
+        assets.append(("video", mp4))
+    elif os.path.isfile(webm):
+        log(f"asset_found asset=video path={webm}")
+        assets.append(("video", webm))
+
+    return assets
+
+
+def _resolve_indi_assets(base, date):
+    assets = []
+
+    cam_id = getattr(config, "CAMERAID", None)
+    if not cam_id:
+        log("indi_enabled_but_cameraid_missing")
+        return assets
+
+    date_dir = os.path.join(base, cam_id, "timelapse", date)
+    log(f"indi_date_dir path={date_dir}")
+
+    if not os.path.isdir(date_dir):
+        log(f"indi_date_dir_missing path={date_dir}")
+        return assets
+
+    keo_patterns = [
+        os.path.join(date_dir, f"allsky-keogram_*_{date}_night_*.jpg"),
+        os.path.join(date_dir, f"allsky-keogram_*_{date}_night_*.png"),
+    ]
+    for p in keo_patterns:
+        log(f"asset_pattern asset=keogram pattern={p}")
+    keo = _latest(keo_patterns)
+    if keo:
+        log(f"asset_found asset=keogram path={keo}")
+        assets.append(("keogram", keo))
+
+    st_patterns = [
+        os.path.join(date_dir, f"allsky-startrail_*_{date}_night_*.jpg"),
+        os.path.join(date_dir, f"allsky-startrail_*_{date}_night_*.png"),
+    ]
+    for p in st_patterns:
+        log(f"asset_pattern asset=startrail pattern={p}")
+    st = _latest(st_patterns)
+    if st:
+        log(f"asset_found asset=startrail path={st}")
+        assets.append(("startrail", st))
+
+    tl_patterns = [
+        os.path.join(date_dir, f"allsky-timelapse_*_{date}_night_*.mp4"),
+        os.path.join(date_dir, f"allsky-timelapse_*_{date}_night_*.webm"),
+    ]
+    for p in tl_patterns:
+        log(f"asset_pattern asset=video pattern={p}")
+    tl = _latest(tl_patterns)
+    if tl:
+        log(f"asset_found asset=video path={tl}")
+        assets.append(("video", tl))
+
+    stv_patterns = [
+        os.path.join(date_dir, f"allsky-startrail_timelapse_*_{date}_night_*.mp4"),
+        os.path.join(date_dir, f"allsky-startrail_timelapse_*_{date}_night_*.webm"),
+    ]
+    for p in stv_patterns:
+        log(f"asset_pattern asset=startrail_video pattern={p}")
+    stv = _latest(stv_patterns)
+    if stv:
+        log(f"asset_found asset=startrail_video path={stv}")
+        assets.append(("startrail_video", stv))
+
+    return assets
+
 
 # -----------------------------------------------------------
 # ffmpeg helpers
@@ -96,73 +295,75 @@ def _latest(patterns):
 def _scale_filter(w):
     return f"scale='if(gt(iw,{w}),{w},iw)':-2"
 
-def _create_jpg(src,dst,width):
-    cmd=[
-        "ffmpeg","-hide_banner","-loglevel","error","-y",
-        "-i",src,
-        "-frames:v","1",
-        "-vf",_scale_filter(width),
-        "-q:v",str(JPEG_QSCALE),
-        "-pix_fmt","yuvj420p",
+
+def _create_jpg(src, dst, width):
+    cmd = [
+        "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+        "-i", src,
+        "-frames:v", "1",
+        "-vf", _scale_filter(width),
+        "-q:v", str(JPEG_QSCALE),
+        "-pix_fmt", "yuvj420p",
         dst
     ]
     subprocess.check_call(cmd)
 
-def _create_three(src,tmp):
-    f=os.path.join(tmp,"fullhd.jpg")
-    m=os.path.join(tmp,"mobile.jpg")
-    t=os.path.join(tmp,"thumb.jpg")
 
-    _create_jpg(src,f,FULLHD_WIDTH)
-    _create_jpg(src,m,MOBILE_WIDTH)
-    _create_jpg(src,t,THUMB_WIDTH)
+def _create_three(src, tmp):
+    f = os.path.join(tmp, "fullhd.jpg")
+    m = os.path.join(tmp, "mobile.jpg")
+    t = os.path.join(tmp, "thumb.jpg")
 
-    return dict(fullhd=f,mobile=m,thumb=t)
+    _create_jpg(src, f, FULLHD_WIDTH)
+    _create_jpg(src, m, MOBILE_WIDTH)
+    _create_jpg(src, t, THUMB_WIDTH)
+
+    return dict(fullhd=f, mobile=m, thumb=t)
+
 
 def _video_duration(path):
-    cmd=[
-        "ffprobe","-v","error",
-        "-show_entries","format=duration",
-        "-of","default=noprint_wrappers=1:nokey=1",
+    cmd = [
+        "ffprobe", "-v", "error",
+        "-show_entries", "format=duration",
+        "-of", "default=noprint_wrappers=1:nokey=1",
         path
     ]
-
-    out=subprocess.check_output(cmd).decode().strip()
-
+    out = subprocess.check_output(cmd).decode().strip()
     return float(out)
 
-def _reduce_video(src,dst):
+
+def _reduce_video(src, dst):
     cmd = [
         "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
         "-i", src,
         "-vf", _scale_filter(FULLHD_WIDTH),
-        "-c:v", "libx264",
+        "-c:v", VIDEO_CODEC,
         "-preset", VIDEO_PRESET,
         "-crf", str(VIDEO_CRF),
-        "-pix_fmt", "yuv420p",
+        "-pix_fmt", VIDEO_PIXEL_FORMAT,
         "-profile:v", "main",
         "-level", "4.0",
         "-movflags", "+faststart",
         "-an",
         dst
     ]
-
     subprocess.check_call(cmd)
 
-def _video_thumb(src,dst):
-    mid=_video_duration(src)/2.0
 
-    cmd=[
-        "ffmpeg","-hide_banner","-loglevel","error","-y",
-        "-ss",str(mid),
-        "-i",src,
-        "-frames:v","1",
-        "-vf",_scale_filter(MOBILE_WIDTH),
-        "-q:v",str(JPEG_QSCALE),
+def _video_thumb(src, dst):
+    mid = _video_duration(src) / 2.0
+
+    cmd = [
+        "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+        "-ss", str(mid),
+        "-i", src,
+        "-frames:v", "1",
+        "-vf", _scale_filter(MOBILE_WIDTH),
+        "-q:v", str(JPEG_QSCALE),
         dst
     ]
-
     subprocess.check_call(cmd)
+
 
 def _prepare_video(src, tmp):
     ext = os.path.splitext(src)[1].lower()
@@ -185,6 +386,7 @@ def _prepare_video(src, tmp):
     log(f"video_use_reduced original_size={src_size} reduced_size={reduced_size}")
     return reduced, thumb
 
+
 # -----------------------------------------------------------
 # Upload
 # -----------------------------------------------------------
@@ -192,14 +394,14 @@ def _upload(asset, date, datafiles, publish_last):
     url = _get_api_url()
     headers = {"X-API-Key": API_KEY}
 
-    def _video_mime(path: str) -> str:
+    def _video_mime(path):
         ext = os.path.splitext(path)[1].lower()
         if ext == ".webm":
             return "video/webm"
         return "video/mp4"
 
     try:
-        if asset == "video":
+        if asset in ("video", "startrail_video"):
             v, t = datafiles
 
             if not os.path.isfile(v):
@@ -214,7 +416,7 @@ def _upload(asset, date, datafiles, publish_last):
             video_mime = _video_mime(v)
 
             log(
-                f"upload_video_prepare file={os.path.basename(v)} "
+                f"upload_video_prepare asset={asset} file={os.path.basename(v)} "
                 f"mime={video_mime} video_size={video_size} thumb_size={thumb_size}"
             )
 
@@ -288,7 +490,6 @@ def _upload(asset, date, datafiles, publish_last):
         body = (r.text or "")[:1000].replace("\n", " ").replace("\r", " ")
         log(f"upload_http_error {r.status_code} asset={asset} body={body}")
 
-        # optional: retry_after_seconds aus API auswerten
         try:
             j = r.json()
             retry_after = j.get("retry_after_seconds")
@@ -312,35 +513,30 @@ def _upload(asset, date, datafiles, publish_last):
     log(f"upload_ok asset={asset}")
     return True
 
+
 # -----------------------------------------------------------
 # Asset Scan
 # -----------------------------------------------------------
 def _collect(date):
-    base=os.path.join(config.ALLSKY_PATH,config.IMAGE_BASE_PATH)
+    primary_base = _get_primary_base()
+    assets = []
+    indi_flag = _truthy(getattr(config, "INDI", 0))
 
-    keo=_latest([
-        os.path.join(base,date,"keogram",f"keogram-{date}.jpg"),
-        os.path.join(base,date,"keogram",f"keogram-{date}.png"),
-    ])
+    log(f"collect_start date={date} indi={indi_flag}")
 
-    st=_latest([
-        os.path.join(base,date,"startrails",f"startrails-{date}.jpg"),
-        os.path.join(base,date,"startrails",f"startrails-{date}.png"),
-    ])
+    if not indi_flag:
+        assets = _resolve_nonindi_assets(primary_base, date)
+    else:
+        assets = _resolve_indi_assets(primary_base, date)
 
-    mp4=os.path.join(base,date,f"allsky-{date}.mp4")
-    assets=[]
-
-    if keo:
-        assets.append(("keogram",keo))
-
-    if st:
-        assets.append(("startrail",st))
-
-    if os.path.isfile(mp4):
-        assets.append(("video",mp4))
+    if assets:
+        for asset_name, asset_path in assets:
+            log(f"collect_ok asset={asset_name} path={asset_path}")
+    else:
+        log("collect_no_assets_found")
 
     return assets
+
 
 # -----------------------------------------------------------
 # Jitter
@@ -351,89 +547,78 @@ def _apply_jitter(date):
         log("jitter_seconds=0")
         return
 
-    kamera = getattr(config, "KAMERA_ID", "ASK000")
+    kamera = getattr(config, "KAMERA_ID", None) or getattr(config, "KAMERA", None) or "ASK000"
     seed = f"{kamera}|{date}".encode()
     slot = int(hashlib.sha256(seed).hexdigest()[:8], 16) % window
     log(f"jitter_seconds={slot}")
     time.sleep(slot)
-    
+
+
 # -----------------------------------------------------------
 # Main
 # -----------------------------------------------------------
 def upload_nightly_batch(date=None):
     if date is None:
-        date=(datetime.now()-timedelta(days=1)).strftime("%Y%m%d")
+        date = (datetime.now() - timedelta(days=1)).strftime("%Y%m%d")
 
     log(f"nightly_start {date}")
 
-    assets=_collect(date)
+    assets = _collect(date)
 
     if not assets:
         log("no_assets")
+        _log_nightly_status(3, "batch")
         return False
 
-    prepared=[]
+    prepared = []
 
-    # ---------------------------------------------------
-    # Phase 1: vorbereiten (CPU)
-    # ---------------------------------------------------
-    for asset,path in assets:
-
-        log(f"prepare {asset}")
+    for asset, path in assets:
+        log(f"prepare_start asset={asset} path={path}")
 
         if not _file_ready(path):
-            log("file_not_ready")
+            log(f"prepare_skip_not_ready asset={asset} path={path}")
+            _log_nightly_status(4, asset)
             continue
 
-        tmp=tempfile.mkdtemp(prefix=f"nightly_{asset}_")
+        tmp = tempfile.mkdtemp(prefix=f"nightly_{asset}_")
 
         try:
+            if asset in ("keogram", "startrail"):
+                variants = _create_three(path, tmp)
+                prepared.append(dict(asset=asset, files=variants, tmp=tmp))
 
-            if asset in ("keogram","startrail"):
+            elif asset in ("video", "startrail_video"):
+                video, thumb = _prepare_video(path, tmp)
+                prepared.append(dict(asset=asset, files=(video, thumb), tmp=tmp))
 
-                variants=_create_three(path,tmp)
-
-                prepared.append(
-                    dict(asset=asset,files=variants,tmp=tmp)
-                )
-
-            elif asset=="video":
-
-                video,thumb=_prepare_video(path,tmp)
-
-                prepared.append(
-                    dict(asset=asset,files=(video,thumb),tmp=tmp)
-                )
+            log(f"prepare_ok asset={asset}")
 
         except Exception as e:
-
-            log(f"prepare_failed {e}")
+            log(f"prepare_failed asset={asset} error={e}")
+            _log_nightly_status(2, asset)
 
     if not prepared:
         log("nothing_prepared")
+        _log_nightly_status(2, "batch")
         return False
 
-    # ---------------------------------------------------
-    # Phase 2: Jitter warten
-    # ---------------------------------------------------
     _apply_jitter(date)
 
-    # ---------------------------------------------------
-    # Phase 3: Upload
-    # ---------------------------------------------------
+    any_success = False
+
     for job in prepared:
+        asset = job["asset"]
+        files = job["files"]
 
-        asset=job["asset"]
-        files=job["files"]
-
-        attempt=0
         ok = False
 
         for attempt in range(1, UPLOAD_MAX_RETRIES + 1):
-            log(f"upload {asset} attempt={attempt}/{UPLOAD_MAX_RETRIES}")
+            log(f"upload asset={asset} attempt={attempt}/{UPLOAD_MAX_RETRIES}")
 
             if _upload(asset, date, files, True):
                 ok = True
+                any_success = True
+                _log_nightly_status(1, asset)
                 break
 
             if attempt < UPLOAD_MAX_RETRIES:
@@ -445,11 +630,16 @@ def upload_nightly_batch(date=None):
                 time.sleep(delay)
 
         if not ok:
-            log(f"upload_failed {asset}")
+            log(f"upload_failed asset={asset}")
+            _log_nightly_status(2, asset)
 
-        # temp löschen
-        shutil.rmtree(job["tmp"],ignore_errors=True)
+        shutil.rmtree(job["tmp"], ignore_errors=True)
 
     log("nightly_done")
 
-    return True
+    if any_success:
+        _log_nightly_status(1, "batch")
+    else:
+        _log_nightly_status(2, "batch")
+
+    return any_success
