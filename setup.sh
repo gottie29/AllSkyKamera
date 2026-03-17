@@ -2311,11 +2311,6 @@ CRONTABS = [
         "schedule": "*/5 * * * *",
         "command": "cd ${ROOT_DIR} && /usr/bin/python3 -m scripts.sqm_camera_logger",
     },
-    {
-        "comment": "SQM Plot Generierung",
-        "schedule": "0 8 * * *",
-        "command": "cd ${ROOT_DIR} && /usr/bin/python3 -m scripts.plot_sqm_night",
-    },
 ]
 
 if not INDI:
@@ -2433,7 +2428,7 @@ fi
 
 cd "$ROOT_DIR" || exit 1
 
-if python3 -m scripts.upload_config_json --no-jitter; then
+if python3 -m scripts.upload_config_json --no-wait; then
   if [ "$LANG_CODE" = "de" ]; then
     whiptail --title "Upload erfolgreich" --msgbox "Die Konfiguration wurde erfolgreich auf den Server uebertragen." 8 70
   else

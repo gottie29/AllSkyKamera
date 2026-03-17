@@ -6,26 +6,8 @@ upload_config_json.py
 
 Creates config.json from askutils/config.py and uploads it to the
 AllSkyKamera server via FTP.
-
-Options
--------
---no-jitter
-    Disable the initial upload jitter delay.
-
---dry-run
-    Create config.json but do NOT upload it.
-
---file <name>
-    Custom output filename instead of default "config.json".
-
-Exit codes
-----------
-0  success
-1  JSON creation failed
-2  FTP upload failed
 """
 
-import sys
 import argparse
 from askutils.uploader import config_upload
 from askutils.utils.logger import log
@@ -39,7 +21,13 @@ def parse_args():
     parser.add_argument(
         "--no-jitter",
         action="store_true",
-        help="Disable upload jitter"
+        help="Disable initial upload jitter"
+    )
+
+    parser.add_argument(
+        "--no-wait",
+        action="store_true",
+        help="Disable all waiting (no jitter, no retry sleep)"
     )
 
     parser.add_argument(
@@ -60,13 +48,16 @@ def parse_args():
 def main() -> int:
     args = parse_args()
 
-    use_jitter = not args.no_jitter
+    use_jitter = not (args.no_jitter or args.no_wait)
+    use_retry_sleep = not args.no_wait
 
     if args.no_jitter:
         log("config_upload running with NO jitter")
 
-    json_path = config_upload.create_config_json(args.file)
+    if args.no_wait:
+        log("config_upload running with NO WAIT (no jitter, no retry sleep)")
 
+    json_path = config_upload.create_config_json(args.file)
     if not json_path:
         return 1
 
@@ -74,7 +65,11 @@ def main() -> int:
         log("config_upload dry-run enabled, skipping FTP upload")
         return 0
 
-    ok = config_upload.upload_to_ftp(json_path, use_jitter=use_jitter)
+    ok = config_upload.upload_to_ftp(
+        json_path,
+        use_jitter=use_jitter,
+        use_retry_sleep=use_retry_sleep,
+    )
 
     return 0 if ok else 2
 

@@ -413,7 +413,7 @@ def _upload_once(filepath: str) -> None:
             ftp.storbinary(f"STOR {os.path.basename(filepath)}", f)
 
 
-def upload_to_ftp(filepath: str, use_jitter: bool = True) -> bool:
+def upload_to_ftp(filepath: str, use_jitter: bool = True, use_retry_sleep: bool = True) -> bool:
     """
     Upload mit:
     - Initial Jitter (Default 180s)
@@ -486,4 +486,7 @@ def upload_to_ftp(filepath: str, use_jitter: bool = True) -> bool:
                 return False
 
             # Pause 2-5 Minuten (oder konfiguriert)
-            _sleep_retry_window(retry_min_s, retry_max_s)
+            if use_retry_sleep:
+                _sleep_retry_window(retry_min_s, retry_max_s)
+            else:
+                log("config_upload retry_sleep_disabled")

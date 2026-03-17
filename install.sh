@@ -459,11 +459,6 @@ CRONTABS = [
         "schedule": "*/5 * * * *",
         "command": "cd ${PROJECT_ROOT} && python3 -m scripts.sqm_camera_logger",
     },
-    {
-        "comment": "SQM plot generation",
-        "schedule": "0 8 * * *",
-        "command": "cd ${PROJECT_ROOT} && python3 -m scripts.plot_sqm_night",
-    },
 ]
 
 # Sensor logger cronjobs will be added dynamically by setup.sh
