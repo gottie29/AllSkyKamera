@@ -1,7 +1,10 @@
 Version history
 ----------------
 
-# v2026.02.11_01 & 02 & v2026.02.12_01
+# v2026.03.17_01
+- Rebuild the Upload management and split this to INDI and TJ
+
+# v2026.03.11_01 & 02 & v2026.03.12_01
 - Change the image upload completly
   - reduce the scaling of the image
   - 3 images are uploaded FullHD, Mobile, Thumb to handle the website faster
