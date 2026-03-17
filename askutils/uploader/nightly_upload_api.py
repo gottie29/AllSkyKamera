@@ -275,17 +275,6 @@ def _resolve_indi_assets(base, date):
         log(f"asset_found asset=video path={tl}")
         assets.append(("video", tl))
 
-    stv_patterns = [
-        os.path.join(date_dir, f"allsky-startrail_timelapse_*_{date}_night_*.mp4"),
-        os.path.join(date_dir, f"allsky-startrail_timelapse_*_{date}_night_*.webm"),
-    ]
-    for p in stv_patterns:
-        log(f"asset_pattern asset=startrail_video pattern={p}")
-    stv = _latest(stv_patterns)
-    if stv:
-        log(f"asset_found asset=startrail_video path={stv}")
-        assets.append(("startrail_video", stv))
-
     return assets
 
 
@@ -401,7 +390,7 @@ def _upload(asset, date, datafiles, publish_last):
         return "video/mp4"
 
     try:
-        if asset in ("video", "startrail_video"):
+        if asset == "video":
             v, t = datafiles
 
             if not os.path.isfile(v):
@@ -587,7 +576,7 @@ def upload_nightly_batch(date=None):
                 variants = _create_three(path, tmp)
                 prepared.append(dict(asset=asset, files=variants, tmp=tmp))
 
-            elif asset in ("video", "startrail_video"):
+            elif asset == "video":
                 video, thumb = _prepare_video(path, tmp)
                 prepared.append(dict(asset=asset, files=(video, thumb), tmp=tmp))
 
