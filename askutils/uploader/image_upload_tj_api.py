@@ -279,7 +279,7 @@ def _upload_variants_to_api(variants: dict) -> bool:
 # -----------------------------
 # Main upload
 # -----------------------------
-def upload_image_api(image_path: str = None) -> bool:
+def upload_image_tj_api(image_path: Optional[str] = None) -> bool:
     """
     Lädt eine einzelne Live-Bilddatei per API hoch.
 

@@ -81,7 +81,6 @@ normalize_coord() {
   python3 - "$raw" <<'PY'
 import sys, re
 s = (sys.argv[1] or "").strip().replace(",", ".")
-# erste "normale" Zahl im String finden
 m = re.search(r"[-+]?\d+(?:\.\d+)?", s)
 if not m:
     sys.exit(1)
@@ -125,6 +124,8 @@ LONGITUDE="$(get_val "LONGITUDE")"
 ALLSKY_PATH="$(get_val "ALLSKY_PATH")"
 IMAGE_BASE_PATH="$(get_val "IMAGE_BASE_PATH")"
 IMAGE_PATH="$(get_val "IMAGE_PATH")"
+IMAGE_UPLOAD_SCRIPT="$(get_val "IMAGE_UPLOAD_SCRIPT")"
+NIGHTLY_UPLOAD_SCRIPT="$(get_val "NIGHTLY_UPLOAD_SCRIPT")"
 
 INDI="$(get_val "INDI")"
 CAMERAID="$(get_val "CAMERAID")"
@@ -238,8 +239,6 @@ KPINDEX_LOG_INTERVAL_MIN="$(get_val "KPINDEX_LOG_INTERVAL_MIN")"
 
 # ---------------------------------------------------
 # INDI Erkennung / Normalisierung (frueh, aber OHNE Overlay-Override)
-# Wichtig: Overlays werden spaeter (kurz vor dem Schreiben) hart deaktiviert,
-# damit Menu-Eingaben / get_val nichts "zurueck-ueberschreiben" koennen.
 # ---------------------------------------------------
 INDI_ACTIVE="0"
 if [ "${INDI:-0}" = "1" ] || [ "${INDI:-0}" = "True" ] || [ "${INDI:-0}" = "true" ]; then
@@ -267,10 +266,14 @@ if [ "$INDI_ACTIVE" = "1" ]; then
   [ -z "$ALLSKY_PATH" ] && ALLSKY_PATH="/var/www/html/allsky"
   [ -z "$IMAGE_BASE_PATH" ] && IMAGE_BASE_PATH="images"
   [ -z "$IMAGE_PATH" ] && IMAGE_PATH="tmp"
+  [ -z "$IMAGE_UPLOAD_SCRIPT" ] && IMAGE_UPLOAD_SCRIPT="scripts.run_image_upload_indi_api"
+  [ -z "$NIGHTLY_UPLOAD_SCRIPT" ] && NIGHTLY_UPLOAD_SCRIPT="scripts.run_nightly_upload_indi_api"
 else
   [ -z "$ALLSKY_PATH" ] && ALLSKY_PATH="$HOME/allsky"
   [ -z "$IMAGE_BASE_PATH" ] && IMAGE_BASE_PATH="images"
   [ -z "$IMAGE_PATH" ] && IMAGE_PATH="tmp"
+  [ -z "$IMAGE_UPLOAD_SCRIPT" ] && IMAGE_UPLOAD_SCRIPT="scripts.run_image_upload_tj_api"
+  [ -z "$NIGHTLY_UPLOAD_SCRIPT" ] && NIGHTLY_UPLOAD_SCRIPT="scripts.run_nightly_upload_tj_api"
 fi
 
 [ -z "$CAMERAID" ] && CAMERAID="ccd_002f6961-ba9f-4387-8c2e-09ec5c72f55d"
@@ -410,21 +413,14 @@ MLX_CLOUD_K7="${MLX_CLOUD_K7//,/.}"
 
 # ---------------------------------------------------
 # INDI Fixups (Pfade + CAMERAID) NACH Defaults
-# - Pfade/CameraID fuer INDI automatisch korrigieren
-# (Overlays werden absichtlich NICHT hier ueberschrieben!)
-# ---------------------------------------------------
-# ---------------------------------------------------
-# INDI Fixups (Pfade + CAMERAID) NACH Defaults
-# - Bereits gesetzte Pfade NICHT überschreiben
-# - Nur fehlende Werte ergänzen
 # ---------------------------------------------------
 if [ "$INDI_ACTIVE" = "1" ]; then
   [ -z "$ALLSKY_PATH" ] && ALLSKY_PATH="/var/www/html/allsky"
   [ -z "$IMAGE_BASE_PATH" ] && IMAGE_BASE_PATH="images"
   [ -z "$IMAGE_PATH" ] && IMAGE_PATH="tmp"
+  [ -z "$IMAGE_UPLOAD_SCRIPT" ] && IMAGE_UPLOAD_SCRIPT="scripts.run_image_upload_indi_api"
+  [ -z "$NIGHTLY_UPLOAD_SCRIPT" ] && NIGHTLY_UPLOAD_SCRIPT="scripts.run_nightly_upload_indi_api"
 
-  # Bei Standardpfad liegen die Bilder unter .../images
-  # Bei Custom-Pfad ist ALLSKY_PATH bereits der Bildbasis-Pfad
   if [ "$ALLSKY_PATH" = "/var/www/html/allsky" ]; then
     INDI_IMAGES_DIR="${ALLSKY_PATH}/images"
   else
@@ -437,7 +433,11 @@ if [ "$INDI_ACTIVE" = "1" ]; then
       CAMERAID="${CCD_DIR_NAME}"
     fi
   fi
+else
+  [ -z "$IMAGE_UPLOAD_SCRIPT" ] && IMAGE_UPLOAD_SCRIPT="scripts.run_image_upload_tj_api"
+  [ -z "$NIGHTLY_UPLOAD_SCRIPT" ] && NIGHTLY_UPLOAD_SCRIPT="scripts.run_nightly_upload_tj_api"
 fi
+
 # ---------------------------------------------------
 # Standortdaten-Dialog
 # ---------------------------------------------------
@@ -465,7 +465,6 @@ edit_location() {
     lbl_lon="Longitude (e.g. 13.1234)"
   fi
 
-  # Alte Werte sichern (fuer Rollback)
   local OLD_KAMERA_NAME="$KAMERA_NAME"
   local OLD_STANDORT_NAME="$STANDORT_NAME"
   local OLD_BENUTZER_NAME="$BENUTZER_NAME"
@@ -474,12 +473,10 @@ edit_location() {
   local OLD_LATITUDE="$LATITUDE"
   local OLD_LONGITUDE="$LONGITUDE"
 
-  # Kamera-Name
   tmp=$(whiptail --title "$title" --inputbox "$lbl_cam" 10 70 "$KAMERA_NAME" 3>&1 1>&2 2>&3)
   rc=$?; [ $rc -ne 0 ] && return 0
   KAMERA_NAME="$tmp"
 
-  # Standort
   tmp=$(whiptail --title "$title" --inputbox "$lbl_loc" 10 70 "$STANDORT_NAME" 3>&1 1>&2 2>&3)
   rc=$?; if [ $rc -ne 0 ]; then
     KAMERA_NAME="$OLD_KAMERA_NAME"
@@ -493,7 +490,6 @@ edit_location() {
   fi
   STANDORT_NAME="$tmp"
 
-  # Benutzer
   tmp=$(whiptail --title "$title" --inputbox "$lbl_user" 10 70 "$BENUTZER_NAME" 3>&1 1>&2 2>&3)
   rc=$?; if [ $rc -ne 0 ]; then
     KAMERA_NAME="$OLD_KAMERA_NAME"
@@ -507,7 +503,6 @@ edit_location() {
   fi
   BENUTZER_NAME="$tmp"
 
-  # Kontakt
   tmp=$(whiptail --title "$title" --inputbox "$lbl_mail" 10 70 "$KONTAKT_EMAIL" 3>&1 1>&2 2>&3)
   rc=$?; if [ $rc -ne 0 ]; then
     KAMERA_NAME="$OLD_KAMERA_NAME"
@@ -521,7 +516,6 @@ edit_location() {
   fi
   KONTAKT_EMAIL="$tmp"
 
-  # Webseite
   tmp=$(whiptail --title "$title" --inputbox "$lbl_web" 10 70 "$WEBSEITE" 3>&1 1>&2 2>&3)
   rc=$?; if [ $rc -ne 0 ]; then
     KAMERA_NAME="$OLD_KAMERA_NAME"
@@ -535,7 +529,6 @@ edit_location() {
   fi
   WEBSEITE="$tmp"
 
-  # Latitude
   tmp=$(whiptail --title "$title" --inputbox "$lbl_lat" 10 70 -- "$LATITUDE" 3>&1 1>&2 2>&3)
   rc=$?; if [ $rc -ne 0 ]; then
     KAMERA_NAME="$OLD_KAMERA_NAME"
@@ -549,7 +542,6 @@ edit_location() {
   fi
   LATITUDE="$tmp"
 
-  # Longitude
   tmp=$(whiptail --title "$title" --inputbox "$lbl_lon" 10 70 -- "$LONGITUDE" 3>&1 1>&2 2>&3)
   rc=$?; if [ $rc -ne 0 ]; then
     KAMERA_NAME="$OLD_KAMERA_NAME"
@@ -563,10 +555,8 @@ edit_location() {
   fi
   LONGITUDE="$tmp"
 
-  # Komma → Punkt
   LATITUDE="${LATITUDE//,/.}"
   LONGITUDE="${LONGITUDE//,/.}"
-
 }
 
 # ---------------------------------------------------
@@ -659,146 +649,6 @@ camera_lens_menu() {
       "Z") return 0 ;;
     esac
   done
-}
-
-# ---------------------------------------------------
-# Sensor-Untermenues
-# ---------------------------------------------------
-# (ab hier: unveraendert aus deinem Script – nur weiter unten beim Speichern kommt der INDI-Overlay-Guard)
-# ---------------------------------------------------
-
-edit_bme280() {
-  local title q_enable q_name q_i2c q_int q_ov q_toff q_poff q_hoff rc tmp
-  if [ "$LANG_CODE" = "de" ]; then
-    title="Sensor BME280"
-    q_enable="BME280 (Temp/Feuchte/Druck) aktivieren?"
-    q_name="Name fuer BME280:"
-    q_i2c="I2C-Adresse des BME280 (z.B. 0x76):"
-    q_toff="Temperatur-Offset in °C (BME280_TEMP_OFFSET_C, z.B. 0.0):"
-    q_poff="Druck-Offset in hPa (BME280_PRESS_OFFSET_HPA, z.B. 0.0):"
-    q_hoff="Feuchte-Offset in %-Punkten (BME280_HUM_OFFSET_PCT, z.B. 0.0):"
-    q_int="Logger-Intervall in Minuten (Cronjob-Frequenz):"
-    q_ov="Overlay (Werte im Bild anzeigen)?"
-  else
-    title="Sensor BME280"
-    q_enable="Enable BME280 (temp/humidity/pressure)?"
-    q_name="Name for BME280:"
-    q_i2c="I2C address for BME280 (e.g. 0x76):"
-    q_toff="Temperature offset in °C (BME280_TEMP_OFFSET_C, e.g. 0.0):"
-    q_poff="Pressure offset in hPa (BME280_PRESS_OFFSET_HPA, e.g. 0.0):"
-    q_hoff="Humidity offset in %-points (BME280_HUM_OFFSET_PCT, e.g. 0.0):"
-    q_int="Logger interval in minutes (cronjob frequency):"
-    q_ov="Overlay (show values on image)?"
-  fi
-
-  local OLD_ENABLED="$BME280_ENABLED"
-  local OLD_NAME="$BME280_NAME"
-  local OLD_ADDR="$BME280_I2C_ADDRESS"
-  local OLD_OV="$BME280_OVERLAY"
-  local OLD_INT="$BME280_LOG_INTERVAL_MIN"
-  local OLD_TOFF="$BME280_TEMP_OFFSET_C"
-  local OLD_POFF="$BME280_PRESS_OFFSET_HPA"
-  local OLD_HOFF="$BME280_HUM_OFFSET_PCT"
-
-  whiptail --title "$title" --yesno "$q_enable" 10 70
-  rc=$?
-  if [ $rc -eq 0 ]; then
-    BME280_ENABLED="True"
-  elif [ $rc -eq 1 ]; then
-    BME280_ENABLED="False"
-  else
-    BME280_ENABLED="$OLD_ENABLED"
-    return 0
-  fi
-
-  tmp=$(whiptail --title "$title" --inputbox "$q_name" 10 70 "$BME280_NAME" 3>&1 1>&2 2>&3)
-  rc=$?
-  if [ $rc -ne 0 ]; then
-    BME280_ENABLED="$OLD_ENABLED"
-    BME280_NAME="$OLD_NAME"
-    BME280_I2C_ADDRESS="$OLD_ADDR"
-    BME280_OVERLAY="$OLD_OV"
-    BME280_LOG_INTERVAL_MIN="$OLD_INT"
-    BME280_TEMP_OFFSET_C="$OLD_TOFF"
-    BME280_PRESS_OFFSET_HPA="$OLD_POFF"
-    BME280_HUM_OFFSET_PCT="$OLD_HOFF"
-    return 0
-  fi
-  BME280_NAME="$tmp"
-
-  if [ "$BME280_ENABLED" = "True" ]; then
-    tmp=$(whiptail --title "$title" --inputbox "$q_i2c" 10 70 "$BME280_I2C_ADDRESS" 3>&1 1>&2 2>&3)
-    rc=$?
-    if [ $rc -ne 0 ]; then
-      BME280_ENABLED="$OLD_ENABLED"
-      BME280_NAME="$OLD_NAME"
-      BME280_I2C_ADDRESS="$OLD_ADDR"
-      BME280_OVERLAY="$OLD_OV"
-      BME280_LOG_INTERVAL_MIN="$OLD_INT"
-      BME280_TEMP_OFFSET_C="$OLD_TOFF"
-      BME280_PRESS_OFFSET_HPA="$OLD_POFF"
-      BME280_HUM_OFFSET_PCT="$OLD_HOFF"
-      return 0
-    fi
-    BME280_I2C_ADDRESS="$tmp"
-
-    tmp=$(whiptail --title "$title" --inputbox "$q_toff" 10 70 "$BME280_TEMP_OFFSET_C" 3>&1 1>&2 2>&3)
-    rc=$?; if [ $rc -ne 0 ]; then
-      BME280_ENABLED="$OLD_ENABLED"; BME280_NAME="$OLD_NAME"; BME280_I2C_ADDRESS="$OLD_ADDR"; BME280_OVERLAY="$OLD_OV"; BME280_LOG_INTERVAL_MIN="$OLD_INT"
-      BME280_TEMP_OFFSET_C="$OLD_TOFF"; BME280_PRESS_OFFSET_HPA="$OLD_POFF"; BME280_HUM_OFFSET_PCT="$OLD_HOFF"
-      return 0
-    fi
-    BME280_TEMP_OFFSET_C="${tmp//,/.}"
-
-    tmp=$(whiptail --title "$title" --inputbox "$q_poff" 10 70 "$BME280_PRESS_OFFSET_HPA" 3>&1 1>&2 2>&3)
-    rc=$?; if [ $rc -ne 0 ]; then
-      BME280_ENABLED="$OLD_ENABLED"; BME280_NAME="$OLD_NAME"; BME280_I2C_ADDRESS="$OLD_ADDR"; BME280_OVERLAY="$OLD_OV"; BME280_LOG_INTERVAL_MIN="$OLD_INT"
-      BME280_TEMP_OFFSET_C="$OLD_TOFF"; BME280_PRESS_OFFSET_HPA="$OLD_POFF"; BME280_HUM_OFFSET_PCT="$OLD_HOFF"
-      return 0
-    fi
-    BME280_PRESS_OFFSET_HPA="${tmp//,/.}"
-
-    tmp=$(whiptail --title "$title" --inputbox "$q_hoff" 10 70 "$BME280_HUM_OFFSET_PCT" 3>&1 1>&2 2>&3)
-    rc=$?; if [ $rc -ne 0 ]; then
-      BME280_ENABLED="$OLD_ENABLED"; BME280_NAME="$OLD_NAME"; BME280_I2C_ADDRESS="$OLD_ADDR"; BME280_OVERLAY="$OLD_OV"; BME280_LOG_INTERVAL_MIN="$OLD_INT"
-      BME280_TEMP_OFFSET_C="$OLD_TOFF"; BME280_PRESS_OFFSET_HPA="$OLD_POFF"; BME280_HUM_OFFSET_PCT="$OLD_HOFF"
-      return 0
-    fi
-    BME280_HUM_OFFSET_PCT="${tmp//,/.}"
-
-    tmp=$(whiptail --title "$title" --inputbox "$q_int" 10 70 "$BME280_LOG_INTERVAL_MIN" 3>&1 1>&2 2>&3)
-    rc=$?
-    if [ $rc -ne 0 ]; then
-      BME280_ENABLED="$OLD_ENABLED"
-      BME280_NAME="$OLD_NAME"
-      BME280_I2C_ADDRESS="$OLD_ADDR"
-      BME280_OVERLAY="$OLD_OV"
-      BME280_LOG_INTERVAL_MIN="$OLD_INT"
-      BME280_TEMP_OFFSET_C="$OLD_TOFF"
-      BME280_PRESS_OFFSET_HPA="$OLD_POFF"
-      BME280_HUM_OFFSET_PCT="$OLD_HOFF"
-      return 0
-    fi
-    BME280_LOG_INTERVAL_MIN="$tmp"
-
-    whiptail --title "$title" --yesno "$q_ov" 10 70
-    rc=$?
-    if [ $rc -eq 0 ]; then
-      BME280_OVERLAY="True"
-    elif [ $rc -eq 1 ]; then
-      BME280_OVERLAY="False"
-    else
-      BME280_ENABLED="$OLD_ENABLED"
-      BME280_NAME="$OLD_NAME"
-      BME280_I2C_ADDRESS="$OLD_ADDR"
-      BME280_OVERLAY="$OLD_OV"
-      BME280_LOG_INTERVAL_MIN="$OLD_INT"
-      BME280_TEMP_OFFSET_C="$OLD_TOFF"
-      BME280_PRESS_OFFSET_HPA="$OLD_POFF"
-      BME280_HUM_OFFSET_PCT="$OLD_HOFF"
-      return 0
-    fi
-  fi
 }
 
 # ---------------------------------------------------
@@ -2141,7 +1991,7 @@ Basisjobs:\n\
 - Allsky Raspi-Status (*/1 Min)\n\
 - Allsky Image-Upload (*/2 Min)\n\
 - Config Update (taeglich 12:00)\n\
-- Nightly FTP-Upload (taeglich 08:45)\n\
+- Nightly API-Upload (taeglich 08:45)\n\
 - SQM Messung (alle 5 Min)\n\
 - SQM Plot Generierung (taeglich 08:00)\n\n\
 Sensor-Logger haengen von den *_ENABLED-Flags und *_LOG_INTERVAL_MIN in config.py ab."
@@ -2152,7 +2002,7 @@ Base jobs:\n\
 - Allsky Raspi status (*/1 min)\n\
 - Allsky image upload (*/2 min)\n\
 - Config update (daily 12:00)\n\
-- Nightly FTP upload (daily 08:45)\n\
+- Nightly API upload (daily 08:45)\n\
 - SQM measurement (every 5 min)\n\
 - SQM plot generation (daily 08:00)\n\n\
 Sensor loggers depend on *_ENABLED flags and *_LOG_INTERVAL_MIN in config.py."
@@ -2210,27 +2060,22 @@ done
 
 # ---------------------------------------------------
 # >>> FIX: INDI Final Guard (VOR dem Schreiben der config.py) <<<
-# - Pfade + CAMERAID fuer INDI final setzen
-# - Overlays bei INDI IMMER deaktivieren (Sensoren + KpIndex)
-# Damit kann nichts mehr "aus Versehen" True schreiben.
 # ---------------------------------------------------
 if [ "$INDI_ACTIVE" = "1" ]; then
   INDI="1"
 
-  # Standardpfad nur setzen wenn ALLSKY_PATH leer
   [ -z "$ALLSKY_PATH" ] && ALLSKY_PATH="/var/www/html/allsky"
 
-  # IMAGE_BASE_PATH Logik
   if [ "$ALLSKY_PATH" != "/var/www/html/allsky" ]; then
       IMAGE_BASE_PATH=""
   else
       [ -z "$IMAGE_BASE_PATH" ] && IMAGE_BASE_PATH="images"
   fi
 
-  # IMAGE_PATH nur setzen wenn leer
   [ -z "$IMAGE_PATH" ] && IMAGE_PATH="tmp"
+  [ -z "$IMAGE_UPLOAD_SCRIPT" ] && IMAGE_UPLOAD_SCRIPT="scripts.run_image_upload_indi_api"
+  [ -z "$NIGHTLY_UPLOAD_SCRIPT" ] && NIGHTLY_UPLOAD_SCRIPT="scripts.run_nightly_upload_indi_api"
 
-  # Kamera-ID bestimmen
   if [ "$ALLSKY_PATH" = "/var/www/html/allsky" ]; then
       INDI_IMAGES_DIR="${ALLSKY_PATH}/images"
   else
@@ -2244,7 +2089,6 @@ if [ "$INDI_ACTIVE" = "1" ]; then
       fi
   fi
 
-  # Overlays bei INDI deaktivieren
   BME280_OVERLAY="False"
   TSL2591_OVERLAY="False"
   DS18B20_OVERLAY="False"
@@ -2256,10 +2100,12 @@ if [ "$INDI_ACTIVE" = "1" ]; then
 
 else
   INDI="0"
+  [ -z "$IMAGE_UPLOAD_SCRIPT" ] && IMAGE_UPLOAD_SCRIPT="scripts.run_image_upload_tj_api"
+  [ -z "$NIGHTLY_UPLOAD_SCRIPT" ] && NIGHTLY_UPLOAD_SCRIPT="scripts.run_nightly_upload_tj_api"
 fi
 
 # ---------------------------------------------------
-# config.py neu erzeugen (inkl. *_NAME, Parametern & Intervallen)
+# config.py neu erzeugen
 # ---------------------------------------------------
 
 KAMERA_ID_ESC="$(esc_py_str "$KAMERA_ID")"
@@ -2271,6 +2117,8 @@ WEBSEITE_ESC="$(esc_py_str "$WEBSEITE")"
 ALLSKY_PATH_ESC="$(esc_py_str "$ALLSKY_PATH")"
 IMAGE_BASE_PATH_ESC="$(esc_py_str "$IMAGE_BASE_PATH")"
 IMAGE_PATH_ESC="$(esc_py_str "$IMAGE_PATH")"
+IMAGE_UPLOAD_SCRIPT_ESC="$(esc_py_str "$IMAGE_UPLOAD_SCRIPT")"
+NIGHTLY_UPLOAD_SCRIPT_ESC="$(esc_py_str "$NIGHTLY_UPLOAD_SCRIPT")"
 CAMERAID_ESC="$(esc_py_str "$CAMERAID")"
 
 BME280_NAME_ESC="$(esc_py_str "$BME280_NAME")"
@@ -2282,33 +2130,22 @@ DHT22_NAME_ESC="$(esc_py_str "$DHT22_NAME")"
 HTU21_NAME_ESC="$(esc_py_str "$HTU21_NAME")"
 SHT3X_NAME_ESC="$(esc_py_str "$SHT3X_NAME")"
 
-
-# ---------------------------------------------------
-# FINAL: LAT/LON normalisieren + validieren + ggf. swap
-# ---------------------------------------------------
-
-# Immer normalisieren (auch wenn edit_location nie geoeffnet wurde)
 LATITUDE="${LATITUDE//,/.}"
 LONGITUDE="${LONGITUDE//,/.}"
 
 LAT_NORM="$(normalize_coord "$LATITUDE" 2>/dev/null || true)"
 LON_NORM="$(normalize_coord "$LONGITUDE" 2>/dev/null || true)"
 
-# Fallbacks, damit config.py nie kaputt ist
 [ -z "$LAT_NORM" ] && LAT_NORM="52.12"
 [ -z "$LON_NORM" ] && LON_NORM="13.12"
 
-# Range-Check + Swap-Heuristik (falls vertauscht)
-# Wenn "Latitude" außerhalb ±90 aber "Longitude" innerhalb ±90 -> tauschen
 python3 - "$LAT_NORM" "$LON_NORM" <<'PY' >/tmp/coord_fixed.txt
-import sys, math
+import sys
 lat = float(sys.argv[1]); lon = float(sys.argv[2])
 
-# Swap-Heuristik
 if abs(lat) > 90 and abs(lon) <= 90:
     lat, lon = lon, lat
 
-# Hard clamp? Nein – aber Fallback wenn komplett daneben:
 if abs(lat) > 90 or abs(lon) > 180:
     lat, lon = 52.12, 13.12
 
@@ -2318,7 +2155,6 @@ PY
 LATITUDE="$(sed -n '1p' /tmp/coord_fixed.txt)"
 LONGITUDE="$(sed -n '2p' /tmp/coord_fixed.txt)"
 rm -f /tmp/coord_fixed.txt
-
 
 cat > "$CFG_FILE" <<EOF
 # config.py - automatisch generiert
@@ -2344,6 +2180,8 @@ LONGITUDE      = ${LONGITUDE}
 ALLSKY_PATH     = "${ALLSKY_PATH_ESC}"
 IMAGE_BASE_PATH = "${IMAGE_BASE_PATH_ESC}"
 IMAGE_PATH      = "${IMAGE_PATH_ESC}"
+IMAGE_UPLOAD_SCRIPT = "${IMAGE_UPLOAD_SCRIPT_ESC}"
+NIGHTLY_UPLOAD_SCRIPT = "${NIGHTLY_UPLOAD_SCRIPT_ESC}"
 INDI            = ${INDI}
 CAMERAID        = "${CAMERAID_ESC}"
 
@@ -2439,8 +2277,8 @@ KPINDEX_LOG_INTERVAL_MIN = ${KPINDEX_LOG_INTERVAL_MIN}
 ANALEMMA_ENABLED = ${ANALEMMA_ENABLED}
 KAMERA_WIDTH = ${KAMERA_WIDTH}
 KAMERA_HEIGHT = ${KAMERA_HEIGHT}
-A_SHUTTER = ${A_SHUTTER}       # 1 ms - deutlich kuerzer!
-A_GAIN = ${A_GAIN}             # Kein Gain
+A_SHUTTER = ${A_SHUTTER}
+A_GAIN = ${A_GAIN}
 A_BRIGHTNESS = ${A_BRIGHTNESS}
 A_CONTRAST = ${A_CONTRAST}
 A_SATURATION = ${A_SATURATION}
@@ -2456,7 +2294,7 @@ CRONTABS = [
     {
         "comment": "Allsky Image-Upload API",
         "schedule": "*/2 * * * *",
-        "command": "cd ${ROOT_DIR} && /usr/bin/python3 -m scripts.run_image_upload_api",
+        "command": "cd ${ROOT_DIR} && /usr/bin/python3 -m ${IMAGE_UPLOAD_SCRIPT_ESC}",
     },
     {
         "comment": "Config Update",
@@ -2464,9 +2302,9 @@ CRONTABS = [
         "command": "cd ${ROOT_DIR} && /usr/bin/python3 -m scripts.upload_config_json",
     },
     {
-        "comment": "Nightly FTP-Upload",
+        "comment": "Nightly API-Upload",
         "schedule": "45 8 * * *",
-        "command": "cd ${ROOT_DIR} && /usr/bin/python3 -m scripts.run_nightly_upload_api",
+        "command": "cd ${ROOT_DIR} && /usr/bin/python3 -m ${NIGHTLY_UPLOAD_SCRIPT_ESC}",
     },
     {
         "comment": "SQM Messung",
@@ -2480,8 +2318,6 @@ CRONTABS = [
     },
 ]
 
-# TJ Interface: regelmaessig capture_args.txt als JSON exportieren + hochladen
-# Nur wenn NICHT INDI (INDI == 0)
 if not INDI:
     CRONTABS.append({
         "comment": "TJ Settings Upload",
@@ -2496,7 +2332,6 @@ if INDI:
         "command": "cd ${ROOT_DIR} && /usr/bin/python3 -m scripts.run_indi_settings_upload",
     })
 
-# Sensor-Logger-Cronjobs dynamisch je nach Enabled-Status
 if BME280_ENABLED:
     CRONTABS.append({
         "comment": "BME280 Sensor",
@@ -2560,7 +2395,6 @@ if KPINDEX_ENABLED:
         "command": "cd ${ROOT_DIR} && /usr/bin/python3 -m scripts.kpindex_logger",
     })
 
-
 ###################################################################
 # Nichts aendern !!!
 ###################################################################
@@ -2571,7 +2405,6 @@ FTP_SQM_DIR        = "sqm"
 FTP_ANALEMMA_DIR   = "analemma"
 FTP_STARTRAILSVIDEO_DIR = "startrailsvideo"
 
-# Secrets laden
 from askutils.utils.load_secrets import load_remote_secrets
 _secrets = load_remote_secrets(API_KEY, API_URL)
 if _secrets:
@@ -2620,7 +2453,6 @@ if python3 -m scripts.upload_config_json --no-jitter; then
       whiptail --title "Cronjob update failed" --msgbox "Crontab entries could not be updated automatically.\nPlease check the logs or run manually:\n\npython3 -m scripts.manage_crontabs" 12 80
     fi
   fi
-
 else
   if [ "$LANG_CODE" = "de" ]; then
     whiptail --title "Fehler beim Upload" --msgbox "Das Python-Skript konnte nicht erfolgreich ausgefuehrt werden.\nBitte pruefen Sie die Logs oder fuehren Sie den Upload manuell aus:\n\npython3 -m scripts.upload_config_json" 12 80
