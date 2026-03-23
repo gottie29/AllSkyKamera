@@ -121,3 +121,59 @@ def read_dht22():
 
     t, h = _apply_calibration("DHT22", t, h)
     return round(t, 2), round(h, 2)
+
+def read_dht22_sensor(sensor_cfg: dict):
+    if not isinstance(sensor_cfg, dict):
+        raise RuntimeError("Ungueltige DHT22-Sensorkonfiguration")
+
+    if not sensor_cfg.get("enabled", True):
+        raise RuntimeError("DHT22-Sensor ist deaktiviert")
+
+    pin = _board_pin_from_bcm(sensor_cfg.get("gpio_bcm", 6))
+    retries = sensor_cfg.get("retries", 10)
+    delay = sensor_cfg.get("retry_delay", 0.3)
+
+    dht = adafruit_dht.DHT22(pin, use_pulseio=False)
+    time.sleep(2.0)
+
+    t_min, t_max = _valid_temp_range("DHT22")
+    t, h = _read_median(dht, retries, delay, t_min, t_max)
+    if t is None or h is None:
+        raise RuntimeError("Keine gueltigen DHT22-Werte erhalten")
+
+    t = float(t) + float(sensor_cfg.get("temp_offset_c", 0.0) or 0.0)
+    h = float(h) + float(sensor_cfg.get("hum_offset_pct", 0.0) or 0.0)
+
+    # Clamp wie bisher
+    h_min = float(getattr(config, "DHT22_HUM_MIN_PCT", 0.0) or 0.0)
+    h_max = float(getattr(config, "DHT22_HUM_MAX_PCT", 100.0) or 100.0)
+
+    if t < t_min:
+        t = t_min
+    if t > t_max:
+        t = t_max
+    if h < h_min:
+        h = h_min
+    if h > h_max:
+        h = h_max
+
+    return round(t, 2), round(h, 2)
+
+def get_dht22_sensors():
+    sensors = getattr(config, "DHT22_SENSORS", None)
+    if isinstance(sensors, list) and sensors:
+        return sensors
+
+    if getattr(config, "DHT22_ENABLED", False):
+        return [{
+            "enabled": True,
+            "name": getattr(config, "DHT22_NAME", "DHT22"),
+            "gpio_bcm": getattr(config, "DHT22_GPIO_BCM", 6),
+            "retries": getattr(config, "DHT22_RETRIES", 10),
+            "retry_delay": getattr(config, "DHT22_RETRY_DELAY", 0.3),
+            "overlay": getattr(config, "DHT22_OVERLAY", False),
+            "temp_offset_c": getattr(config, "DHT22_TEMP_OFFSET_C", 0.0),
+            "hum_offset_pct": getattr(config, "DHT22_HUM_OFFSET_PCT", 0.0),
+        }]
+
+    return []

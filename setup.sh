@@ -82,6 +82,34 @@ else:
 EOF
 }
 
+get_dht22_sensor_field() {
+    local idx="$1"
+    local field="$2"
+    python3 - "$CFG_FILE" "$idx" "$field" << 'EOF'
+import sys
+
+path, idx, field = sys.argv[1], int(sys.argv[2]), sys.argv[3]
+text = open(path, 'r', encoding='utf-8').read()
+marker = "###################################################################"
+if marker in text:
+    text = text.split(marker, 1)[0]
+
+ns = {}
+try:
+    code = compile(text, path, "exec")
+    exec(code, ns, ns)
+except Exception:
+    ns = {}
+
+sensors = ns.get("DHT22_SENSORS", [])
+if isinstance(sensors, list) and 0 <= idx < len(sensors) and isinstance(sensors[idx], dict):
+    val = sensors[idx].get(field, "")
+    print(val if val is not None else "")
+else:
+    print("")
+EOF
+}
+
 # Strings fuer Python escapen (fuer Strings in config.py)
 esc_py_str() {
     local s="$1"
@@ -224,6 +252,23 @@ DHT22_RETRIES="$(get_val "DHT22_RETRIES")"
 DHT22_RETRY_DELAY="$(get_val "DHT22_RETRY_DELAY")"
 DHT22_OVERLAY="$(get_val "DHT22_OVERLAY")"
 
+# DHT22 Multi-Sensor (neu)
+DHT22_SENSOR1_NAME="$(get_dht22_sensor_field 0 name)"
+DHT22_SENSOR1_GPIO_BCM="$(get_dht22_sensor_field 0 gpio_bcm)"
+DHT22_SENSOR1_RETRIES="$(get_dht22_sensor_field 0 retries)"
+DHT22_SENSOR1_RETRY_DELAY="$(get_dht22_sensor_field 0 retry_delay)"
+DHT22_SENSOR1_OVERLAY="$(get_dht22_sensor_field 0 overlay)"
+DHT22_SENSOR1_TEMP_OFFSET_C="$(get_dht22_sensor_field 0 temp_offset_c)"
+DHT22_SENSOR1_HUM_OFFSET_PCT="$(get_dht22_sensor_field 0 hum_offset_pct)"
+
+DHT22_SENSOR2_NAME="$(get_dht22_sensor_field 1 name)"
+DHT22_SENSOR2_GPIO_BCM="$(get_dht22_sensor_field 1 gpio_bcm)"
+DHT22_SENSOR2_RETRIES="$(get_dht22_sensor_field 1 retries)"
+DHT22_SENSOR2_RETRY_DELAY="$(get_dht22_sensor_field 1 retry_delay)"
+DHT22_SENSOR2_OVERLAY="$(get_dht22_sensor_field 1 overlay)"
+DHT22_SENSOR2_TEMP_OFFSET_C="$(get_dht22_sensor_field 1 temp_offset_c)"
+DHT22_SENSOR2_HUM_OFFSET_PCT="$(get_dht22_sensor_field 1 hum_offset_pct)"
+
 MLX90614_I2C_ADDRESS="$(get_val "MLX90614_I2C_ADDRESS")"
 
 HTU21_I2C_ADDRESS="$(get_val "HTU21_I2C_ADDRESS")"
@@ -299,6 +344,29 @@ A_SATURATION="$(get_val "A_SATURATION")"
 KPINDEX_ENABLED="$(get_val "KPINDEX_ENABLED")"
 KPINDEX_OVERLAY="$(get_val "KPINDEX_OVERLAY")"
 KPINDEX_LOG_INTERVAL_MIN="$(get_val "KPINDEX_LOG_INTERVAL_MIN")"
+
+# Wenn DHT22_SENSORS vorhanden ist, daraus den echten Status ableiten
+if [ -n "$DHT22_SENSOR1_NAME" ] || [ -n "$DHT22_SENSOR2_NAME" ]; then
+  DHT22_ENABLED="True"
+
+  if [ -n "$DHT22_SENSOR1_NAME" ] && [ -n "$DHT22_SENSOR2_NAME" ] \
+    && [ -n "$DHT22_SENSOR1_GPIO_BCM" ] && [ -n "$DHT22_SENSOR2_GPIO_BCM" ]; then
+    DHT22_SENSOR_COUNT="2"
+  else
+    DHT22_SENSOR_COUNT="1"
+  fi
+
+  # Legacy-Felder aus Sensor 1 spiegeln
+  [ -n "$DHT22_SENSOR1_NAME" ] && DHT22_NAME="$DHT22_SENSOR1_NAME"
+  [ -n "$DHT22_SENSOR1_GPIO_BCM" ] && DHT22_GPIO_BCM="$DHT22_SENSOR1_GPIO_BCM"
+  [ -n "$DHT22_SENSOR1_RETRIES" ] && DHT22_RETRIES="$DHT22_SENSOR1_RETRIES"
+  [ -n "$DHT22_SENSOR1_RETRY_DELAY" ] && DHT22_RETRY_DELAY="$DHT22_SENSOR1_RETRY_DELAY"
+  [ -n "$DHT22_SENSOR1_OVERLAY" ] && DHT22_OVERLAY="$DHT22_SENSOR1_OVERLAY"
+  [ -n "$DHT22_SENSOR1_TEMP_OFFSET_C" ] && DHT22_TEMP_OFFSET_C="$DHT22_SENSOR1_TEMP_OFFSET_C"
+  [ -n "$DHT22_SENSOR1_HUM_OFFSET_PCT" ] && DHT22_HUM_OFFSET_PCT="$DHT22_SENSOR1_HUM_OFFSET_PCT"
+fi
+
+
 
 # ---------------------------------------------------
 # INDI Erkennung / Normalisierung (frueh, aber OHNE Overlay-Override)
@@ -392,10 +460,38 @@ fi
 [ -z "$DHT11_RETRY_DELAY" ] && DHT11_RETRY_DELAY="0.3"
 [ -z "$DHT11_OVERLAY" ] && DHT11_OVERLAY="False"
 
+[ -z "$DHT22_NAME" ] && DHT22_NAME="DHT22"
 [ -z "$DHT22_GPIO_BCM" ] && DHT22_GPIO_BCM="6"
 [ -z "$DHT22_RETRIES" ] && DHT22_RETRIES="5"
 [ -z "$DHT22_RETRY_DELAY" ] && DHT22_RETRY_DELAY="12"
 [ -z "$DHT22_OVERLAY" ] && DHT22_OVERLAY="False"
+[ -z "$DHT22_TEMP_OFFSET_C" ] && DHT22_TEMP_OFFSET_C="0.0"
+[ -z "$DHT22_HUM_OFFSET_PCT" ] && DHT22_HUM_OFFSET_PCT="0.0"
+
+# DHT22 Multi-Sensor Defaults
+# DHT22 Multi-Sensor Defaults
+if [ -n "$DHT22_SENSOR1_NAME" ] && [ -n "$DHT22_SENSOR2_NAME" ] \
+   && [ -n "$DHT22_SENSOR1_GPIO_BCM" ] && [ -n "$DHT22_SENSOR2_GPIO_BCM" ]; then
+  DHT22_SENSOR_COUNT="2"
+else
+  DHT22_SENSOR_COUNT="1"
+fi
+
+[ -z "$DHT22_SENSOR1_NAME" ] && DHT22_SENSOR1_NAME="$DHT22_NAME"
+[ -z "$DHT22_SENSOR1_GPIO_BCM" ] && DHT22_SENSOR1_GPIO_BCM="$DHT22_GPIO_BCM"
+[ -z "$DHT22_SENSOR1_RETRIES" ] && DHT22_SENSOR1_RETRIES="$DHT22_RETRIES"
+[ -z "$DHT22_SENSOR1_RETRY_DELAY" ] && DHT22_SENSOR1_RETRY_DELAY="$DHT22_RETRY_DELAY"
+[ -z "$DHT22_SENSOR1_OVERLAY" ] && DHT22_SENSOR1_OVERLAY="$DHT22_OVERLAY"
+[ -z "$DHT22_SENSOR1_TEMP_OFFSET_C" ] && DHT22_SENSOR1_TEMP_OFFSET_C="$DHT22_TEMP_OFFSET_C"
+[ -z "$DHT22_SENSOR1_HUM_OFFSET_PCT" ] && DHT22_SENSOR1_HUM_OFFSET_PCT="$DHT22_HUM_OFFSET_PCT"
+
+[ -z "$DHT22_SENSOR2_NAME" ] && DHT22_SENSOR2_NAME="Outside DHT22"
+[ -z "$DHT22_SENSOR2_GPIO_BCM" ] && DHT22_SENSOR2_GPIO_BCM="5"
+[ -z "$DHT22_SENSOR2_RETRIES" ] && DHT22_SENSOR2_RETRIES="$DHT22_RETRIES"
+[ -z "$DHT22_SENSOR2_RETRY_DELAY" ] && DHT22_SENSOR2_RETRY_DELAY="$DHT22_RETRY_DELAY"
+[ -z "$DHT22_SENSOR2_OVERLAY" ] && DHT22_SENSOR2_OVERLAY="False"
+[ -z "$DHT22_SENSOR2_TEMP_OFFSET_C" ] && DHT22_SENSOR2_TEMP_OFFSET_C="0.0"
+[ -z "$DHT22_SENSOR2_HUM_OFFSET_PCT" ] && DHT22_SENSOR2_HUM_OFFSET_PCT="0.0"
 
 [ -z "$MLX90614_I2C_ADDRESS" ] && MLX90614_I2C_ADDRESS="0x5a"
 
@@ -413,7 +509,6 @@ fi
 [ -z "$MLX90614_NAME" ] && MLX90614_NAME="MLX90614"
 [ -z "$TSL2591_NAME" ] && TSL2591_NAME="TSL2591"
 [ -z "$DHT11_NAME" ] && DHT11_NAME="DHT11"
-[ -z "$DHT22_NAME" ] && DHT22_NAME="DHT22"
 [ -z "$HTU21_NAME" ] && HTU21_NAME="HTU21 / GY-21"
 [ -z "$SHT3X_NAME" ] && SHT3X_NAME="SHT3x"
 
@@ -451,9 +546,6 @@ fi
 
 [ -z "$DHT11_TEMP_OFFSET_C" ] && DHT11_TEMP_OFFSET_C="0.0"
 [ -z "$DHT11_HUM_OFFSET_PCT" ] && DHT11_HUM_OFFSET_PCT="0.0"
-
-[ -z "$DHT22_TEMP_OFFSET_C" ] && DHT22_TEMP_OFFSET_C="0.0"
-[ -z "$DHT22_HUM_OFFSET_PCT" ] && DHT22_HUM_OFFSET_PCT="0.0"
 
 [ -z "$MLX90614_AMBIENT_OFFSET_C" ] && MLX90614_AMBIENT_OFFSET_C="0.0"
 
@@ -495,6 +587,14 @@ DHT11_TEMP_OFFSET_C="${DHT11_TEMP_OFFSET_C//,/.}"
 DHT11_HUM_OFFSET_PCT="${DHT11_HUM_OFFSET_PCT//,/.}"
 DHT22_TEMP_OFFSET_C="${DHT22_TEMP_OFFSET_C//,/.}"
 DHT22_HUM_OFFSET_PCT="${DHT22_HUM_OFFSET_PCT//,/.}"
+
+DHT22_SENSOR1_RETRY_DELAY="${DHT22_SENSOR1_RETRY_DELAY//,/.}"
+DHT22_SENSOR1_TEMP_OFFSET_C="${DHT22_SENSOR1_TEMP_OFFSET_C//,/.}"
+DHT22_SENSOR1_HUM_OFFSET_PCT="${DHT22_SENSOR1_HUM_OFFSET_PCT//,/.}"
+
+DHT22_SENSOR2_RETRY_DELAY="${DHT22_SENSOR2_RETRY_DELAY//,/.}"
+DHT22_SENSOR2_TEMP_OFFSET_C="${DHT22_SENSOR2_TEMP_OFFSET_C//,/.}"
+DHT22_SENSOR2_HUM_OFFSET_PCT="${DHT22_SENSOR2_HUM_OFFSET_PCT//,/.}"
 
 MLX90614_AMBIENT_OFFSET_C="${MLX90614_AMBIENT_OFFSET_C//,/.}"
 
@@ -1556,10 +1656,15 @@ edit_dht11() {
 }
 
 edit_dht22() {
-  local title q_enable q_name q_gpio q_ret q_delay q_toff q_hoff q_ov q_int rc tmp
+  local title q_enable q_mode q_name q_gpio q_ret q_delay q_toff q_hoff q_ov q_int
+  local q_s1_name q_s1_gpio q_s1_ret q_s1_delay q_s1_toff q_s1_hoff q_s1_ov
+  local q_s2_name q_s2_gpio q_s2_ret q_s2_delay q_s2_toff q_s2_hoff q_s2_ov
+  local rc tmp mode_choice
+
   if [ "$LANG_CODE" = "de" ]; then
     title="Sensor DHT22"
     q_enable="DHT22 aktivieren?"
+    q_mode="Wie viele DHT22-Sensoren sollen verwendet werden?"
     q_name="Name fuer DHT22:"
     q_gpio="GPIO (BCM-Nummer, z.B. 6):"
     q_ret="Anzahl Wiederholungen (DHT22_RETRIES):"
@@ -1568,9 +1673,26 @@ edit_dht22() {
     q_hoff="Feuchte-Offset in %-Punkten (DHT22_HUM_OFFSET_PCT, z.B. 0.0):"
     q_ov="Overlay (Werte im Bild anzeigen)?"
     q_int="Logger-Intervall in Minuten (Cronjob-Frequenz):"
+
+    q_s1_name="Name fuer Sensor 1:"
+    q_s1_gpio="GPIO fuer Sensor 1 (BCM-Nummer, z.B. 6):"
+    q_s1_ret="Anzahl Wiederholungen fuer Sensor 1:"
+    q_s1_delay="Retry-Delay fuer Sensor 1 in Sekunden:"
+    q_s1_toff="Temperatur-Offset fuer Sensor 1 in °C:"
+    q_s1_hoff="Feuchte-Offset fuer Sensor 1 in %-Punkten:"
+    q_s1_ov="Overlay fuer Sensor 1 aktivieren?"
+
+    q_s2_name="Name fuer Sensor 2:"
+    q_s2_gpio="GPIO fuer Sensor 2 (BCM-Nummer, z.B. 5):"
+    q_s2_ret="Anzahl Wiederholungen fuer Sensor 2:"
+    q_s2_delay="Retry-Delay fuer Sensor 2 in Sekunden:"
+    q_s2_toff="Temperatur-Offset fuer Sensor 2 in °C:"
+    q_s2_hoff="Feuchte-Offset fuer Sensor 2 in %-Punkten:"
+    q_s2_ov="Overlay fuer Sensor 2 aktivieren?"
   else
     title="Sensor DHT22"
     q_enable="Enable DHT22?"
+    q_mode="How many DHT22 sensors should be used?"
     q_name="Name for DHT22:"
     q_gpio="GPIO (BCM number, e.g. 6):"
     q_ret="Number of retries (DHT22_RETRIES):"
@@ -1579,6 +1701,22 @@ edit_dht22() {
     q_hoff="Humidity offset in %-points (DHT22_HUM_OFFSET_PCT, e.g. 0.0):"
     q_ov="Overlay (show values on image)?"
     q_int="Logger interval in minutes (cronjob frequency):"
+
+    q_s1_name="Name for sensor 1:"
+    q_s1_gpio="GPIO for sensor 1 (BCM number, e.g. 6):"
+    q_s1_ret="Number of retries for sensor 1:"
+    q_s1_delay="Retry delay for sensor 1 in seconds:"
+    q_s1_toff="Temperature offset for sensor 1 in °C:"
+    q_s1_hoff="Humidity offset for sensor 1 in %-points:"
+    q_s1_ov="Enable overlay for sensor 1?"
+
+    q_s2_name="Name for sensor 2:"
+    q_s2_gpio="GPIO for sensor 2 (BCM number, e.g. 5):"
+    q_s2_ret="Number of retries for sensor 2:"
+    q_s2_delay="Retry delay for sensor 2 in seconds:"
+    q_s2_toff="Temperature offset for sensor 2 in °C:"
+    q_s2_hoff="Humidity offset for sensor 2 in %-points:"
+    q_s2_ov="Enable overlay for sensor 2?"
   fi
 
   local OLD_ENABLED="$DHT22_ENABLED"
@@ -1590,6 +1728,23 @@ edit_dht22() {
   local OLD_INT="$DHT22_LOG_INTERVAL_MIN"
   local OLD_TOFF="$DHT22_TEMP_OFFSET_C"
   local OLD_HOFF="$DHT22_HUM_OFFSET_PCT"
+  local OLD_COUNT="${DHT22_SENSOR_COUNT:-1}"
+
+  local OLD_S1_NAME="$DHT22_SENSOR1_NAME"
+  local OLD_S1_GPIO="$DHT22_SENSOR1_GPIO_BCM"
+  local OLD_S1_RET="$DHT22_SENSOR1_RETRIES"
+  local OLD_S1_DEL="$DHT22_SENSOR1_RETRY_DELAY"
+  local OLD_S1_OV="$DHT22_SENSOR1_OVERLAY"
+  local OLD_S1_TOFF="$DHT22_SENSOR1_TEMP_OFFSET_C"
+  local OLD_S1_HOFF="$DHT22_SENSOR1_HUM_OFFSET_PCT"
+
+  local OLD_S2_NAME="$DHT22_SENSOR2_NAME"
+  local OLD_S2_GPIO="$DHT22_SENSOR2_GPIO_BCM"
+  local OLD_S2_RET="$DHT22_SENSOR2_RETRIES"
+  local OLD_S2_DEL="$DHT22_SENSOR2_RETRY_DELAY"
+  local OLD_S2_OV="$DHT22_SENSOR2_OVERLAY"
+  local OLD_S2_TOFF="$DHT22_SENSOR2_TEMP_OFFSET_C"
+  local OLD_S2_HOFF="$DHT22_SENSOR2_HUM_OFFSET_PCT"
 
   whiptail --title "$title" --yesno "$q_enable" 10 70
   rc=$?
@@ -1597,12 +1752,17 @@ edit_dht22() {
     DHT22_ENABLED="True"
   elif [ $rc -eq 1 ]; then
     DHT22_ENABLED="False"
+    DHT22_SENSOR_COUNT="1"
+    return 0
   else
     DHT22_ENABLED="$OLD_ENABLED"
     return 0
   fi
 
-  tmp=$(whiptail --title "$title" --inputbox "$q_name" 10 70 "$DHT22_NAME" 3>&1 1>&2 2>&3)
+  mode_choice=$(whiptail --title "$title" --menu "$q_mode" 15 70 3 \
+    "1" "1 DHT22" \
+    "2" "2 DHT22" \
+    3>&1 1>&2 2>&3)
   rc=$?
   if [ $rc -ne 0 ]; then
     DHT22_ENABLED="$OLD_ENABLED"
@@ -1614,23 +1774,43 @@ edit_dht22() {
     DHT22_LOG_INTERVAL_MIN="$OLD_INT"
     DHT22_TEMP_OFFSET_C="$OLD_TOFF"
     DHT22_HUM_OFFSET_PCT="$OLD_HOFF"
+    DHT22_SENSOR_COUNT="$OLD_COUNT"
+
+    DHT22_SENSOR1_NAME="$OLD_S1_NAME"
+    DHT22_SENSOR1_GPIO_BCM="$OLD_S1_GPIO"
+    DHT22_SENSOR1_RETRIES="$OLD_S1_RET"
+    DHT22_SENSOR1_RETRY_DELAY="$OLD_S1_DEL"
+    DHT22_SENSOR1_OVERLAY="$OLD_S1_OV"
+    DHT22_SENSOR1_TEMP_OFFSET_C="$OLD_S1_TOFF"
+    DHT22_SENSOR1_HUM_OFFSET_PCT="$OLD_S1_HOFF"
+
+    DHT22_SENSOR2_NAME="$OLD_S2_NAME"
+    DHT22_SENSOR2_GPIO_BCM="$OLD_S2_GPIO"
+    DHT22_SENSOR2_RETRIES="$OLD_S2_RET"
+    DHT22_SENSOR2_RETRY_DELAY="$OLD_S2_DEL"
+    DHT22_SENSOR2_OVERLAY="$OLD_S2_OV"
+    DHT22_SENSOR2_TEMP_OFFSET_C="$OLD_S2_TOFF"
+    DHT22_SENSOR2_HUM_OFFSET_PCT="$OLD_S2_HOFF"
     return 0
   fi
-  DHT22_NAME="$tmp"
 
-  if [ "$DHT22_ENABLED" = "True" ]; then
+  DHT22_SENSOR_COUNT="$mode_choice"
+
+  if [ "$DHT22_SENSOR_COUNT" = "1" ]; then
+    tmp=$(whiptail --title "$title" --inputbox "$q_name" 10 70 "$DHT22_NAME" 3>&1 1>&2 2>&3)
+    rc=$?
+    if [ $rc -ne 0 ]; then
+      DHT22_ENABLED="$OLD_ENABLED"; DHT22_NAME="$OLD_NAME"; DHT22_GPIO_BCM="$OLD_GPIO"; DHT22_RETRIES="$OLD_RET"; DHT22_RETRY_DELAY="$OLD_DEL"
+      DHT22_OVERLAY="$OLD_OV"; DHT22_LOG_INTERVAL_MIN="$OLD_INT"; DHT22_TEMP_OFFSET_C="$OLD_TOFF"; DHT22_HUM_OFFSET_PCT="$OLD_HOFF"; DHT22_SENSOR_COUNT="$OLD_COUNT"
+      return 0
+    fi
+    DHT22_NAME="$tmp"
+
     tmp=$(whiptail --title "$title" --inputbox "$q_gpio" 10 70 "$DHT22_GPIO_BCM" 3>&1 1>&2 2>&3)
     rc=$?
     if [ $rc -ne 0 ]; then
-      DHT22_ENABLED="$OLD_ENABLED"
-      DHT22_NAME="$OLD_NAME"
-      DHT22_GPIO_BCM="$OLD_GPIO"
-      DHT22_RETRIES="$OLD_RET"
-      DHT22_RETRY_DELAY="$OLD_DEL"
-      DHT22_OVERLAY="$OLD_OV"
-      DHT22_LOG_INTERVAL_MIN="$OLD_INT"
-      DHT22_TEMP_OFFSET_C="$OLD_TOFF"
-      DHT22_HUM_OFFSET_PCT="$OLD_HOFF"
+      DHT22_ENABLED="$OLD_ENABLED"; DHT22_NAME="$OLD_NAME"; DHT22_GPIO_BCM="$OLD_GPIO"; DHT22_RETRIES="$OLD_RET"; DHT22_RETRY_DELAY="$OLD_DEL"
+      DHT22_OVERLAY="$OLD_OV"; DHT22_LOG_INTERVAL_MIN="$OLD_INT"; DHT22_TEMP_OFFSET_C="$OLD_TOFF"; DHT22_HUM_OFFSET_PCT="$OLD_HOFF"; DHT22_SENSOR_COUNT="$OLD_COUNT"
       return 0
     fi
     DHT22_GPIO_BCM="$tmp"
@@ -1638,15 +1818,8 @@ edit_dht22() {
     tmp=$(whiptail --title "$title" --inputbox "$q_ret" 10 70 "$DHT22_RETRIES" 3>&1 1>&2 2>&3)
     rc=$?
     if [ $rc -ne 0 ]; then
-      DHT22_ENABLED="$OLD_ENABLED"
-      DHT22_NAME="$OLD_NAME"
-      DHT22_GPIO_BCM="$OLD_GPIO"
-      DHT22_RETRIES="$OLD_RET"
-      DHT22_RETRY_DELAY="$OLD_DEL"
-      DHT22_OVERLAY="$OLD_OV"
-      DHT22_LOG_INTERVAL_MIN="$OLD_INT"
-      DHT22_TEMP_OFFSET_C="$OLD_TOFF"
-      DHT22_HUM_OFFSET_PCT="$OLD_HOFF"
+      DHT22_ENABLED="$OLD_ENABLED"; DHT22_NAME="$OLD_NAME"; DHT22_GPIO_BCM="$OLD_GPIO"; DHT22_RETRIES="$OLD_RET"; DHT22_RETRY_DELAY="$OLD_DEL"
+      DHT22_OVERLAY="$OLD_OV"; DHT22_LOG_INTERVAL_MIN="$OLD_INT"; DHT22_TEMP_OFFSET_C="$OLD_TOFF"; DHT22_HUM_OFFSET_PCT="$OLD_HOFF"; DHT22_SENSOR_COUNT="$OLD_COUNT"
       return 0
     fi
     DHT22_RETRIES="$tmp"
@@ -1654,31 +1827,26 @@ edit_dht22() {
     tmp=$(whiptail --title "$title" --inputbox "$q_delay" 10 70 "$DHT22_RETRY_DELAY" 3>&1 1>&2 2>&3)
     rc=$?
     if [ $rc -ne 0 ]; then
-      DHT22_ENABLED="$OLD_ENABLED"
-      DHT22_NAME="$OLD_NAME"
-      DHT22_GPIO_BCM="$OLD_GPIO"
-      DHT22_RETRIES="$OLD_RET"
-      DHT22_RETRY_DELAY="$OLD_DEL"
-      DHT22_OVERLAY="$OLD_OV"
-      DHT22_LOG_INTERVAL_MIN="$OLD_INT"
-      DHT22_TEMP_OFFSET_C="$OLD_TOFF"
-      DHT22_HUM_OFFSET_PCT="$OLD_HOFF"
+      DHT22_ENABLED="$OLD_ENABLED"; DHT22_NAME="$OLD_NAME"; DHT22_GPIO_BCM="$OLD_GPIO"; DHT22_RETRIES="$OLD_RET"; DHT22_RETRY_DELAY="$OLD_DEL"
+      DHT22_OVERLAY="$OLD_OV"; DHT22_LOG_INTERVAL_MIN="$OLD_INT"; DHT22_TEMP_OFFSET_C="$OLD_TOFF"; DHT22_HUM_OFFSET_PCT="$OLD_HOFF"; DHT22_SENSOR_COUNT="$OLD_COUNT"
       return 0
     fi
     DHT22_RETRY_DELAY="${tmp//,/.}"
 
     tmp=$(whiptail --title "$title" --inputbox "$q_toff" 10 70 "$DHT22_TEMP_OFFSET_C" 3>&1 1>&2 2>&3)
-    rc=$?; if [ $rc -ne 0 ]; then
-      DHT22_ENABLED="$OLD_ENABLED"; DHT22_NAME="$OLD_NAME"; DHT22_GPIO_BCM="$OLD_GPIO"; DHT22_RETRIES="$OLD_RET"; DHT22_RETRY_DELAY="$OLD_DEL"; DHT22_OVERLAY="$OLD_OV"; DHT22_LOG_INTERVAL_MIN="$OLD_INT"
-      DHT22_TEMP_OFFSET_C="$OLD_TOFF"; DHT22_HUM_OFFSET_PCT="$OLD_HOFF"
+    rc=$?
+    if [ $rc -ne 0 ]; then
+      DHT22_ENABLED="$OLD_ENABLED"; DHT22_NAME="$OLD_NAME"; DHT22_GPIO_BCM="$OLD_GPIO"; DHT22_RETRIES="$OLD_RET"; DHT22_RETRY_DELAY="$OLD_DEL"
+      DHT22_OVERLAY="$OLD_OV"; DHT22_LOG_INTERVAL_MIN="$OLD_INT"; DHT22_TEMP_OFFSET_C="$OLD_TOFF"; DHT22_HUM_OFFSET_PCT="$OLD_HOFF"; DHT22_SENSOR_COUNT="$OLD_COUNT"
       return 0
     fi
     DHT22_TEMP_OFFSET_C="${tmp//,/.}"
 
     tmp=$(whiptail --title "$title" --inputbox "$q_hoff" 10 70 "$DHT22_HUM_OFFSET_PCT" 3>&1 1>&2 2>&3)
-    rc=$?; if [ $rc -ne 0 ]; then
-      DHT22_ENABLED="$OLD_ENABLED"; DHT22_NAME="$OLD_NAME"; DHT22_GPIO_BCM="$OLD_GPIO"; DHT22_RETRIES="$OLD_RET"; DHT22_RETRY_DELAY="$OLD_DEL"; DHT22_OVERLAY="$OLD_OV"; DHT22_LOG_INTERVAL_MIN="$OLD_INT"
-      DHT22_TEMP_OFFSET_C="$OLD_TOFF"; DHT22_HUM_OFFSET_PCT="$OLD_HOFF"
+    rc=$?
+    if [ $rc -ne 0 ]; then
+      DHT22_ENABLED="$OLD_ENABLED"; DHT22_NAME="$OLD_NAME"; DHT22_GPIO_BCM="$OLD_GPIO"; DHT22_RETRIES="$OLD_RET"; DHT22_RETRY_DELAY="$OLD_DEL"
+      DHT22_OVERLAY="$OLD_OV"; DHT22_LOG_INTERVAL_MIN="$OLD_INT"; DHT22_TEMP_OFFSET_C="$OLD_TOFF"; DHT22_HUM_OFFSET_PCT="$OLD_HOFF"; DHT22_SENSOR_COUNT="$OLD_COUNT"
       return 0
     fi
     DHT22_HUM_OFFSET_PCT="${tmp//,/.}"
@@ -1690,33 +1858,124 @@ edit_dht22() {
     elif [ $rc -eq 1 ]; then
       DHT22_OVERLAY="False"
     else
-      DHT22_ENABLED="$OLD_ENABLED"
-      DHT22_NAME="$OLD_NAME"
-      DHT22_GPIO_BCM="$OLD_GPIO"
-      DHT22_RETRIES="$OLD_RET"
-      DHT22_RETRY_DELAY="$OLD_DEL"
-      DHT22_OVERLAY="$OLD_OV"
-      DHT22_LOG_INTERVAL_MIN="$OLD_INT"
-      DHT22_TEMP_OFFSET_C="$OLD_TOFF"
-      DHT22_HUM_OFFSET_PCT="$OLD_HOFF"
+      DHT22_ENABLED="$OLD_ENABLED"; DHT22_NAME="$OLD_NAME"; DHT22_GPIO_BCM="$OLD_GPIO"; DHT22_RETRIES="$OLD_RET"; DHT22_RETRY_DELAY="$OLD_DEL"
+      DHT22_OVERLAY="$OLD_OV"; DHT22_LOG_INTERVAL_MIN="$OLD_INT"; DHT22_TEMP_OFFSET_C="$OLD_TOFF"; DHT22_HUM_OFFSET_PCT="$OLD_HOFF"; DHT22_SENSOR_COUNT="$OLD_COUNT"
       return 0
     fi
 
     tmp=$(whiptail --title "$title" --inputbox "$q_int" 10 70 "$DHT22_LOG_INTERVAL_MIN" 3>&1 1>&2 2>&3)
     rc=$?
     if [ $rc -ne 0 ]; then
-      DHT22_ENABLED="$OLD_ENABLED"
-      DHT22_NAME="$OLD_NAME"
-      DHT22_GPIO_BCM="$OLD_GPIO"
-      DHT22_RETRIES="$OLD_RET"
-      DHT22_RETRY_DELAY="$OLD_DEL"
-      DHT22_OVERLAY="$OLD_OV"
-      DHT22_LOG_INTERVAL_MIN="$OLD_INT"
-      DHT22_TEMP_OFFSET_C="$OLD_TOFF"
-      DHT22_HUM_OFFSET_PCT="$OLD_HOFF"
+      DHT22_ENABLED="$OLD_ENABLED"; DHT22_NAME="$OLD_NAME"; DHT22_GPIO_BCM="$OLD_GPIO"; DHT22_RETRIES="$OLD_RET"; DHT22_RETRY_DELAY="$OLD_DEL"
+      DHT22_OVERLAY="$OLD_OV"; DHT22_LOG_INTERVAL_MIN="$OLD_INT"; DHT22_TEMP_OFFSET_C="$OLD_TOFF"; DHT22_HUM_OFFSET_PCT="$OLD_HOFF"; DHT22_SENSOR_COUNT="$OLD_COUNT"
       return 0
     fi
     DHT22_LOG_INTERVAL_MIN="$tmp"
+
+    # Sensor 1 mit alten Werten spiegeln
+    DHT22_SENSOR1_NAME="$DHT22_NAME"
+    DHT22_SENSOR1_GPIO_BCM="$DHT22_GPIO_BCM"
+    DHT22_SENSOR1_RETRIES="$DHT22_RETRIES"
+    DHT22_SENSOR1_RETRY_DELAY="$DHT22_RETRY_DELAY"
+    DHT22_SENSOR1_OVERLAY="$DHT22_OVERLAY"
+    DHT22_SENSOR1_TEMP_OFFSET_C="$DHT22_TEMP_OFFSET_C"
+    DHT22_SENSOR1_HUM_OFFSET_PCT="$DHT22_HUM_OFFSET_PCT"
+
+    # Sensor 2 neutral halten
+    DHT22_SENSOR2_NAME="Outside DHT22"
+    DHT22_SENSOR2_GPIO_BCM="5"
+    DHT22_SENSOR2_RETRIES="$DHT22_RETRIES"
+    DHT22_SENSOR2_RETRY_DELAY="$DHT22_RETRY_DELAY"
+    DHT22_SENSOR2_OVERLAY="False"
+    DHT22_SENSOR2_TEMP_OFFSET_C="0.0"
+    DHT22_SENSOR2_HUM_OFFSET_PCT="0.0"
+
+  else
+    tmp=$(whiptail --title "$title" --inputbox "$q_int" 10 70 "$DHT22_LOG_INTERVAL_MIN" 3>&1 1>&2 2>&3)
+    rc=$?
+    if [ $rc -ne 0 ]; then
+      DHT22_ENABLED="$OLD_ENABLED"
+      DHT22_SENSOR_COUNT="$OLD_COUNT"
+      return 0
+    fi
+    DHT22_LOG_INTERVAL_MIN="$tmp"
+
+    tmp=$(whiptail --title "$title" --inputbox "$q_s1_name" 10 70 "$DHT22_SENSOR1_NAME" 3>&1 1>&2 2>&3)
+    rc=$?; [ $rc -ne 0 ] && return 0
+    DHT22_SENSOR1_NAME="$tmp"
+
+    tmp=$(whiptail --title "$title" --inputbox "$q_s1_gpio" 10 70 "$DHT22_SENSOR1_GPIO_BCM" 3>&1 1>&2 2>&3)
+    rc=$?; [ $rc -ne 0 ] && return 0
+    DHT22_SENSOR1_GPIO_BCM="$tmp"
+
+    tmp=$(whiptail --title "$title" --inputbox "$q_s1_ret" 10 70 "$DHT22_SENSOR1_RETRIES" 3>&1 1>&2 2>&3)
+    rc=$?; [ $rc -ne 0 ] && return 0
+    DHT22_SENSOR1_RETRIES="$tmp"
+
+    tmp=$(whiptail --title "$title" --inputbox "$q_s1_delay" 10 70 "$DHT22_SENSOR1_RETRY_DELAY" 3>&1 1>&2 2>&3)
+    rc=$?; [ $rc -ne 0 ] && return 0
+    DHT22_SENSOR1_RETRY_DELAY="${tmp//,/.}"
+
+    tmp=$(whiptail --title "$title" --inputbox "$q_s1_toff" 10 70 "$DHT22_SENSOR1_TEMP_OFFSET_C" 3>&1 1>&2 2>&3)
+    rc=$?; [ $rc -ne 0 ] && return 0
+    DHT22_SENSOR1_TEMP_OFFSET_C="${tmp//,/.}"
+
+    tmp=$(whiptail --title "$title" --inputbox "$q_s1_hoff" 10 70 "$DHT22_SENSOR1_HUM_OFFSET_PCT" 3>&1 1>&2 2>&3)
+    rc=$?; [ $rc -ne 0 ] && return 0
+    DHT22_SENSOR1_HUM_OFFSET_PCT="${tmp//,/.}"
+
+    whiptail --title "$title" --yesno "$q_s1_ov" 10 70
+    rc=$?
+    if [ $rc -eq 0 ]; then
+      DHT22_SENSOR1_OVERLAY="True"
+    elif [ $rc -eq 1 ]; then
+      DHT22_SENSOR1_OVERLAY="False"
+    else
+      return 0
+    fi
+
+    tmp=$(whiptail --title "$title" --inputbox "$q_s2_name" 10 70 "$DHT22_SENSOR2_NAME" 3>&1 1>&2 2>&3)
+    rc=$?; [ $rc -ne 0 ] && return 0
+    DHT22_SENSOR2_NAME="$tmp"
+
+    tmp=$(whiptail --title "$title" --inputbox "$q_s2_gpio" 10 70 "$DHT22_SENSOR2_GPIO_BCM" 3>&1 1>&2 2>&3)
+    rc=$?; [ $rc -ne 0 ] && return 0
+    DHT22_SENSOR2_GPIO_BCM="$tmp"
+
+    tmp=$(whiptail --title "$title" --inputbox "$q_s2_ret" 10 70 "$DHT22_SENSOR2_RETRIES" 3>&1 1>&2 2>&3)
+    rc=$?; [ $rc -ne 0 ] && return 0
+    DHT22_SENSOR2_RETRIES="$tmp"
+
+    tmp=$(whiptail --title "$title" --inputbox "$q_s2_delay" 10 70 "$DHT22_SENSOR2_RETRY_DELAY" 3>&1 1>&2 2>&3)
+    rc=$?; [ $rc -ne 0 ] && return 0
+    DHT22_SENSOR2_RETRY_DELAY="${tmp//,/.}"
+
+    tmp=$(whiptail --title "$title" --inputbox "$q_s2_toff" 10 70 "$DHT22_SENSOR2_TEMP_OFFSET_C" 3>&1 1>&2 2>&3)
+    rc=$?; [ $rc -ne 0 ] && return 0
+    DHT22_SENSOR2_TEMP_OFFSET_C="${tmp//,/.}"
+
+    tmp=$(whiptail --title "$title" --inputbox "$q_s2_hoff" 10 70 "$DHT22_SENSOR2_HUM_OFFSET_PCT" 3>&1 1>&2 2>&3)
+    rc=$?; [ $rc -ne 0 ] && return 0
+    DHT22_SENSOR2_HUM_OFFSET_PCT="${tmp//,/.}"
+
+    whiptail --title "$title" --yesno "$q_s2_ov" 10 70
+    rc=$?
+    if [ $rc -eq 0 ]; then
+      DHT22_SENSOR2_OVERLAY="True"
+    elif [ $rc -eq 1 ]; then
+      DHT22_SENSOR2_OVERLAY="False"
+    else
+      return 0
+    fi
+
+    # Legacy-Felder befuellen
+    DHT22_NAME="$DHT22_SENSOR1_NAME"
+    DHT22_GPIO_BCM="$DHT22_SENSOR1_GPIO_BCM"
+    DHT22_RETRIES="$DHT22_SENSOR1_RETRIES"
+    DHT22_RETRY_DELAY="$DHT22_SENSOR1_RETRY_DELAY"
+    DHT22_OVERLAY="False"
+    DHT22_TEMP_OFFSET_C="$DHT22_SENSOR1_TEMP_OFFSET_C"
+    DHT22_HUM_OFFSET_PCT="$DHT22_SENSOR1_HUM_OFFSET_PCT"
   fi
 }
 
@@ -2346,6 +2605,8 @@ if [ "$INDI_ACTIVE" = "1" ]; then
   DS18B20_OVERLAY="False"
   DHT11_OVERLAY="False"
   DHT22_OVERLAY="False"
+  DHT22_SENSOR1_OVERLAY="False"
+  DHT22_SENSOR2_OVERLAY="False"
   HTU21_OVERLAY="False"
   SHT3X_OVERLAY="False"
   KPINDEX_OVERLAY="False"
@@ -2380,7 +2641,11 @@ DS18B20_NAME_ESC="$(esc_py_str "$DS18B20_NAME")"
 MLX90614_NAME_ESC="$(esc_py_str "$MLX90614_NAME")"
 TSL2591_NAME_ESC="$(esc_py_str "$TSL2591_NAME")"
 DHT11_NAME_ESC="$(esc_py_str "$DHT11_NAME")"
+
 DHT22_NAME_ESC="$(esc_py_str "$DHT22_NAME")"
+DHT22_SENSOR1_NAME_ESC="$(esc_py_str "$DHT22_SENSOR1_NAME")"
+DHT22_SENSOR2_NAME_ESC="$(esc_py_str "$DHT22_SENSOR2_NAME")"
+
 HTU21_NAME_ESC="$(esc_py_str "$HTU21_NAME")"
 SHT3X_NAME_ESC="$(esc_py_str "$SHT3X_NAME")"
 
@@ -2510,6 +2775,40 @@ DHT11_OVERLAY      = ${DHT11_OVERLAY}
 DHT11_TEMP_OFFSET_C    = ${DHT11_TEMP_OFFSET_C}
 DHT11_HUM_OFFSET_PCT   = ${DHT11_HUM_OFFSET_PCT}
 
+EOF
+
+if [ "${DHT22_SENSOR_COUNT:-1}" = "2" ] && [ "$DHT22_ENABLED" = "True" ]; then
+cat >> "$CFG_FILE" <<EOF
+
+# DHT22
+DHT22_ENABLED = True
+
+DHT22_SENSORS = [
+    {
+        "enabled": True,
+        "name": "${DHT22_SENSOR1_NAME_ESC}",
+        "gpio_bcm": ${DHT22_SENSOR1_GPIO_BCM},
+        "retries": ${DHT22_SENSOR1_RETRIES},
+        "retry_delay": ${DHT22_SENSOR1_RETRY_DELAY},
+        "overlay": ${DHT22_SENSOR1_OVERLAY},
+        "temp_offset_c": ${DHT22_SENSOR1_TEMP_OFFSET_C},
+        "hum_offset_pct": ${DHT22_SENSOR1_HUM_OFFSET_PCT},
+    },
+    {
+        "enabled": True,
+        "name": "${DHT22_SENSOR2_NAME_ESC}",
+        "gpio_bcm": ${DHT22_SENSOR2_GPIO_BCM},
+        "retries": ${DHT22_SENSOR2_RETRIES},
+        "retry_delay": ${DHT22_SENSOR2_RETRY_DELAY},
+        "overlay": ${DHT22_SENSOR2_OVERLAY},
+        "temp_offset_c": ${DHT22_SENSOR2_TEMP_OFFSET_C},
+        "hum_offset_pct": ${DHT22_SENSOR2_HUM_OFFSET_PCT},
+    }
+]
+EOF
+else
+cat >> "$CFG_FILE" <<EOF
+
 # DHT22
 DHT22_ENABLED      = ${DHT22_ENABLED}
 DHT22_NAME         = "${DHT22_NAME_ESC}"
@@ -2519,6 +2818,10 @@ DHT22_RETRY_DELAY  = ${DHT22_RETRY_DELAY}
 DHT22_OVERLAY      = ${DHT22_OVERLAY}
 DHT22_TEMP_OFFSET_C    = ${DHT22_TEMP_OFFSET_C}
 DHT22_HUM_OFFSET_PCT   = ${DHT22_HUM_OFFSET_PCT}
+EOF
+fi
+
+cat >> "$CFG_FILE" <<EOF
 
 MLX90614_ENABLED     = ${MLX90614_ENABLED}
 MLX90614_NAME        = "${MLX90614_NAME_ESC}"

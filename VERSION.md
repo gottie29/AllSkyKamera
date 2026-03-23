@@ -6,6 +6,7 @@ Version history
 - BME280 now supports two sensors
 - setup.sh adapted with selection for 1 or 2 BME280 sensors
 - Configuration transfer with multi-BME280 handling
+- Multi-Sensor-Handlinhg for DHT22 with setup etc. - similar to BME280
 
 # v2026.03.17_01
 - Rebuild the Upload management and split this to INDI and TJ
