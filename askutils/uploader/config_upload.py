@@ -132,6 +132,8 @@ OPTIONAL_FIELDS = [
     "BME280_PRESS_OFFSET_HPA",
     "BME280_HUM_OFFSET_PCT",
 
+    "BME280_SENSORS",
+
     "TSL2591_ENABLED",
     "TSL2591_NAME",
     "TSL2591_I2C_ADDRESS",
@@ -329,23 +331,34 @@ def _json_safe(value, key: str = ""):
     """
     Macht Werte JSON-sicher:
     - bytes -> decode
-    - LATITUDE/LONGITUDE -> float mit 4 Nachkommazeichen
-    - I2C-Adressen (int, nur *_I2C_ADDRESS) -> hex-string ("0x76")
-    - sonst: unveraendert
+    - LAT/LON -> float
+    - I2C-Adressen -> hex-string
+    - LISTEN/DICT rekursiv behandeln
     """
     try:
         if isinstance(value, (bytes, bytearray)):
             return value.decode("utf-8", errors="replace")
 
-        # LAT/LON immer als float mit 4 Nachkommazeichen (numerisch in JSON)
+        # Rekursiv für dict
+        if isinstance(value, dict):
+            return {k: _json_safe(v, k) for k, v in value.items()}
+
+        # Rekursiv für list
+        if isinstance(value, list):
+            return [_json_safe(v, key) for v in value]
+
+        # LAT/LON
         if key in ("LATITUDE", "LONGITUDE"):
             return round(float(value), 4)
 
-        # Nur echte I2C-Adressen als Hex exportieren
-        if isinstance(value, int) and key.endswith("_I2C_ADDRESS"):
+        # I2C-Adressen (nur passende Keys)
+        if isinstance(value, int) and (
+            key.endswith("_I2C_ADDRESS") or key == "address"
+        ):
             return f"0x{value:02x}"
 
         return value
+
     except Exception:
         return str(value)
 

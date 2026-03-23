@@ -54,6 +54,34 @@ print(val if val is not None else "")
 EOF
 }
 
+get_bme_sensor_field() {
+    local idx="$1"
+    local field="$2"
+    python3 - "$CFG_FILE" "$idx" "$field" << 'EOF'
+import sys
+
+path, idx, field = sys.argv[1], int(sys.argv[2]), sys.argv[3]
+text = open(path, 'r', encoding='utf-8').read()
+marker = "###################################################################"
+if marker in text:
+    text = text.split(marker, 1)[0]
+
+ns = {}
+try:
+    code = compile(text, path, "exec")
+    exec(code, ns, ns)
+except Exception:
+    ns = {}
+
+sensors = ns.get("BME280_SENSORS", [])
+if isinstance(sensors, list) and 0 <= idx < len(sensors) and isinstance(sensors[idx], dict):
+    val = sensors[idx].get(field, "")
+    print(val if val is not None else "")
+else:
+    print("")
+EOF
+}
+
 # Strings fuer Python escapen (fuer Strings in config.py)
 esc_py_str() {
     local s="$1"
@@ -143,6 +171,41 @@ SHT3X_ENABLED="$(get_val "SHT3X_ENABLED")"
 # Sensor-Parameter (alt)
 BME280_I2C_ADDRESS="$(get_val "BME280_I2C_ADDRESS")"
 BME280_OVERLAY="$(get_val "BME280_OVERLAY")"
+
+# BME280 Multi-Sensor (neu)
+BME280_SENSOR1_NAME="$(get_bme_sensor_field 0 name)"
+BME280_SENSOR1_ADDRESS="$(get_bme_sensor_field 0 address)"
+BME280_SENSOR1_OVERLAY="$(get_bme_sensor_field 0 overlay)"
+BME280_SENSOR1_TEMP_OFFSET_C="$(get_bme_sensor_field 0 temp_offset_c)"
+BME280_SENSOR1_PRESS_OFFSET_HPA="$(get_bme_sensor_field 0 press_offset_hpa)"
+BME280_SENSOR1_HUM_OFFSET_PCT="$(get_bme_sensor_field 0 hum_offset_pct)"
+
+BME280_SENSOR2_NAME="$(get_bme_sensor_field 1 name)"
+BME280_SENSOR2_ADDRESS="$(get_bme_sensor_field 1 address)"
+BME280_SENSOR2_OVERLAY="$(get_bme_sensor_field 1 overlay)"
+BME280_SENSOR2_TEMP_OFFSET_C="$(get_bme_sensor_field 1 temp_offset_c)"
+BME280_SENSOR2_PRESS_OFFSET_HPA="$(get_bme_sensor_field 1 press_offset_hpa)"
+BME280_SENSOR2_HUM_OFFSET_PCT="$(get_bme_sensor_field 1 hum_offset_pct)"
+
+# Wenn BME280_SENSORS vorhanden ist, daraus den echten Status ableiten
+if [ -n "$BME280_SENSOR1_NAME" ] || [ -n "$BME280_SENSOR2_NAME" ]; then
+  BME280_ENABLED="True"
+
+  if [ -n "$BME280_SENSOR1_NAME" ] && [ -n "$BME280_SENSOR2_NAME" ] \
+    && [ -n "$BME280_SENSOR1_ADDRESS" ] && [ -n "$BME280_SENSOR2_ADDRESS" ]; then
+    BME280_SENSOR_COUNT="2"
+  else
+    BME280_SENSOR_COUNT="1"
+  fi
+
+  # Legacy-Felder aus Sensor 1 spiegeln
+  [ -n "$BME280_SENSOR1_NAME" ] && BME280_NAME="$BME280_SENSOR1_NAME"
+  [ -n "$BME280_SENSOR1_ADDRESS" ] && BME280_I2C_ADDRESS="$BME280_SENSOR1_ADDRESS"
+  [ -n "$BME280_SENSOR1_OVERLAY" ] && BME280_OVERLAY="$BME280_SENSOR1_OVERLAY"
+  [ -n "$BME280_SENSOR1_TEMP_OFFSET_C" ] && BME280_TEMP_OFFSET_C="$BME280_SENSOR1_TEMP_OFFSET_C"
+  [ -n "$BME280_SENSOR1_PRESS_OFFSET_HPA" ] && BME280_PRESS_OFFSET_HPA="$BME280_SENSOR1_PRESS_OFFSET_HPA"
+  [ -n "$BME280_SENSOR1_HUM_OFFSET_PCT" ] && BME280_HUM_OFFSET_PCT="$BME280_SENSOR1_HUM_OFFSET_PCT"
+fi
 
 TSL2591_I2C_ADDRESS="$(get_val "TSL2591_I2C_ADDRESS")"
 TSL2591_SQM2_LIMIT="$(get_val "TSL2591_SQM2_LIMIT")"
@@ -287,8 +350,35 @@ fi
 [ -z "$HTU21_ENABLED" ] && HTU21_ENABLED="False"
 [ -z "$SHT3X_ENABLED" ] && SHT3X_ENABLED="False"
 
+# --- BME280 Einzel-Defaults zuerst setzen ---
+[ -z "$BME280_NAME" ] && BME280_NAME="BME280"
 [ -z "$BME280_I2C_ADDRESS" ] && BME280_I2C_ADDRESS="0x76"
 [ -z "$BME280_OVERLAY" ] && BME280_OVERLAY="False"
+[ -z "$BME280_TEMP_OFFSET_C" ] && BME280_TEMP_OFFSET_C="0.0"
+[ -z "$BME280_PRESS_OFFSET_HPA" ] && BME280_PRESS_OFFSET_HPA="0.0"
+[ -z "$BME280_HUM_OFFSET_PCT" ] && BME280_HUM_OFFSET_PCT="0.0"
+
+# BME280 Multi-Sensor Defaults
+if [ -n "$BME280_SENSOR1_NAME" ] && [ -n "$BME280_SENSOR2_NAME" ] \
+   && [ -n "$BME280_SENSOR1_ADDRESS" ] && [ -n "$BME280_SENSOR2_ADDRESS" ]; then
+  BME280_SENSOR_COUNT="2"
+else
+  BME280_SENSOR_COUNT="1"
+fi
+
+[ -z "$BME280_SENSOR1_NAME" ] && BME280_SENSOR1_NAME="$BME280_NAME"
+[ -z "$BME280_SENSOR1_ADDRESS" ] && BME280_SENSOR1_ADDRESS="$BME280_I2C_ADDRESS"
+[ -z "$BME280_SENSOR1_OVERLAY" ] && BME280_SENSOR1_OVERLAY="$BME280_OVERLAY"
+[ -z "$BME280_SENSOR1_TEMP_OFFSET_C" ] && BME280_SENSOR1_TEMP_OFFSET_C="$BME280_TEMP_OFFSET_C"
+[ -z "$BME280_SENSOR1_PRESS_OFFSET_HPA" ] && BME280_SENSOR1_PRESS_OFFSET_HPA="$BME280_PRESS_OFFSET_HPA"
+[ -z "$BME280_SENSOR1_HUM_OFFSET_PCT" ] && BME280_SENSOR1_HUM_OFFSET_PCT="$BME280_HUM_OFFSET_PCT"
+
+[ -z "$BME280_SENSOR2_NAME" ] && BME280_SENSOR2_NAME="Outside BME280"
+[ -z "$BME280_SENSOR2_ADDRESS" ] && BME280_SENSOR2_ADDRESS="0x77"
+[ -z "$BME280_SENSOR2_OVERLAY" ] && BME280_SENSOR2_OVERLAY="False"
+[ -z "$BME280_SENSOR2_TEMP_OFFSET_C" ] && BME280_SENSOR2_TEMP_OFFSET_C="0.0"
+[ -z "$BME280_SENSOR2_PRESS_OFFSET_HPA" ] && BME280_SENSOR2_PRESS_OFFSET_HPA="0.0"
+[ -z "$BME280_SENSOR2_HUM_OFFSET_PCT" ] && BME280_SENSOR2_HUM_OFFSET_PCT="0.0"
 
 [ -z "$TSL2591_I2C_ADDRESS" ] && TSL2591_I2C_ADDRESS="0x29"
 [ -z "$TSL2591_SQM2_LIMIT" ] && TSL2591_SQM2_LIMIT="0.0"
@@ -319,7 +409,6 @@ fi
 [ -z "$SHT3X_HUM_OFFSET" ] && SHT3X_HUM_OFFSET="0.0"
 [ -z "$SHT3X_OVERLAY" ] && SHT3X_OVERLAY="False"
 
-[ -z "$BME280_NAME" ] && BME280_NAME="BME280"
 [ -z "$DS18B20_NAME" ] && DS18B20_NAME="DS18B20"
 [ -z "$MLX90614_NAME" ] && MLX90614_NAME="MLX90614"
 [ -z "$TSL2591_NAME" ] && TSL2591_NAME="TSL2591"
@@ -358,11 +447,6 @@ fi
 [ -z "$KPINDEX_OVERLAY" ] && KPINDEX_OVERLAY="False"
 [ -z "$KPINDEX_LOG_INTERVAL_MIN" ] && KPINDEX_LOG_INTERVAL_MIN="15"
 
-# --- NEU: Defaults Offsets ---
-[ -z "$BME280_TEMP_OFFSET_C" ] && BME280_TEMP_OFFSET_C="0.0"
-[ -z "$BME280_PRESS_OFFSET_HPA" ] && BME280_PRESS_OFFSET_HPA="0.0"
-[ -z "$BME280_HUM_OFFSET_PCT" ] && BME280_HUM_OFFSET_PCT="0.0"
-
 [ -z "$DS18B20_TEMP_OFFSET_C" ] && DS18B20_TEMP_OFFSET_C="0.0"
 
 [ -z "$DHT11_TEMP_OFFSET_C" ] && DHT11_TEMP_OFFSET_C="0.0"
@@ -384,15 +468,26 @@ fi
 
 # I2C-Adressen in schoene Hex-Notation bringen
 BME280_I2C_ADDRESS="$(normalize_hex_literal "$BME280_I2C_ADDRESS")"
+BME280_SENSOR1_ADDRESS="$(normalize_hex_literal "$BME280_SENSOR1_ADDRESS")"
+BME280_SENSOR2_ADDRESS="$(normalize_hex_literal "$BME280_SENSOR2_ADDRESS")"
 TSL2591_I2C_ADDRESS="$(normalize_hex_literal "$TSL2591_I2C_ADDRESS")"
 MLX90614_I2C_ADDRESS="$(normalize_hex_literal "$MLX90614_I2C_ADDRESS")"
 HTU21_I2C_ADDRESS="$(normalize_hex_literal "$HTU21_I2C_ADDRESS")"
 SHT3X_I2C_ADDRESS="$(normalize_hex_literal "$SHT3X_I2C_ADDRESS")"
 
+
 # --- NEU: Float Normalisierung (Komma -> Punkt) ---
 BME280_TEMP_OFFSET_C="${BME280_TEMP_OFFSET_C//,/.}"
 BME280_PRESS_OFFSET_HPA="${BME280_PRESS_OFFSET_HPA//,/.}"
 BME280_HUM_OFFSET_PCT="${BME280_HUM_OFFSET_PCT//,/.}"
+BME280_SENSOR1_TEMP_OFFSET_C="${BME280_SENSOR1_TEMP_OFFSET_C//,/.}"
+BME280_SENSOR1_PRESS_OFFSET_HPA="${BME280_SENSOR1_PRESS_OFFSET_HPA//,/.}"
+BME280_SENSOR1_HUM_OFFSET_PCT="${BME280_SENSOR1_HUM_OFFSET_PCT//,/.}"
+
+BME280_SENSOR2_TEMP_OFFSET_C="${BME280_SENSOR2_TEMP_OFFSET_C//,/.}"
+BME280_SENSOR2_PRESS_OFFSET_HPA="${BME280_SENSOR2_PRESS_OFFSET_HPA//,/.}"
+BME280_SENSOR2_HUM_OFFSET_PCT="${BME280_SENSOR2_HUM_OFFSET_PCT//,/.}"
+
 
 DS18B20_TEMP_OFFSET_C="${DS18B20_TEMP_OFFSET_C//,/.}"
 
@@ -654,29 +749,62 @@ camera_lens_menu() {
 # ---------------------------------------------------
 # Sensor-Untermenues
 # ---------------------------------------------------
-
 edit_bme280() {
-  local title q_enable q_name q_i2c q_int q_ov q_toff q_poff q_hoff rc tmp
+  local title q_enable q_mode q_name q_i2c q_int q_ov q_toff q_poff q_hoff
+  local q_s1_name q_s1_i2c q_s1_toff q_s1_poff q_s1_hoff q_s1_ov
+  local q_s2_name q_s2_i2c q_s2_toff q_s2_poff q_s2_hoff q_s2_ov
+  local rc tmp mode_choice
+
   if [ "$LANG_CODE" = "de" ]; then
     title="Sensor BME280"
     q_enable="BME280 (Temp/Feuchte/Druck) aktivieren?"
+    q_mode="Wie viele BME280-Sensoren sollen verwendet werden?"
     q_name="Name fuer BME280:"
     q_i2c="I2C-Adresse des BME280 (z.B. 0x76):"
-    q_toff="Temperatur-Offset in °C (BME280_TEMP_OFFSET_C, z.B. 0.0):"
-    q_poff="Druck-Offset in hPa (BME280_PRESS_OFFSET_HPA, z.B. 0.0):"
-    q_hoff="Feuchte-Offset in %-Punkten (BME280_HUM_OFFSET_PCT, z.B. 0.0):"
+    q_toff="Temperatur-Offset in °C (z.B. 0.0):"
+    q_poff="Druck-Offset in hPa (z.B. 0.0):"
+    q_hoff="Feuchte-Offset in %-Punkten (z.B. 0.0):"
     q_int="Logger-Intervall in Minuten (Cronjob-Frequenz):"
     q_ov="Overlay (Werte im Bild anzeigen)?"
+
+    q_s1_name="Name fuer Sensor 1:"
+    q_s1_i2c="I2C-Adresse fuer Sensor 1 (z.B. 0x76):"
+    q_s1_toff="Temperatur-Offset fuer Sensor 1 in °C:"
+    q_s1_poff="Druck-Offset fuer Sensor 1 in hPa:"
+    q_s1_hoff="Feuchte-Offset fuer Sensor 1 in %-Punkten:"
+    q_s1_ov="Overlay fuer Sensor 1 aktivieren?"
+
+    q_s2_name="Name fuer Sensor 2:"
+    q_s2_i2c="I2C-Adresse fuer Sensor 2 (z.B. 0x77):"
+    q_s2_toff="Temperatur-Offset fuer Sensor 2 in °C:"
+    q_s2_poff="Druck-Offset fuer Sensor 2 in hPa:"
+    q_s2_hoff="Feuchte-Offset fuer Sensor 2 in %-Punkten:"
+    q_s2_ov="Overlay fuer Sensor 2 aktivieren?"
   else
     title="Sensor BME280"
     q_enable="Enable BME280 (temp/humidity/pressure)?"
+    q_mode="How many BME280 sensors should be used?"
     q_name="Name for BME280:"
     q_i2c="I2C address for BME280 (e.g. 0x76):"
-    q_toff="Temperature offset in °C (BME280_TEMP_OFFSET_C, e.g. 0.0):"
-    q_poff="Pressure offset in hPa (BME280_PRESS_OFFSET_HPA, e.g. 0.0):"
-    q_hoff="Humidity offset in %-points (BME280_HUM_OFFSET_PCT, e.g. 0.0):"
+    q_toff="Temperature offset in °C (e.g. 0.0):"
+    q_poff="Pressure offset in hPa (e.g. 0.0):"
+    q_hoff="Humidity offset in %-points (e.g. 0.0):"
     q_int="Logger interval in minutes (cronjob frequency):"
     q_ov="Overlay (show values on image)?"
+
+    q_s1_name="Name for sensor 1:"
+    q_s1_i2c="I2C address for sensor 1 (e.g. 0x76):"
+    q_s1_toff="Temperature offset for sensor 1 in °C:"
+    q_s1_poff="Pressure offset for sensor 1 in hPa:"
+    q_s1_hoff="Humidity offset for sensor 1 in %-points:"
+    q_s1_ov="Enable overlay for sensor 1?"
+
+    q_s2_name="Name for sensor 2:"
+    q_s2_i2c="I2C address for sensor 2 (e.g. 0x77):"
+    q_s2_toff="Temperature offset for sensor 2 in °C:"
+    q_s2_poff="Pressure offset for sensor 2 in hPa:"
+    q_s2_hoff="Humidity offset for sensor 2 in %-points:"
+    q_s2_ov="Enable overlay for sensor 2?"
   fi
 
   local OLD_ENABLED="$BME280_ENABLED"
@@ -687,6 +815,21 @@ edit_bme280() {
   local OLD_TOFF="$BME280_TEMP_OFFSET_C"
   local OLD_POFF="$BME280_PRESS_OFFSET_HPA"
   local OLD_HOFF="$BME280_HUM_OFFSET_PCT"
+  local OLD_COUNT="${BME280_SENSOR_COUNT:-1}"
+
+  local OLD_S1_NAME="$BME280_SENSOR1_NAME"
+  local OLD_S1_ADDR="$BME280_SENSOR1_ADDRESS"
+  local OLD_S1_OV="$BME280_SENSOR1_OVERLAY"
+  local OLD_S1_TOFF="$BME280_SENSOR1_TEMP_OFFSET_C"
+  local OLD_S1_POFF="$BME280_SENSOR1_PRESS_OFFSET_HPA"
+  local OLD_S1_HOFF="$BME280_SENSOR1_HUM_OFFSET_PCT"
+
+  local OLD_S2_NAME="$BME280_SENSOR2_NAME"
+  local OLD_S2_ADDR="$BME280_SENSOR2_ADDRESS"
+  local OLD_S2_OV="$BME280_SENSOR2_OVERLAY"
+  local OLD_S2_TOFF="$BME280_SENSOR2_TEMP_OFFSET_C"
+  local OLD_S2_POFF="$BME280_SENSOR2_PRESS_OFFSET_HPA"
+  local OLD_S2_HOFF="$BME280_SENSOR2_HUM_OFFSET_PCT"
 
   whiptail --title "$title" --yesno "$q_enable" 10 70
   rc=$?
@@ -694,12 +837,17 @@ edit_bme280() {
     BME280_ENABLED="True"
   elif [ $rc -eq 1 ]; then
     BME280_ENABLED="False"
+    BME280_SENSOR_COUNT="1"
+    return 0
   else
     BME280_ENABLED="$OLD_ENABLED"
     return 0
   fi
 
-  tmp=$(whiptail --title "$title" --inputbox "$q_name" 10 70 "$BME280_NAME" 3>&1 1>&2 2>&3)
+  mode_choice=$(whiptail --title "$title" --menu "$q_mode" 15 70 3 \
+    "1" "1 BME280" \
+    "2" "2 BME280" \
+    3>&1 1>&2 2>&3)
   rc=$?
   if [ $rc -ne 0 ]; then
     BME280_ENABLED="$OLD_ENABLED"
@@ -710,46 +858,66 @@ edit_bme280() {
     BME280_TEMP_OFFSET_C="$OLD_TOFF"
     BME280_PRESS_OFFSET_HPA="$OLD_POFF"
     BME280_HUM_OFFSET_PCT="$OLD_HOFF"
+    BME280_SENSOR_COUNT="$OLD_COUNT"
+    BME280_SENSOR1_NAME="$OLD_S1_NAME"
+    BME280_SENSOR1_ADDRESS="$OLD_S1_ADDR"
+    BME280_SENSOR1_OVERLAY="$OLD_S1_OV"
+    BME280_SENSOR1_TEMP_OFFSET_C="$OLD_S1_TOFF"
+    BME280_SENSOR1_PRESS_OFFSET_HPA="$OLD_S1_POFF"
+    BME280_SENSOR1_HUM_OFFSET_PCT="$OLD_S1_HOFF"
+    BME280_SENSOR2_NAME="$OLD_S2_NAME"
+    BME280_SENSOR2_ADDRESS="$OLD_S2_ADDR"
+    BME280_SENSOR2_OVERLAY="$OLD_S2_OV"
+    BME280_SENSOR2_TEMP_OFFSET_C="$OLD_S2_TOFF"
+    BME280_SENSOR2_PRESS_OFFSET_HPA="$OLD_S2_POFF"
+    BME280_SENSOR2_HUM_OFFSET_PCT="$OLD_S2_HOFF"
     return 0
   fi
-  BME280_NAME="$tmp"
 
-  if [ "$BME280_ENABLED" = "True" ]; then
+  BME280_SENSOR_COUNT="$mode_choice"
+
+  if [ "$BME280_SENSOR_COUNT" = "1" ]; then
+    tmp=$(whiptail --title "$title" --inputbox "$q_name" 10 70 "$BME280_NAME" 3>&1 1>&2 2>&3)
+    rc=$?
+    if [ $rc -ne 0 ]; then
+      BME280_ENABLED="$OLD_ENABLED"; BME280_NAME="$OLD_NAME"; BME280_I2C_ADDRESS="$OLD_ADDR"; BME280_OVERLAY="$OLD_OV"; BME280_LOG_INTERVAL_MIN="$OLD_INT"
+      BME280_TEMP_OFFSET_C="$OLD_TOFF"; BME280_PRESS_OFFSET_HPA="$OLD_POFF"; BME280_HUM_OFFSET_PCT="$OLD_HOFF"; BME280_SENSOR_COUNT="$OLD_COUNT"
+      return 0
+    fi
+    BME280_NAME="$tmp"
+
     tmp=$(whiptail --title "$title" --inputbox "$q_i2c" 10 70 "$BME280_I2C_ADDRESS" 3>&1 1>&2 2>&3)
     rc=$?
     if [ $rc -ne 0 ]; then
-      BME280_ENABLED="$OLD_ENABLED"
-      BME280_NAME="$OLD_NAME"
-      BME280_I2C_ADDRESS="$OLD_ADDR"
-      BME280_OVERLAY="$OLD_OV"
-      BME280_LOG_INTERVAL_MIN="$OLD_INT"
-      BME280_TEMP_OFFSET_C="$OLD_TOFF"
-      BME280_PRESS_OFFSET_HPA="$OLD_POFF"
-      BME280_HUM_OFFSET_PCT="$OLD_HOFF"
+      BME280_ENABLED="$OLD_ENABLED"; BME280_NAME="$OLD_NAME"; BME280_I2C_ADDRESS="$OLD_ADDR"; BME280_OVERLAY="$OLD_OV"; BME280_LOG_INTERVAL_MIN="$OLD_INT"
+      BME280_TEMP_OFFSET_C="$OLD_TOFF"; BME280_PRESS_OFFSET_HPA="$OLD_POFF"; BME280_HUM_OFFSET_PCT="$OLD_HOFF"; BME280_SENSOR_COUNT="$OLD_COUNT"
       return 0
     fi
     BME280_I2C_ADDRESS="$tmp"
 
     tmp=$(whiptail --title "$title" --inputbox "$q_toff" 10 70 "$BME280_TEMP_OFFSET_C" 3>&1 1>&2 2>&3)
-    rc=$?; if [ $rc -ne 0 ]; then
+    rc=$?
+    if [ $rc -ne 0 ]; then
       BME280_ENABLED="$OLD_ENABLED"; BME280_NAME="$OLD_NAME"; BME280_I2C_ADDRESS="$OLD_ADDR"; BME280_OVERLAY="$OLD_OV"; BME280_LOG_INTERVAL_MIN="$OLD_INT"
-      BME280_TEMP_OFFSET_C="$OLD_TOFF"; BME280_PRESS_OFFSET_HPA="$OLD_POFF"; BME280_HUM_OFFSET_PCT="$OLD_HOFF"
+      BME280_TEMP_OFFSET_C="$OLD_TOFF"; BME280_PRESS_OFFSET_HPA="$OLD_POFF"; BME280_HUM_OFFSET_PCT="$OLD_HOFF"; BME280_SENSOR_COUNT="$OLD_COUNT"
       return 0
     fi
     BME280_TEMP_OFFSET_C="${tmp//,/.}"
 
     tmp=$(whiptail --title "$title" --inputbox "$q_poff" 10 70 "$BME280_PRESS_OFFSET_HPA" 3>&1 1>&2 2>&3)
-    rc=$?; if [ $rc -ne 0 ]; then
+    rc=$?
+    if [ $rc -ne 0 ]; then
       BME280_ENABLED="$OLD_ENABLED"; BME280_NAME="$OLD_NAME"; BME280_I2C_ADDRESS="$OLD_ADDR"; BME280_OVERLAY="$OLD_OV"; BME280_LOG_INTERVAL_MIN="$OLD_INT"
-      BME280_TEMP_OFFSET_C="$OLD_TOFF"; BME280_PRESS_OFFSET_HPA="$OLD_POFF"; BME280_HUM_OFFSET_PCT="$OLD_HOFF"
+      BME280_TEMP_OFFSET_C="$OLD_TOFF"; BME280_PRESS_OFFSET_HPA="$OLD_POFF"; BME280_HUM_OFFSET_PCT="$OLD_HOFF"; BME280_SENSOR_COUNT="$OLD_COUNT"
       return 0
     fi
     BME280_PRESS_OFFSET_HPA="${tmp//,/.}"
 
     tmp=$(whiptail --title "$title" --inputbox "$q_hoff" 10 70 "$BME280_HUM_OFFSET_PCT" 3>&1 1>&2 2>&3)
-    rc=$?; if [ $rc -ne 0 ]; then
+    rc=$?
+    if [ $rc -ne 0 ]; then
       BME280_ENABLED="$OLD_ENABLED"; BME280_NAME="$OLD_NAME"; BME280_I2C_ADDRESS="$OLD_ADDR"; BME280_OVERLAY="$OLD_OV"; BME280_LOG_INTERVAL_MIN="$OLD_INT"
-      BME280_TEMP_OFFSET_C="$OLD_TOFF"; BME280_PRESS_OFFSET_HPA="$OLD_POFF"; BME280_HUM_OFFSET_PCT="$OLD_HOFF"
+      BME280_TEMP_OFFSET_C="$OLD_TOFF"; BME280_PRESS_OFFSET_HPA="$OLD_POFF"; BME280_HUM_OFFSET_PCT="$OLD_HOFF"; BME280_SENSOR_COUNT="$OLD_COUNT"
       return 0
     fi
     BME280_HUM_OFFSET_PCT="${tmp//,/.}"
@@ -757,14 +925,8 @@ edit_bme280() {
     tmp=$(whiptail --title "$title" --inputbox "$q_int" 10 70 "$BME280_LOG_INTERVAL_MIN" 3>&1 1>&2 2>&3)
     rc=$?
     if [ $rc -ne 0 ]; then
-      BME280_ENABLED="$OLD_ENABLED"
-      BME280_NAME="$OLD_NAME"
-      BME280_I2C_ADDRESS="$OLD_ADDR"
-      BME280_OVERLAY="$OLD_OV"
-      BME280_LOG_INTERVAL_MIN="$OLD_INT"
-      BME280_TEMP_OFFSET_C="$OLD_TOFF"
-      BME280_PRESS_OFFSET_HPA="$OLD_POFF"
-      BME280_HUM_OFFSET_PCT="$OLD_HOFF"
+      BME280_ENABLED="$OLD_ENABLED"; BME280_NAME="$OLD_NAME"; BME280_I2C_ADDRESS="$OLD_ADDR"; BME280_OVERLAY="$OLD_OV"; BME280_LOG_INTERVAL_MIN="$OLD_INT"
+      BME280_TEMP_OFFSET_C="$OLD_TOFF"; BME280_PRESS_OFFSET_HPA="$OLD_POFF"; BME280_HUM_OFFSET_PCT="$OLD_HOFF"; BME280_SENSOR_COUNT="$OLD_COUNT"
       return 0
     fi
     BME280_LOG_INTERVAL_MIN="$tmp"
@@ -776,16 +938,104 @@ edit_bme280() {
     elif [ $rc -eq 1 ]; then
       BME280_OVERLAY="False"
     else
-      BME280_ENABLED="$OLD_ENABLED"
-      BME280_NAME="$OLD_NAME"
-      BME280_I2C_ADDRESS="$OLD_ADDR"
-      BME280_OVERLAY="$OLD_OV"
-      BME280_LOG_INTERVAL_MIN="$OLD_INT"
-      BME280_TEMP_OFFSET_C="$OLD_TOFF"
-      BME280_PRESS_OFFSET_HPA="$OLD_POFF"
-      BME280_HUM_OFFSET_PCT="$OLD_HOFF"
+      BME280_ENABLED="$OLD_ENABLED"; BME280_NAME="$OLD_NAME"; BME280_I2C_ADDRESS="$OLD_ADDR"; BME280_OVERLAY="$OLD_OV"; BME280_LOG_INTERVAL_MIN="$OLD_INT"
+      BME280_TEMP_OFFSET_C="$OLD_TOFF"; BME280_PRESS_OFFSET_HPA="$OLD_POFF"; BME280_HUM_OFFSET_PCT="$OLD_HOFF"; BME280_SENSOR_COUNT="$OLD_COUNT"
       return 0
     fi
+
+    # Sensor 1 mit alten Werten spiegeln
+    BME280_SENSOR1_NAME="$BME280_NAME"
+    BME280_SENSOR1_ADDRESS="$BME280_I2C_ADDRESS"
+    BME280_SENSOR1_OVERLAY="$BME280_OVERLAY"
+    BME280_SENSOR1_TEMP_OFFSET_C="$BME280_TEMP_OFFSET_C"
+    BME280_SENSOR1_PRESS_OFFSET_HPA="$BME280_PRESS_OFFSET_HPA"
+    BME280_SENSOR1_HUM_OFFSET_PCT="$BME280_HUM_OFFSET_PCT"
+
+    # Sensor 2 neutral halten
+    BME280_SENSOR2_NAME="Outside BME280"
+    BME280_SENSOR2_ADDRESS="0x77"
+    BME280_SENSOR2_OVERLAY="False"
+    BME280_SENSOR2_TEMP_OFFSET_C="0.0"
+    BME280_SENSOR2_PRESS_OFFSET_HPA="0.0"
+    BME280_SENSOR2_HUM_OFFSET_PCT="0.0"
+
+  else
+    tmp=$(whiptail --title "$title" --inputbox "$q_int" 10 70 "$BME280_LOG_INTERVAL_MIN" 3>&1 1>&2 2>&3)
+    rc=$?
+    if [ $rc -ne 0 ]; then
+      BME280_ENABLED="$OLD_ENABLED"
+      BME280_SENSOR_COUNT="$OLD_COUNT"
+      return 0
+    fi
+    BME280_LOG_INTERVAL_MIN="$tmp"
+
+    tmp=$(whiptail --title "$title" --inputbox "$q_s1_name" 10 70 "$BME280_SENSOR1_NAME" 3>&1 1>&2 2>&3)
+    rc=$?; [ $rc -ne 0 ] && return 0
+    BME280_SENSOR1_NAME="$tmp"
+
+    tmp=$(whiptail --title "$title" --inputbox "$q_s1_i2c" 10 70 "$BME280_SENSOR1_ADDRESS" 3>&1 1>&2 2>&3)
+    rc=$?; [ $rc -ne 0 ] && return 0
+    BME280_SENSOR1_ADDRESS="$tmp"
+
+    tmp=$(whiptail --title "$title" --inputbox "$q_s1_toff" 10 70 "$BME280_SENSOR1_TEMP_OFFSET_C" 3>&1 1>&2 2>&3)
+    rc=$?; [ $rc -ne 0 ] && return 0
+    BME280_SENSOR1_TEMP_OFFSET_C="${tmp//,/.}"
+
+    tmp=$(whiptail --title "$title" --inputbox "$q_s1_poff" 10 70 "$BME280_SENSOR1_PRESS_OFFSET_HPA" 3>&1 1>&2 2>&3)
+    rc=$?; [ $rc -ne 0 ] && return 0
+    BME280_SENSOR1_PRESS_OFFSET_HPA="${tmp//,/.}"
+
+    tmp=$(whiptail --title "$title" --inputbox "$q_s1_hoff" 10 70 "$BME280_SENSOR1_HUM_OFFSET_PCT" 3>&1 1>&2 2>&3)
+    rc=$?; [ $rc -ne 0 ] && return 0
+    BME280_SENSOR1_HUM_OFFSET_PCT="${tmp//,/.}"
+
+    whiptail --title "$title" --yesno "$q_s1_ov" 10 70
+    rc=$?
+    if [ $rc -eq 0 ]; then
+      BME280_SENSOR1_OVERLAY="True"
+    elif [ $rc -eq 1 ]; then
+      BME280_SENSOR1_OVERLAY="False"
+    else
+      return 0
+    fi
+
+    tmp=$(whiptail --title "$title" --inputbox "$q_s2_name" 10 70 "$BME280_SENSOR2_NAME" 3>&1 1>&2 2>&3)
+    rc=$?; [ $rc -ne 0 ] && return 0
+    BME280_SENSOR2_NAME="$tmp"
+
+    tmp=$(whiptail --title "$title" --inputbox "$q_s2_i2c" 10 70 "$BME280_SENSOR2_ADDRESS" 3>&1 1>&2 2>&3)
+    rc=$?; [ $rc -ne 0 ] && return 0
+    BME280_SENSOR2_ADDRESS="$tmp"
+
+    tmp=$(whiptail --title "$title" --inputbox "$q_s2_toff" 10 70 "$BME280_SENSOR2_TEMP_OFFSET_C" 3>&1 1>&2 2>&3)
+    rc=$?; [ $rc -ne 0 ] && return 0
+    BME280_SENSOR2_TEMP_OFFSET_C="${tmp//,/.}"
+
+    tmp=$(whiptail --title "$title" --inputbox "$q_s2_poff" 10 70 "$BME280_SENSOR2_PRESS_OFFSET_HPA" 3>&1 1>&2 2>&3)
+    rc=$?; [ $rc -ne 0 ] && return 0
+    BME280_SENSOR2_PRESS_OFFSET_HPA="${tmp//,/.}"
+
+    tmp=$(whiptail --title "$title" --inputbox "$q_s2_hoff" 10 70 "$BME280_SENSOR2_HUM_OFFSET_PCT" 3>&1 1>&2 2>&3)
+    rc=$?; [ $rc -ne 0 ] && return 0
+    BME280_SENSOR2_HUM_OFFSET_PCT="${tmp//,/.}"
+
+    whiptail --title "$title" --yesno "$q_s2_ov" 10 70
+    rc=$?
+    if [ $rc -eq 0 ]; then
+      BME280_SENSOR2_OVERLAY="True"
+    elif [ $rc -eq 1 ]; then
+      BME280_SENSOR2_OVERLAY="False"
+    else
+      return 0
+    fi
+
+    # Legacy-Felder befuellen, damit altes Verhalten fuer andere Stellen stabil bleibt
+    BME280_NAME="$BME280_SENSOR1_NAME"
+    BME280_I2C_ADDRESS="$BME280_SENSOR1_ADDRESS"
+    BME280_OVERLAY="False"
+    BME280_TEMP_OFFSET_C="$BME280_SENSOR1_TEMP_OFFSET_C"
+    BME280_PRESS_OFFSET_HPA="$BME280_SENSOR1_PRESS_OFFSET_HPA"
+    BME280_HUM_OFFSET_PCT="$BME280_SENSOR1_HUM_OFFSET_PCT"
   fi
 }
 
@@ -2090,6 +2340,8 @@ if [ "$INDI_ACTIVE" = "1" ]; then
   fi
 
   BME280_OVERLAY="False"
+  BME280_SENSOR1_OVERLAY="False"
+  BME280_SENSOR2_OVERLAY="False"
   TSL2591_OVERLAY="False"
   DS18B20_OVERLAY="False"
   DHT11_OVERLAY="False"
@@ -2122,6 +2374,8 @@ NIGHTLY_UPLOAD_SCRIPT_ESC="$(esc_py_str "$NIGHTLY_UPLOAD_SCRIPT")"
 CAMERAID_ESC="$(esc_py_str "$CAMERAID")"
 
 BME280_NAME_ESC="$(esc_py_str "$BME280_NAME")"
+BME280_SENSOR1_NAME_ESC="$(esc_py_str "$BME280_SENSOR1_NAME")"
+BME280_SENSOR2_NAME_ESC="$(esc_py_str "$BME280_SENSOR2_NAME")"
 DS18B20_NAME_ESC="$(esc_py_str "$DS18B20_NAME")"
 MLX90614_NAME_ESC="$(esc_py_str "$MLX90614_NAME")"
 TSL2591_NAME_ESC="$(esc_py_str "$TSL2591_NAME")"
@@ -2192,6 +2446,36 @@ ZP             = ${ZP}
 SQM_PATCH_SIZE = ${SQM_PATCH_SIZE}
 
 # Sensoren
+# Sensoren
+EOF
+
+if [ "${BME280_SENSOR_COUNT:-1}" = "2" ] && [ "$BME280_ENABLED" = "True" ]; then
+cat >> "$CFG_FILE" <<EOF
+BME280_ENABLED = True
+
+BME280_SENSORS = [
+    {
+        "enabled": True,
+        "name": "${BME280_SENSOR1_NAME_ESC}",
+        "address": ${BME280_SENSOR1_ADDRESS},
+        "overlay": ${BME280_SENSOR1_OVERLAY},
+        "temp_offset_c": ${BME280_SENSOR1_TEMP_OFFSET_C},
+        "press_offset_hpa": ${BME280_SENSOR1_PRESS_OFFSET_HPA},
+        "hum_offset_pct": ${BME280_SENSOR1_HUM_OFFSET_PCT},
+    },
+    {
+        "enabled": True,
+        "name": "${BME280_SENSOR2_NAME_ESC}",
+        "address": ${BME280_SENSOR2_ADDRESS},
+        "overlay": ${BME280_SENSOR2_OVERLAY},
+        "temp_offset_c": ${BME280_SENSOR2_TEMP_OFFSET_C},
+        "press_offset_hpa": ${BME280_SENSOR2_PRESS_OFFSET_HPA},
+        "hum_offset_pct": ${BME280_SENSOR2_HUM_OFFSET_PCT},
+    }
+]
+EOF
+else
+cat >> "$CFG_FILE" <<EOF
 BME280_ENABLED      = ${BME280_ENABLED}
 BME280_NAME         = "${BME280_NAME_ESC}"
 BME280_I2C_ADDRESS  = ${BME280_I2C_ADDRESS}
@@ -2199,6 +2483,10 @@ BME280_OVERLAY      = ${BME280_OVERLAY}
 BME280_TEMP_OFFSET_C     = ${BME280_TEMP_OFFSET_C}
 BME280_PRESS_OFFSET_HPA  = ${BME280_PRESS_OFFSET_HPA}
 BME280_HUM_OFFSET_PCT    = ${BME280_HUM_OFFSET_PCT}
+EOF
+fi
+
+cat >> "$CFG_FILE" <<EOF
 
 TSL2591_ENABLED        = ${TSL2591_ENABLED}
 TSL2591_NAME           = "${TSL2591_NAME_ESC}"
