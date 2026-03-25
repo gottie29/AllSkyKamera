@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="{{ ui_lang }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ page_title }} - {{ tr('app_title') }}</title>
+    <style>
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #0b1220;
+            color: #e5e7eb;
+        }
+
+        a { color: inherit; text-decoration: none; }
+
+        .layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: #111827;
+            border-right: 1px solid #1f2937;
+            padding: 24px 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .brand {
+            padding-bottom: 20px;
+            border-bottom: 1px solid #1f2937;
+        }
+
+        .brand h1 {
+            margin: 0 0 8px 0;
+            font-size: 1.4rem;
+        }
+
+        .brand .sub {
+            color: #9ca3af;
+            font-size: 0.95rem;
+        }
+
+        .caminfo {
+            background: #0b1220;
+            border: 1px solid #243041;
+            border-radius: 14px;
+            padding: 14px;
+        }
+
+        .caminfo .label {
+            color: #93c5fd;
+            font-size: 0.85rem;
+            margin-bottom: 4px;
+        }
+
+        .caminfo .value {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .nav {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .nav-section-title {
+            margin-top: 10px;
+            margin-bottom: 4px;
+            color: #9ca3af;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .nav a {
+            display: block;
+            padding: 12px 14px;
+            border-radius: 12px;
+            background: transparent;
+            border: 1px solid transparent;
+            transition: 0.2s ease;
+        }
+
+        .nav a:hover {
+            background: #172033;
+            border-color: #243041;
+        }
+
+        .nav a.active {
+            background: #1d4ed8;
+            border-color: #2563eb;
+            color: #ffffff;
+            font-weight: bold;
+        }
+
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .topbar {
+            padding: 18px 24px;
+            border-bottom: 1px solid #1f2937;
+            background: rgba(17, 24, 39, 0.75);
+            backdrop-filter: blur(8px);
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .topbar h2 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+
+        .topbar .subtitle {
+            margin-top: 6px;
+            color: #9ca3af;
+            font-size: 0.95rem;
+        }
+
+        .top-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .mini-btn {
+            padding: 8px 12px;
+            border-radius: 10px;
+            border: 1px solid #243041;
+            background: #111827;
+            color: #e5e7eb;
+            font-size: 0.9rem;
+        }
+
+        .mini-btn:hover {
+            background: #172033;
+        }
+
+        .content {
+            padding: 24px;
+        }
+
+        .card {
+            background: #111827;
+            border: 1px solid #1f2937;
+            border-radius: 18px;
+            padding: 22px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+        }
+
+        .muted { color: #9ca3af; }
+        .ok { color: #86efac; font-weight: bold; }
+        .warn { color: #fca5a5; font-weight: bold; }
+
+        .placeholder-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+            margin-top: 18px;
+        }
+
+        .placeholder-box {
+            background: #0b1220;
+            border: 1px solid #243041;
+            border-radius: 14px;
+            padding: 16px;
+        }
+
+        .placeholder-box h3 {
+            margin-top: 0;
+            margin-bottom: 8px;
+            font-size: 1rem;
+        }
+
+        .status-active {
+            border: 1px solid #16a34a !important;
+            box-shadow: 0 0 0 1px rgba(22, 163, 74, 0.25), 0 0 18px rgba(22, 163, 74, 0.12);
+        }
+
+        .status-inactive {
+            opacity: 0.92;
+        }
+
+        .status-badge {
+            display: inline-block;
+            margin-top: 8px;
+            padding: 4px 8px;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .status-badge.active {
+            background: rgba(22, 163, 74, 0.15);
+            color: #86efac;
+            border: 1px solid rgba(22, 163, 74, 0.45);
+        }
+
+        .status-badge.inactive {
+            background: rgba(148, 163, 184, 0.12);
+            color: #cbd5e1;
+            border: 1px solid rgba(148, 163, 184, 0.25);
+        }
+
+        .flash-wrap {
+            margin-bottom: 16px;
+            display: grid;
+            gap: 10px;
+        }
+
+        .flash {
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid #243041;
+            background: #0b1220;
+        }
+
+        .flash.success {
+            border-color: rgba(22, 163, 74, 0.45);
+            color: #86efac;
+        }
+
+        .flash.error {
+            border-color: rgba(239, 68, 68, 0.45);
+            color: #fca5a5;
+        }
+
+        @media (max-width: 900px) {
+            .layout { flex-direction: column; }
+            .sidebar {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid #1f2937;
+            }
+            .topbar {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+                input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid #243041;
+            background: #0b1220;
+            color: #e5e7eb;
+            font-size: 0.95rem;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+        }
+
+        button.mini-btn {
+            cursor: pointer;
+        }
+
+        button.mini-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 18px;
+        }
+
+        .btn-primary {
+            background: #2563eb;
+            border-color: #2563eb;
+            color: #ffffff;
+        }
+
+        .btn-save {
+            background: #d97706;
+            border-color: #d97706;
+            color: #ffffff;
+        }
+
+        .btn-upload {
+            background: #059669;
+            border-color: #059669;
+            color: #ffffff;
+        }
+
+        .btn-restore {
+            background: #7c3aed;
+            border-color: #7c3aed;
+            color: #ffffff;
+        }
+
+        .btn-attention {
+            animation: pulseSave 1.2s infinite;
+            box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.7);
+        }
+
+        @keyframes pulseSave {
+            0% {
+                box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.65);
+                transform: scale(1);
+            }
+            50% {
+                box-shadow: 0 0 0 10px rgba(217, 119, 6, 0.0);
+                transform: scale(1.03);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.0);
+                transform: scale(1);
+            }
+        }
+
+                .toggle-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 6px;
+        }
+
+        .toggle-label {
+            font-size: 0.95rem;
+            color: #e5e7eb;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 52px;
+            height: 30px;
+            flex: 0 0 auto;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+            position: absolute;
+        }
+
+        .slider-toggle {
+            position: absolute;
+            cursor: pointer;
+            inset: 0;
+            background-color: #243041;
+            transition: .25s;
+            border-radius: 999px;
+            border: 1px solid #334155;
+        }
+
+        .slider-toggle:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 3px;
+            top: 3px;
+            background-color: white;
+            transition: .25s;
+            border-radius: 50%;
+        }
+
+        .switch input:checked + .slider-toggle {
+            background-color: #16a34a;
+            border-color: #16a34a;
+            box-shadow: 0 0 0 2px rgba(22,163,74,0.15);
+        }
+
+        .switch input:checked + .slider-toggle:before {
+            transform: translateX(22px);
+        }
+
+        .switch input:focus + .slider-toggle {
+            box-shadow: 0 0 0 2px rgba(37,99,235,0.25);
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+    <aside class="sidebar">
+        <div class="brand">
+            <h1>{{ tr('app_title') }}</h1>
+            <div class="sub">{{ tr('app_subtitle') }}</div>
+        </div>
+
+        <div class="caminfo">
+            <div class="label">{{ tr('camera_id') }}</div>
+            <div class="value">{{ camera_id }}</div>
+
+            <div style="margin-bottom: 10px;">
+                <a
+                    href="https://allskykamera.space/kamera.php?k={{ camera_id }}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="mini-btn"
+                    style="display:inline-block;"
+                >
+                    {{ tr('open_camera_page') }}
+                </a>
+            </div>
+
+            <div class="label">{{ tr('camera_location') }}</div>
+            <div class="value">{{ location_name }}</div>
+
+            <div class="label">Hostname</div>
+            <div class="value">{{ hostname }}</div>
+        </div>
+
+        <nav class="nav">
+            <div class="nav-section-title">{{ tr('nav_general') }}</div>
+            <a href="/" class="{% if active_page == 'dashboard' %}active{% endif %}">{{ tr('dashboard') }}</a>
+            <a href="/allsky-settings" class="{% if active_page == 'allsky_settings' %}active{% endif %}">{{ tr('allsky_settings') }}</a>
+            <a href="/sensors" class="{% if active_page == 'sensors' %}active{% endif %}">{{ tr('sensors') }}</a>
+            <a href="/cronjobs" class="{% if active_page == 'cronjobs' %}active{% endif %}">{{ tr('cronjobs') }}</a>
+
+            <div class="nav-section-title">{{ tr('nav_options') }}</div>
+            <a href="/kpindex" class="{% if active_page == 'kpindex' %}active{% endif %}">{{ tr('kpindex') }}</a>
+            <a href="/meteor" class="{% if active_page == 'meteor' %}active{% endif %}">{{ tr('meteor') }}</a>
+
+            <div class="nav-section-title">{{ tr('nav_user') }}</div>
+            <a href="/settings" class="{% if active_page == 'settings' %}active{% endif %}">{{ tr('settings') }}</a>
+        </nav>
+    </aside>
+
+    <main class="main">
+        <div class="topbar">
+            <div>
+                <h2>{{ page_title }}</h2>
+                <div class="subtitle">{{ tr('layout_subtitle') }}</div>
+            </div>
+            <div class="top-actions">
+                <a class="mini-btn" href="/set-language/de">DE</a>
+                <a class="mini-btn" href="/set-language/en">EN</a>
+                {% if session_logged_in %}
+                    <span class="mini-btn">{{ session_username }}</span>
+                    <a class="mini-btn" href="/logout">{{ tr('logout') }}</a>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="content">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="flash-wrap">
+                        {% for category, message in messages %}
+                            <div class="flash {{ category }}">{{ message }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+</div>
+</body>
+</html>

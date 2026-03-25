@@ -1,0 +1,382 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+    <h3>Sensoren</h3>
+    <p class="muted">
+        Hier kannst du erste Sensoren lokal konfigurieren und direkt testen.
+        Aktuell editierbar: <strong>BME280</strong>, <strong>DHT22</strong>, <strong>TSL2591</strong>.
+    </p>
+
+    <div class="placeholder-grid">
+        {% for sensor in sensor_overview %}
+            <div class="placeholder-box {% if sensor.enabled %}status-active{% else %}status-inactive{% endif %}">
+                <h3>{{ sensor.title }}</h3>
+                <p>{{ 'Aktiv' if sensor.enabled else 'Inaktiv' }}</p>
+                <div class="muted">Modus: {{ sensor.mode }}</div>
+                <div class="muted">Einträge: {{ sensor.count }}</div>
+                <div class="muted">Logger: {{ sensor.log_interval_min if sensor.log_interval_min is not none else '–' }} min</div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="card" style="margin-top: 20px;">
+    <h3>Sensor-Cronjobs</h3>
+    <p class="muted">
+        Hier werden nur die Sensor-Cronjobs verwaltet. Basis-Crons und Options-Crons bleiben unberührt.
+    </p>
+
+    <div class="placeholder-grid">
+        <div class="placeholder-box {% if sensor_cron_in_sync %}status-active{% endif %}">
+            <h3>Status</h3>
+            {% if sensor_cron_current_ok %}
+                {% if sensor_cron_in_sync %}
+                    <p class="ok">Sensor-Crons sind synchron</p>
+                {% else %}
+                    <p class="warn">Sensor-Crons weichen ab</p>
+                {% endif %}
+            {% else %}
+                <p class="warn">Crontab konnte nicht gelesen werden</p>
+                <div class="muted">{{ sensor_cron_current_error }}</div>
+            {% endif %}
+        </div>
+
+        <div class="placeholder-box">
+            <h3>Gewünschte Sensorjobs</h3>
+            <p>{{ sensor_cron_jobs_desired|length }}</p>
+        </div>
+
+        <div class="placeholder-box">
+            <h3>Aktueller Sensorblock</h3>
+            <p>{{ 'Vorhanden' if sensor_cron_has_current_block else 'Nicht vorhanden' }}</p>
+        </div>
+    </div>
+
+    <form method="post" style="margin-top:18px;">
+        <input type="hidden" name="action" value="apply_sensor_crons">
+        <button class="mini-btn btn-upload" type="submit">Apply sensor cronjobs</button>
+    </form>
+</div>
+
+
+{% for sensor in sensor_overview %}
+<div class="card" style="margin-top: 20px;">
+    <h3>{{ sensor.title }}</h3>
+    <p class="muted">
+        Status:
+        <strong>{{ 'Aktiv' if sensor.enabled else 'Inaktiv' }}</strong> ·
+        Modus:
+        <strong>{{ sensor.mode }}</strong> ·
+        Logger:
+        <strong>{{ sensor.log_interval_min if sensor.log_interval_min is not none else '–' }} min</strong>
+    </p>
+
+    {% if sensor.key in ['bme280', 'dht22', 'tsl2591'] %}
+    <form method="post" action="/save-sensor-settings" class="sensor-edit-form">
+        <input type="hidden" name="sensor_type" value="{{ sensor.key }}">
+        <input type="hidden" name="mode" value="{{ sensor.mode }}">
+        <input type="hidden" name="item_count" value="{{ sensor['items']|length }}">
+
+        <div class="placeholder-grid">
+            <div class="placeholder-box">
+                <h3>Allgemein</h3>
+
+                <div class="toggle-row">
+                    <label class="switch">
+                        <input type="checkbox" name="enabled" value="1" {% if sensor.enabled %}checked{% endif %}>
+                        <span class="slider-toggle"></span>
+                    </label>
+                    <span class="toggle-label">Sensor aktiv</span>
+                </div>
+                
+                <div style="margin-top:12px;">
+                    <label>Logger-Intervall (min)</label>
+                    <input type="number" name="log_interval_min" value="{{ sensor.log_interval_min if sensor.log_interval_min is not none else 1 }}">
+                </div>
+            </div>
+
+            {% for item in sensor["items"] %}
+            <div class="placeholder-box {% if item.enabled %}status-active{% else %}status-inactive{% endif %}">
+                <h3>{{ item.name or sensor.title ~ ' ' ~ loop.index }}</h3>
+
+                <div class="toggle-row">
+                    <label class="switch">
+                        <input type="checkbox" name="item_enabled_{{ loop.index0 }}" value="1" {% if item.enabled %}checked{% endif %}>
+                        <span class="slider-toggle"></span>
+                    </label>
+                    <span class="toggle-label">Eintrag aktiv</span>
+                </div>
+
+                <div style="margin-top:10px;">
+                    <label>Name</label>
+                    <input type="text" name="item_name_{{ loop.index0 }}" value="{{ item.name or '' }}">
+                </div>
+
+                {% if sensor.key == 'bme280' %}
+                    <div style="margin-top:10px;">
+                        <label>I2C-Adresse</label>
+                        <input type="text" name="item_address_{{ loop.index0 }}" value="{{ item.address or '' }}">
+                    </div>
+                    <div style="margin-top:10px;">
+                        <div class="toggle-row">
+                            <label class="switch">
+                                <input type="checkbox" name="item_overlay_{{ loop.index0 }}" value="1" {% if item.overlay %}checked{% endif %}>
+                                <span class="slider-toggle"></span>
+                            </label>
+                            <span class="toggle-label">Overlay</span>
+                        </div>
+                    </div>
+                    <div style="margin-top:10px;">
+                        <label>Temp Offset °C</label>
+                        <input type="text" name="item_temp_offset_c_{{ loop.index0 }}" value="{{ item.temp_offset_c }}">
+                    </div>
+                    <div style="margin-top:10px;">
+                        <label>Pressure Offset hPa</label>
+                        <input type="text" name="item_press_offset_hpa_{{ loop.index0 }}" value="{{ item.press_offset_hpa }}">
+                    </div>
+                    <div style="margin-top:10px;">
+                        <label>Humidity Offset %</label>
+                        <input type="text" name="item_hum_offset_pct_{{ loop.index0 }}" value="{{ item.hum_offset_pct }}">
+                    </div>
+                    <div class="btn-row">
+                        <button type="button" class="mini-btn btn-primary test-sensor-btn"
+                                data-sensor-type="bme280"
+                                data-address-input="item_address_{{ loop.index0 }}">
+                            Test BME280
+                        </button>
+                    </div>
+                    <div class="sensor-test-result" style="margin-top:10px;"></div>
+                {% endif %}
+
+                {% if sensor.key == 'dht22' %}
+                    <div style="margin-top:10px;">
+                        <label>GPIO BCM</label>
+                        <input type="text" name="item_gpio_bcm_{{ loop.index0 }}" value="{{ item.gpio_bcm }}">
+                    </div>
+                    <div style="margin-top:10px;">
+                        <label>Retries</label>
+                        <input type="text" name="item_retries_{{ loop.index0 }}" value="{{ item.retries }}">
+                    </div>
+                    <div style="margin-top:10px;">
+                        <label>Retry Delay</label>
+                        <input type="text" name="item_retry_delay_{{ loop.index0 }}" value="{{ item.retry_delay }}">
+                    </div>
+                    <div style="margin-top:10px;">
+                        <div class="toggle-row">
+                            <label class="switch">
+                                <input type="checkbox" name="item_overlay_{{ loop.index0 }}" value="1" {% if item.overlay %}checked{% endif %}>
+                                <span class="slider-toggle"></span>
+                            </label>
+                            <span class="toggle-label">Overlay</span>
+                        </div>
+                    </div>
+                    <div style="margin-top:10px;">
+                        <label>Temp Offset °C</label>
+                        <input type="text" name="item_temp_offset_c_{{ loop.index0 }}" value="{{ item.temp_offset_c }}">
+                    </div>
+                    <div style="margin-top:10px;">
+                        <label>Humidity Offset %</label>
+                        <input type="text" name="item_hum_offset_pct_{{ loop.index0 }}" value="{{ item.hum_offset_pct }}">
+                    </div>
+                    <div class="btn-row">
+                        <button type="button" class="mini-btn btn-primary test-sensor-btn"
+                                data-sensor-type="dht22"
+                                data-gpio-input="item_gpio_bcm_{{ loop.index0 }}"
+                                data-retries-input="item_retries_{{ loop.index0 }}"
+                                data-delay-input="item_retry_delay_{{ loop.index0 }}">
+                            Test DHT22
+                        </button>
+                    </div>
+                    <div class="sensor-test-result" style="margin-top:10px;"></div>
+                {% endif %}
+
+                {% if sensor.key == 'tsl2591' %}
+                    <div style="margin-top:10px;">
+                        <label>I2C-Adresse</label>
+                        <input type="text" name="item_address_{{ loop.index0 }}" value="{{ item.address or '' }}">
+                    </div>
+                    <div style="margin-top:10px;">
+                        <div class="toggle-row">
+                            <label class="switch">
+                                <input type="checkbox" name="item_overlay_{{ loop.index0 }}" value="1" {% if item.overlay %}checked{% endif %}>
+                                <span class="slider-toggle"></span>
+                            </label>
+                            <span class="toggle-label">Overlay</span>
+                        </div>
+                    </div>
+                    <div style="margin-top:10px;">
+                        <label>SQM2 Limit</label>
+                        <input type="text" name="item_sqm2_limit_{{ loop.index0 }}" value="{{ item.sqm2_limit }}">
+                    </div>
+                    <div style="margin-top:10px;">
+                        <label>SQM Correction</label>
+                        <input type="text" name="item_sqm_correction_{{ loop.index0 }}" value="{{ item.sqm_correction }}">
+                    </div>
+                    <div class="btn-row">
+                        <button type="button" class="mini-btn btn-primary test-sensor-btn"
+                                data-sensor-type="tsl2591"
+                                data-address-input="item_address_{{ loop.index0 }}">
+                            Test TSL2591
+                        </button>
+                    </div>
+                    <div class="sensor-test-result" style="margin-top:10px;"></div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="btn-row">
+            <button class="mini-btn btn-save" type="submit">Save {{ sensor.title }} locally</button>
+        </div>
+    </form>
+    {% else %}
+        {% if sensor["items"] %}
+            <div class="placeholder-grid">
+                {% for item in sensor["items"] %}
+                    <div class="placeholder-box {% if item.enabled %}status-active{% else %}status-inactive{% endif %}">
+                        <h3>{{ item.name or sensor.title ~ ' ' ~ loop.index }}</h3>
+                        {% for key, value in item.items() %}
+                            {% if key != 'name' %}
+                                <div style="margin-bottom:6px;">
+                                    <strong>{{ key }}:</strong>
+                                    <span class="muted">{{ value }}</span>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if sensor.key == 'ds18b20' %}
+                        <div class="btn-row">
+                            <button type="button" class="mini-btn btn-primary test-sensor-btn" data-sensor-type="ds18b20">
+                                Test DS18B20
+                            </button>
+                        </div>
+                        <div class="sensor-test-result" style="margin-top:10px;"></div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="muted">Keine Einträge erkannt.</p>
+        {% endif %}
+    {% endif %}
+</div>
+{% endfor %}
+
+<div class="card" style="margin-top: 20px;">
+    <h3>Gewünschte Sensor-Cronjobs</h3>
+
+    {% if sensor_cron_jobs_desired %}
+        <div class="placeholder-grid">
+            {% for job in sensor_cron_jobs_desired %}
+                <div class="placeholder-box">
+                    <h3>{{ job.comment }}</h3>
+                    <div><strong>Schedule:</strong> <code>{{ job.schedule }}</code></div>
+                    <div style="margin-top:8px;"><strong>Command:</strong></div>
+                    <div class="muted"><code>{{ job.command }}</code></div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="muted">Keine Sensor-Cronjobs aktiv.</p>
+    {% endif %}
+</div>
+
+<div class="card" style="margin-top: 20px;">
+    <h3>Aktueller Sensor-AUTOCRON-Block</h3>
+
+    <div class="placeholder-grid">
+        <div class="placeholder-box">
+            <h3>Gewünschter Block</h3>
+            <pre style="white-space:pre-wrap; margin:0; color:#cbd5e1;">{{ sensor_cron_desired_block }}</pre>
+        </div>
+
+        <div class="placeholder-box">
+            <h3>Aktueller Block</h3>
+            <pre style="white-space:pre-wrap; margin:0; color:#cbd5e1;">{{ sensor_cron_current_block or 'Kein Block vorhanden.' }}</pre>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    function renderResult(target, data) {
+        if (!target) return;
+
+        if (!data.ok) {
+            target.innerHTML =
+                '<div style="padding:12px;border:1px solid #ef4444;border-radius:12px;background:#0b1220;color:#fca5a5;">'
+                + '<strong>Test failed</strong><br>' + (data.error || 'Unknown error') + '</div>';
+            return;
+        }
+
+        var html = '<div style="padding:12px;border:1px solid #16a34a;border-radius:12px;background:#0b1220;color:#86efac;">';
+        html += '<strong>Test successful</strong><br>';
+
+        if (data.values) {
+            html += '<div style="margin-top:8px;">';
+            for (var key in data.values) {
+                if (Object.prototype.hasOwnProperty.call(data.values, key)) {
+                    html += '<div><strong>' + key + ':</strong> ' + data.values[key] + '</div>';
+                }
+            }
+            html += '</div>';
+        }
+
+        html += '</div>';
+        target.innerHTML = html;
+    }
+
+    var buttons = document.querySelectorAll('.test-sensor-btn');
+
+    buttons.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var box = btn.closest('.placeholder-box');
+            var resultBox = box ? box.querySelector('.sensor-test-result') : null;
+            var formData = new FormData();
+
+            formData.append('sensor_type', btn.getAttribute('data-sensor-type'));
+
+            var addressInput = btn.getAttribute('data-address-input');
+            var gpioInput = btn.getAttribute('data-gpio-input');
+            var retriesInput = btn.getAttribute('data-retries-input');
+            var delayInput = btn.getAttribute('data-delay-input');
+
+            if (addressInput) {
+                var elAddr = document.querySelector('[name="' + addressInput + '"]');
+                if (elAddr) formData.append('address', elAddr.value);
+            }
+
+            if (gpioInput) {
+                var elGpio = document.querySelector('[name="' + gpioInput + '"]');
+                if (elGpio) formData.append('gpio_bcm', elGpio.value);
+            }
+
+            if (retriesInput) {
+                var elRet = document.querySelector('[name="' + retriesInput + '"]');
+                if (elRet) formData.append('retries', elRet.value);
+            }
+
+            if (delayInput) {
+                var elDel = document.querySelector('[name="' + delayInput + '"]');
+                if (elDel) formData.append('retry_delay', elDel.value);
+            }
+
+            if (resultBox) {
+                resultBox.innerHTML = '<div class="muted">Testing...</div>';
+            }
+
+            fetch('/test-sensor', {
+                method: 'POST',
+                body: formData
+            })
+            .then(function (res) { return res.json(); })
+            .then(function (data) { renderResult(resultBox, data); })
+            .catch(function () {
+                renderResult(resultBox, {ok: false, error: 'Request failed'});
+            });
+        });
+    });
+})();
+</script>
+{% endblock %}

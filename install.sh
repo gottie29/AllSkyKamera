@@ -23,6 +23,12 @@ fi
 PROJECT_ROOT="$(pwd)"
 echo "Project root: ${PROJECT_ROOT}"
 
+# Service for WebUI
+SETUPUI_DIR="${PROJECT_ROOT}/setupui"
+SETUPUI_SERVICE_NAME="allsky-setupui.service"
+SYSTEMCTL_BIN="$(command -v systemctl || echo /bin/systemctl)"
+SUDOERS_FILE="/etc/sudoers.d/allsky-setupui"
+
 CFG_FILE="askutils/config.py"
 SECRET_FILE="askutils/ASKsecret.py"
 
@@ -271,6 +277,8 @@ pip3 install --user \
     numpy \
     matplotlib \
     smbus2 \
+    flask \
+    werkzeug \
     --break-system-packages
 
 # --------------------------------------------------------------------
@@ -510,12 +518,82 @@ cd "${PROJECT_ROOT}"
 python3 -m scripts.upload_config_json --no-jitter || echo "upload_config_json failed."
 python3 -m scripts.manage_crontabs || echo "manage_crontabs failed."
 
+# --------------------------------------------------------------------
+# 9. Install and enable SetupUI systemd service
+# --------------------------------------------------------------------
+echo
+echo "=== 9. Installing SetupUI service ==="
+
+if [ -d "${SETUPUI_DIR}" ] && [ -f "${SETUPUI_DIR}/app.py" ]; then
+    echo "> Found SetupUI in: ${SETUPUI_DIR}"
+
+    SERVICE_FILE="/etc/systemd/system/${SETUPUI_SERVICE_NAME}"
+
+    sudo tee "${SERVICE_FILE}" >/dev/null <<EOF
+[Unit]
+Description=AllSky Setup UI
+After=network.target
+
+[Service]
+Type=simple
+User=${USER}
+WorkingDirectory=${SETUPUI_DIR}
+ExecStart=/usr/bin/python3 ${SETUPUI_DIR}/app.py
+Restart=always
+RestartSec=3
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+    echo "> Created service file: ${SERVICE_FILE}"
+
+    echo "> Installing sudoers rule for controlled service restart..."
+    sudo tee "${SUDOERS_FILE}" >/dev/null <<EOF
+${USER} ALL=(ALL) NOPASSWD: ${SYSTEMCTL_BIN} restart ${SETUPUI_SERVICE_NAME}
+${USER} ALL=(ALL) NOPASSWD: ${SYSTEMCTL_BIN} status ${SETUPUI_SERVICE_NAME}
+EOF
+    sudo chmod 440 "${SUDOERS_FILE}"
+
+    echo "> Reloading systemd..."
+    sudo "${SYSTEMCTL_BIN}" daemon-reload
+
+    echo "> Enabling SetupUI service..."
+    sudo "${SYSTEMCTL_BIN}" enable "${SETUPUI_SERVICE_NAME}"
+
+    echo "> Restarting SetupUI service..."
+    sudo "${SYSTEMCTL_BIN}" restart "${SETUPUI_SERVICE_NAME}" || true
+
+    echo "> Service status:"
+    sudo "${SYSTEMCTL_BIN}" --no-pager --full status "${SETUPUI_SERVICE_NAME}" || true
+else
+    echo "⚠️ SetupUI directory or app.py not found. Service installation skipped."
+    echo "   Expected: ${SETUPUI_DIR}/app.py"
+fi
+
+
 echo
 echo "Installation finished."
 echo
 echo "Next steps:"
-echo "  1) Run ./setup.sh to configure camera, sensors and intervals."
-echo "  2) After setup.sh, your configuration will be uploaded and cronjobs will be updated."
+echo "  1) Open the local SetupUI in your browser:"
+echo "     http://<LAN-IP>:5001"
+echo "     or via ZeroTier: http://<ZT-IP>:5001"
+
+echo
+echo "Network addresses:"
+LAN_IPS="$(hostname -I 2>/dev/null | xargs || true)"
+
+if [ -n "${LAN_IPS}" ]; then
+    echo "  LAN IP(s): ${LAN_IPS}"
+    for ip in ${LAN_IPS}; do
+        echo "    SetupUI: http://${ip}:5001"
+    done
+else
+    echo "  LAN IP(s): not detected"
+fi
+
 echo
 echo "Your camera page:"
 echo "  https://allskykamera.space/kamera.php?k=${KAMERA_ID_FROM_API}"

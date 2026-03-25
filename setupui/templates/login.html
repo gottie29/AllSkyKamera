@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="{{ ui_lang }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ page_title }}</title>
+    <style>
+        body {
+            margin: 0;
+            background: #0b1220;
+            color: #e5e7eb;
+            font-family: Arial, Helvetica, sans-serif;
+            display: grid;
+            place-items: center;
+            min-height: 100vh;
+            padding: 24px;
+        }
+        .box {
+            width: 100%;
+            max-width: 520px;
+            background: #111827;
+            border: 1px solid #1f2937;
+            border-radius: 18px;
+            padding: 24px;
+        }
+        h1 { margin-top: 0; }
+        .muted { color: #9ca3af; }
+        label { display: block; margin: 14px 0 6px; }
+        input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid #243041;
+            background: #0b1220;
+            color: #e5e7eb;
+        }
+        button {
+            margin-top: 18px;
+            width: 100%;
+            padding: 12px;
+            border: 0;
+            border-radius: 12px;
+            background: #2563eb;
+            color: white;
+            font-weight: bold;
+        }
+        .flash {
+            margin-bottom: 12px;
+            padding: 12px;
+            border-radius: 12px;
+            background: #0b1220;
+            border: 1px solid #243041;
+        }
+        .flash.error { border-color: #ef4444; color: #fca5a5; }
+        .flash.success { border-color: #16a34a; color: #86efac; }
+        a { color: #93c5fd; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h1>{{ tr('login') }}</h1>
+        <p class="muted">{{ tr('login_hint') }}</p>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash {{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form method="post">
+            <label>{{ tr('username') }}</label>
+            <input type="text" name="username" required>
+
+            <label>{{ tr('password') }}</label>
+            <input type="password" name="password" required>
+
+            <button type="submit">{{ tr('login') }}</button>
+        </form>
+
+        <p style="margin-top:16px;">
+            <a href="/recover">{{ tr('recover') }}</a>
+        </p>
+    </div>
+</body>
+</html>

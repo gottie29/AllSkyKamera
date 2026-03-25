@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="de">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AllSky Setup UI</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #0f172a;
+            color: #e5e7eb;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        .wrap {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+
+        .card {
+            background: #111827;
+            border: 1px solid #1f2937;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            margin-top: 0;
+            font-size: 2rem;
+        }
+
+        .muted {
+            color: #9ca3af;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-top: 24px;
+        }
+
+        .box {
+            background: #0b1220;
+            border: 1px solid #243041;
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .label {
+            font-size: 0.9rem;
+            color: #93c5fd;
+            margin-bottom: 8px;
+        }
+
+        .value {
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        .ok {
+            color: #86efac;
+            font-weight: bold;
+        }
+
+        .warn {
+            color: #fca5a5;
+            font-weight: bold;
+        }
+
+        code {
+            background: #1f2937;
+            padding: 2px 6px;
+            border-radius: 6px;
+        }
+
+        @media (max-width: 700px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <div class="card">
+            <h1>AllSky Setup UI</h1>
+            <p class="muted">Lokale Konfigurationsoberfläche für deine Kamera</p>
+
+            <p>
+                Status:
+                <span class="ok">App läuft</span>
+            </p>
+
+            <div class="grid">
+                <div class="box">
+                    <div class="label">Hostname</div>
+                    <div class="value">{{ hostname }}</div>
+                </div>
+
+                <div class="box">
+                    <div class="label">Kamera-ID</div>
+                    <div class="value">{{ camera_id }}</div>
+                </div>
+
+                <div class="box">
+                    <div class="label">Standortname</div>
+                    <div class="value">{{ location_name }}</div>
+                </div>
+
+                <div class="box">
+                    <div class="label">Config-Datei</div>
+                    <div class="value">
+                        {% if config_found %}
+                            <span class="ok">gefunden</span>
+                        {% else %}
+                            <span class="warn">nicht gefunden</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="box" style="margin-top: 16px;">
+                <div class="label">Pfad</div>
+                <div class="value"><code>{{ config_path }}</code></div>
+            </div>
+
+            {% if error %}
+            <div class="box" style="margin-top: 16px;">
+                <div class="label">Fehler</div>
+                <div class="warn">{{ error }}</div>
+            </div>
+            {% endif %}
+
+            <div class="box" style="margin-top: 16px;">
+                <div class="label">Test-URLs</div>
+                <div class="muted">
+                    Heimnetz: <code>http://DEINE-LAN-IP:5001</code><br>
+                    ZeroTier: <code>http://DEINE-ZT-IP:5001</code><br>
+                    Health: <code>/health</code>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

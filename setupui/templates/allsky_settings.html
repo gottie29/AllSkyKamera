@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+    <h3>AllSkyKamera Settings</h3>
+    <p class="muted">
+        Hier kannst du die zentralen Kamera- und Standortdaten bearbeiten.
+        Geschützte Felder bleiben unverändert und werden nur angezeigt.
+        Vor jedem Speichern wird automatisch ein Backup der aktuellen <code>config.py</code> erstellt.
+    </p>
+
+    <form method="post" id="settingsForm">
+        <input type="hidden" name="action" value="save" id="settingsAction">
+
+        <div class="placeholder-grid">
+            <div class="placeholder-box">
+                <h3>KAMERA_ID</h3>
+                <p>{{ config_data.camera.kamera_id or '–' }}</p>
+                <div class="muted">Geschützt / nicht editierbar</div>
+            </div>
+
+            <div class="placeholder-box">
+                <h3>KAMERA_NAME</h3>
+                <input type="text" name="KAMERA_NAME" value="{{ config_data.camera.kamera_name or '' }}" data-initial="{{ config_data.camera.kamera_name or '' }}">
+            </div>
+
+            <div class="placeholder-box">
+                <h3>STANDORT_NAME</h3>
+                <input type="text" name="STANDORT_NAME" value="{{ config_data.camera.standort_name or '' }}" data-initial="{{ config_data.camera.standort_name or '' }}">
+            </div>
+
+            <div class="placeholder-box">
+                <h3>BENUTZER_NAME</h3>
+                <input type="text" name="BENUTZER_NAME" value="{{ config_data.camera.benutzer_name or '' }}" data-initial="{{ config_data.camera.benutzer_name or '' }}">
+            </div>
+
+            <div class="placeholder-box">
+                <h3>KONTAKT_EMAIL</h3>
+                <input type="text" name="KONTAKT_EMAIL" value="{{ config_data.camera.kontakt_email or '' }}" data-initial="{{ config_data.camera.kontakt_email or '' }}">
+            </div>
+
+            <div class="placeholder-box">
+                <h3>WEBSEITE</h3>
+                <input type="text" name="WEBSEITE" value="{{ config_data.camera.webseite or '' }}" data-initial="{{ config_data.camera.webseite or '' }}">
+            </div>
+
+            <div class="placeholder-box">
+                <h3>LATITUDE</h3>
+                <input type="text" name="LATITUDE" value="{{ config_data.camera.latitude if config_data.camera.latitude is not none else '' }}" data-initial="{{ config_data.camera.latitude if config_data.camera.latitude is not none else '' }}">
+            </div>
+
+            <div class="placeholder-box">
+                <h3>LONGITUDE</h3>
+                <input type="text" name="LONGITUDE" value="{{ config_data.camera.longitude if config_data.camera.longitude is not none else '' }}" data-initial="{{ config_data.camera.longitude if config_data.camera.longitude is not none else '' }}">
+            </div>
+
+            <div class="placeholder-box">
+                <h3>ALLSKY_PATH</h3>
+                <input type="text" name="ALLSKY_PATH" value="{{ config_data.system.allsky_path or '' }}" data-initial="{{ config_data.system.allsky_path or '' }}">
+            </div>
+
+            <div class="placeholder-box">
+                <h3>IMAGE_BASE_PATH</h3>
+                <input type="text" name="IMAGE_BASE_PATH" value="{{ config_data.system.image_base_path or '' }}" data-initial="{{ config_data.system.image_base_path or '' }}">
+            </div>
+
+            <div class="placeholder-box">
+                <h3>IMAGE_PATH</h3>
+                <input type="text" name="IMAGE_PATH" value="{{ config_data.system.image_path or '' }}" data-initial="{{ config_data.system.image_path or '' }}">
+            </div>
+
+            <div class="placeholder-box">
+                <h3>CAMERAID</h3>
+                <input type="text" name="CAMERAID" value="{{ config_data.system.cameraid or '' }}" data-initial="{{ config_data.system.cameraid or '' }}">
+            </div>
+
+            <div class="placeholder-box">
+                <h3>IMAGE_UPLOAD_SCRIPT</h3>
+                <p>{{ config_data.uploads.image_upload_script or '–' }}</p>
+                <div class="muted">Geschützt / nicht editierbar</div>
+            </div>
+
+            <div class="placeholder-box">
+                <h3>NIGHTLY_UPLOAD_SCRIPT</h3>
+                <p>{{ config_data.uploads.nightly_upload_script or '–' }}</p>
+                <div class="muted">Geschützt / nicht editierbar</div>
+            </div>
+
+            <div class="placeholder-box">
+                <h3>INDI</h3>
+                <p>{{ 1 if config_data.system.indi else 0 }}</p>
+                <div class="muted">Geschützt / nicht editierbar</div>
+            </div>
+
+            <div class="placeholder-box" style="grid-column: 1 / -1;">
+                <h3>Pfad-Test</h3>
+                <p class="muted">
+                    Testet im TJ-Modus die konfigurierten Pfade und prüft, ob Bild- und Archivstruktur vorhanden sind.
+                </p>
+
+                <div class="btn-row">
+                    <button type="button" class="mini-btn btn-primary" id="testPathsButton">
+                        Test paths
+                    </button>
+                </div>
+
+                <div id="pathTestResults" style="margin-top:15px;"></div>
+            </div>
+        </div>
+
+        <div class="btn-row">
+            <button class="mini-btn btn-save" type="submit" id="saveButton">Save locally</button>
+            <button class="mini-btn btn-upload" type="button" id="uploadButton">Upload to server</button>
+        </div>
+    </form>
+</div>
+
+<div class="card" style="margin-top: 20px;">
+    <h3>Config backups</h3>
+    <p class="muted">
+        Hier kannst du eine ältere Sicherung der <code>config.py</code> wiederherstellen.
+        Vor dem Restore wird die aktuelle Datei erneut gesichert.
+    </p>
+
+    <form method="post">
+        <input type="hidden" name="action" value="restore">
+
+        <div class="placeholder-grid">
+            <div class="placeholder-box">
+                <h3>Available backups</h3>
+
+                {% if config_backups %}
+                    <select name="backup_name">
+                        {% for b in config_backups %}
+                            <option value="{{ b.name }}">{{ b.name }} — {{ b.mtime }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <div class="muted" style="margin-top:10px;">
+                        {{ config_backups|length }} backup(s) available
+                    </div>
+                {% else %}
+                    <p>No backups available yet.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="btn-row">
+            <button class="mini-btn btn-restore" type="submit" {% if not config_backups %}disabled{% endif %}>Restore selected backup</button>
+        </div>
+    </form>
+</div>
+
+<form method="post" id="uploadForm" style="display:none;">
+    <input type="hidden" name="action" value="upload">
+</form>
+
+<script>
+(function () {
+    const form = document.getElementById('settingsForm');
+    const saveButton = document.getElementById('saveButton');
+    const uploadButton = document.getElementById('uploadButton');
+    const uploadForm = document.getElementById('uploadForm');
+    const testBtn = document.getElementById('testPathsButton');
+    const resultBox = document.getElementById('pathTestResults');
+
+    if (!form || !saveButton || !uploadButton) {
+        return;
+    }
+
+    const fields = form.querySelectorAll('input[name]:not([type="hidden"])');
+
+    function normalizeValue(value) {
+        return String(value ?? '').trim();
+    }
+
+    function hasChanges() {
+        for (const field of fields) {
+            const initial = normalizeValue(field.getAttribute('data-initial'));
+            const current = normalizeValue(field.value);
+            if (initial !== current) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function updateSaveState() {
+        if (hasChanges()) {
+            saveButton.classList.add('btn-attention');
+        } else {
+            saveButton.classList.remove('btn-attention');
+        }
+    }
+
+    fields.forEach(field => {
+        field.addEventListener('input', updateSaveState);
+        field.addEventListener('change', updateSaveState);
+    });
+
+    uploadButton.addEventListener('click', function () {
+        uploadForm.submit();
+    });
+
+    if (testBtn && resultBox) {
+        testBtn.addEventListener('click', async function () {
+            const formData = new FormData();
+            formData.append('ALLSKY_PATH', form.querySelector('[name="ALLSKY_PATH"]').value);
+            formData.append('IMAGE_BASE_PATH', form.querySelector('[name="IMAGE_BASE_PATH"]').value);
+            formData.append('IMAGE_PATH', form.querySelector('[name="IMAGE_PATH"]').value);
+
+            resultBox.innerHTML = "<div class='muted'>Testing...</div>";
+
+            try {
+                const res = await fetch('/test-paths', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await res.json();
+
+                if (!data.ok) {
+                    resultBox.innerHTML = "<div class='warn'>Error: " + data.error + "</div>";
+                    return;
+                }
+
+                function renderItem(title, item) {
+                    const border = item.ok ? "#16a34a" : "#ef4444";
+                    const color = item.ok ? "#86efac" : "#fca5a5";
+                    const icon = item.ok ? "✔" : "✖";
+
+                    return `
+                        <div style="padding:12px; border:1px solid ${border}; border-radius:12px; margin-bottom:10px; background:#0b1220;">
+                            <strong>${icon} ${title}</strong><br>
+                            <span style="color:${color};">${item.msg}</span>
+                        </div>
+                    `;
+                }
+
+                resultBox.innerHTML = `
+                    ${renderItem("ALLSKY_PATH", data.result.allsky_path)}
+                    ${renderItem("IMAGE_BASE_PATH", data.result.image_base_path)}
+                    ${renderItem("IMAGE_PATH", data.result.image_path)}
+                `;
+            } catch (err) {
+                resultBox.innerHTML = "<div class='warn'>Request failed</div>";
+            }
+        });
+    }
+
+    updateSaveState();
+})();
+</script>
+{% endblock %}

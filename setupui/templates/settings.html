@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+    <h3>{{ tr('settings') }}</h3>
+    <p class="muted">
+        Hier verwalten wir Benutzer, Sprache und System-Updates.
+    </p>
+
+    <div class="placeholder-grid">
+        <div class="placeholder-box">
+            <h3>{{ tr('username') }}</h3>
+            <p>{{ session_username or '–' }}</p>
+        </div>
+
+        <div class="placeholder-box">
+            <h3>{{ tr('language') }}</h3>
+            <p>{{ ui_lang|upper }}</p>
+        </div>
+
+        <div class="placeholder-box">
+            <h3>{{ tr('recover') }}</h3>
+            <p><a href="/recover">/recover</a></p>
+        </div>
+    </div>
+</div>
+
+<div class="card" style="margin-top: 20px;">
+    <h3>Projekt-Update</h3>
+    <p class="muted">
+        Hier wird die lokale Version mit der GitHub-Version verglichen.
+    </p>
+
+    <div class="placeholder-grid">
+        <div class="placeholder-box">
+            <h3>Lokale Version</h3>
+            <p>{{ version_info.local_version }}</p>
+        </div>
+
+        <div class="placeholder-box">
+            <h3>GitHub-Version</h3>
+            <p>{{ version_info.github_version }}</p>
+        </div>
+
+        <div class="placeholder-box {% if version_info.update_available %}status-active{% endif %}">
+            <h3>Status</h3>
+            {% if version_info.github_reachable %}
+                {% if version_info.update_available %}
+                    <p class="ok">Update verfügbar</p>
+                {% else %}
+                    <p>Kein Update nötig</p>
+                {% endif %}
+            {% else %}
+                <p class="warn">GitHub-Version konnte nicht geladen werden</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="placeholder-grid" style="margin-top: 18px;">
+        <div class="placeholder-box">
+            <h3>Version-Datei lokal</h3>
+            <p><code>{{ version_info.local_version_path }}</code></p>
+        </div>
+
+        <div class="placeholder-box">
+            <h3>GitHub-Ziel</h3>
+            <p><code>{{ version_info.github_version_url }}</code></p>
+        </div>
+    </div>
+
+    <div style="margin-top: 18px; display:flex; gap:12px; flex-wrap:wrap;">
+        <a class="mini-btn" href="/check-update">Update prüfen</a>
+
+        {% if version_info.update_available %}
+        <form method="post" action="/run-update" style="margin:0;">
+            <button class="mini-btn" type="submit">Jetzt updaten</button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
