@@ -174,3 +174,12 @@ tests/mlx90614_coeffs.j*
 tests/*.csv
 tj_settings.json
 
+# SetupUI local data
+setupui/data/session_secret.txt
+setupui/data/ui_config.json
+setupui/data/config_backups/
+
+*.log
+*.tmp
+setupui/data/*
+!setupui/data/.gitkeep
