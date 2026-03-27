@@ -182,5 +182,6 @@ setupui/data/config_backups/
 
 *.log
 *.tmp
+*.json
 setupui/data/*
 !setupui/data/.gitkeep
