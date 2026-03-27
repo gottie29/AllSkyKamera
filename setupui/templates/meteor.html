@@ -22,19 +22,22 @@
                 </div>
             </div>
 
-            <div class="placeholder-box">
+            <div class="placeholder-box field-locked">              
                 <h3>{{ tr('output_directory') }}</h3>
-                <input type="text" name="output_dir" value="{{ config_data.features.meteor_output_dir or '' }}">
+                <input type="text" value="{{ config_data.features.meteor_output_dir or '' }}" readonly disabled>
+                <input type="hidden" name="output_dir" value="{{ config_data.features.meteor_output_dir or '' }}">
             </div>
 
-            <div class="placeholder-box">
+            <div class="placeholder-box field-locked">              
                 <h3>{{ tr('state_file') }}</h3>
-                <input type="text" name="state_file" value="{{ config_data.features.meteor_state_file or '' }}">
+                <input type="text" value="{{ config_data.features.meteor_state_file or '' }}" readonly disabled>
+                <input type="hidden" name="state_file" value="{{ config_data.features.meteor_state_file or '' }}">
             </div>
 
-            <div class="placeholder-box">
+            <div class="placeholder-box field-locked">              
                 <h3>{{ tr('keep_days_local') }}</h3>
-                <input type="number" name="keep_days_local" value="{{ config_data.features.meteor_keep_days_local or 3 }}">
+                <input type="number" value="{{ config_data.features.meteor_keep_days_local or 3 }}" readonly disabled>
+                <input type="hidden" name="keep_days_local" value="{{ config_data.features.meteor_keep_days_local or 3 }}">
             </div>
 
             <div class="placeholder-box">
@@ -44,22 +47,22 @@
 
             <div class="placeholder-box">
                 <h3>{{ tr('min_pixels') }}</h3>
-                <input type="number" name="min_pixels" value="{{ config_data.features.meteor_min_pixels or 1200 }}">
+                <input type="number" name="min_pixels" value="{{ config_data.features.meteor_min_pixels or 900 }}">
             </div>
 
             <div class="placeholder-box">
                 <h3>{{ tr('min_blob_pixels') }}</h3>
-                <input type="number" name="min_blob_pixels" value="{{ config_data.features.meteor_min_blob_pixels or 25 }}">
+                <input type="number" name="min_blob_pixels" value="{{ config_data.features.meteor_min_blob_pixels or 13 }}">
             </div>
 
             <div class="placeholder-box">
                 <h3>{{ tr('min_line_length') }}</h3>
-                <input type="number" name="min_line_length" value="{{ config_data.features.meteor_min_line_length or 20 }}">
+                <input type="number" name="min_line_length" value="{{ config_data.features.meteor_min_line_length or 14 }}">
             </div>
 
             <div class="placeholder-box">
                 <h3>{{ tr('min_aspect_ratio') }}</h3>
-                <input type="text" name="min_aspect_ratio" value="{{ config_data.features.meteor_min_aspect_ratio or 4.0 }}">
+                <input type="text" name="min_aspect_ratio" value="{{ config_data.features.meteor_min_aspect_ratio or 3.5 }}">
             </div>
 
             <div class="placeholder-box">
@@ -69,27 +72,28 @@
 
             <div class="placeholder-box">
                 <h3>{{ tr('small_width') }}</h3>
-                <input type="number" name="small_width" value="{{ config_data.features.meteor_small_width or 640 }}">
+                <input type="number" name="small_width" value="{{ config_data.features.meteor_small_width or 800 }}">
             </div>
 
             <div class="placeholder-box">
                 <h3>{{ tr('diff_width') }}</h3>
-                <input type="number" name="diff_width" value="{{ config_data.features.meteor_diff_width or 640 }}">
+                <input type="number" name="diff_width" value="{{ config_data.features.meteor_diff_width or 800 }}">
             </div>
 
             <div class="placeholder-box">
                 <h3>{{ tr('boxed_width') }}</h3>
-                <input type="number" name="boxed_width" value="{{ config_data.features.meteor_boxed_width or 640 }}">
+                <input type="number" name="boxed_width" value="{{ config_data.features.meteor_boxed_width or 800 }}">
             </div>
 
             <div class="placeholder-box">
                 <h3>{{ tr('preview_small_width') }}</h3>
-                <input type="number" name="prev_small_width" value="{{ config_data.features.meteor_prev_small_width or 640 }}">
+                <input type="number" name="prev_small_width" value="{{ config_data.features.meteor_prev_small_width or 800 }}">
             </div>
 
-            <div class="placeholder-box">
+            <div class="placeholder-box field-locked">              
                 <h3>{{ tr('upload_jitter_max_sec') }}</h3>
-                <input type="number" name="upload_jitter_max_seconds" value="{{ config_data.features.meteor_upload_jitter_max_seconds or 90 }}">
+                <input type="number" value="{{ config_data.features.meteor_upload_jitter_max_seconds or 90 }}" readonly disabled>
+                <input type="hidden" name="upload_jitter_max_seconds" value="{{ config_data.features.meteor_upload_jitter_max_seconds or 90 }}">
             </div>
         </div>
 

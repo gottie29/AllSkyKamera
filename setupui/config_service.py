@@ -2,10 +2,11 @@
 # -*- coding: utf-8 -*-
 
 import os
+import re
 import sys
 import types
 import importlib.util
-from typing import Any, Dict
+from typing import Any, Dict, List, Tuple
 
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -15,8 +16,142 @@ if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
 
+CONFIG_DEFAULT_SECTIONS = [
+    {
+        "title": "Meteor detection",
+        "comment_lines": [
+            "Lokales Arbeits-/Ergebnisverzeichnis",
+            "State-Datei für inkrementelle Verarbeitung",
+            "Lokale Aufbewahrung in Tagen",
+            "Schwellwerte",
+            "Bildgrößen für Speicherung / Upload",
+            "Upload-Jitter innerhalb des 10-Minuten-Fensters",
+        ],
+        "entries": [
+            ("METEOR_ENABLE", False),
+            ("METEOR_OUTPUT_DIR", os.path.join(PROJECT_ROOT, "meteordetect")),
+            ("METEOR_STATE_FILE", os.path.join(PROJECT_ROOT, "meteordetect", "meteor_state.json")),
+            ("METEOR_KEEP_DAYS_LOCAL", 3),
+            ("METEOR_THRESHOLD", 80),
+            ("METEOR_MIN_PIXELS", 900),
+            ("METEOR_MIN_BLOB_PIXELS", 13),
+            ("METEOR_MIN_LINE_LENGTH", 14),
+            ("METEOR_MIN_ASPECT_RATIO", 3.5),
+            ("METEOR_FULLHD_WIDTH", 1920),
+            ("METEOR_SMALL_WIDTH", 640),
+            ("METEOR_DIFF_WIDTH", 640),
+            ("METEOR_BOXED_WIDTH", 640),
+            ("METEOR_PREV_SMALL_WIDTH", 640),
+            ("METEOR_UPLOAD_JITTER_MAX_SECONDS", 90),
+        ],
+    },
+]
+
+
 def _safe_get(module: Any, name: str, default: Any = None) -> Any:
     return getattr(module, name, default)
+
+
+def _py_literal(value: Any) -> str:
+    if isinstance(value, str):
+        return repr(value)
+    if isinstance(value, bool):
+        return "True" if value else "False"
+    return repr(value)
+
+
+def _find_missing_config_keys(content: str, entries: List[Tuple[str, Any]]) -> List[Tuple[str, Any]]:
+    missing = []
+    for key, value in entries:
+        pattern = r"(?m)^\s*{}\s*=".format(re.escape(key))
+        if not re.search(pattern, content):
+            missing.append((key, value))
+    return missing
+
+
+def _build_default_section_block(title: str, entries: List[Tuple[str, Any]], comment_lines: List[str] = None) -> str:
+    lines = [
+        "# ---------------------------------------------------",
+        "# {}".format(title),
+        "# ---------------------------------------------------",
+    ]
+
+    comment_map = {
+        1: comment_lines[0] if comment_lines and len(comment_lines) > 0 else None,
+        2: comment_lines[1] if comment_lines and len(comment_lines) > 1 else None,
+        3: comment_lines[2] if comment_lines and len(comment_lines) > 2 else None,
+        4: comment_lines[3] if comment_lines and len(comment_lines) > 3 else None,
+        9: comment_lines[4] if comment_lines and len(comment_lines) > 4 else None,
+        14: comment_lines[5] if comment_lines and len(comment_lines) > 5 else None,
+    }
+
+    for idx, (key, value) in enumerate(entries):
+        comment = comment_map.get(idx)
+        if comment:
+            lines.append("")
+            lines.append("# {}".format(comment))
+        lines.append("{} = {}".format(key, _py_literal(value)))
+
+    return "\n".join(lines) + "\n"
+
+
+def _insert_block_before_crontabs(content: str, block: str) -> str:
+    """
+    Fügt einen Default-Block direkt vor dem Abschnitt
+    '# CRONTABS – Basisjobs' ein.
+    Falls der Marker nicht gefunden wird, wird der Block
+    aus Sicherheitsgründen ans Ende angehängt.
+    """
+    marker_pattern = r'(?m)^#\s*CRONTABS\s*[–-]\s*Basisjobs\b'
+
+    match = re.search(marker_pattern, content)
+    if not match:
+        if content and not content.endswith("\n"):
+            content += "\n"
+        return content + "\n" + block
+
+    insert_pos = match.start()
+
+    prefix = content[:insert_pos].rstrip()
+    suffix = content[insert_pos:].lstrip("\n")
+
+    return prefix + "\n\n" + block.rstrip() + "\n\n" + suffix
+
+
+def ensure_config_defaults() -> Dict[str, Any]:
+    if not os.path.isfile(CONFIG_PATH):
+        raise FileNotFoundError("config.py nicht gefunden: %s" % CONFIG_PATH)
+
+    with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    original_content = content
+    applied_keys = []
+
+    for section in CONFIG_DEFAULT_SECTIONS:
+        entries = section.get("entries", [])
+        missing_entries = _find_missing_config_keys(content, entries)
+        if not missing_entries:
+            continue
+
+        block = _build_default_section_block(
+            section.get("title", "Config defaults"),
+            missing_entries,
+            section.get("comment_lines") or [],
+        )
+
+        content = _insert_block_before_crontabs(content, block)
+        applied_keys.extend([key for key, _ in missing_entries])
+
+    changed = content != original_content
+    if changed:
+        with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+            f.write(content)
+
+    return {
+        "changed": changed,
+        "applied_keys": applied_keys,
+    }
 
 
 def _install_stub_modules() -> Dict[str, Any]:
@@ -52,10 +187,12 @@ def load_config_module():
     """
     Lädt askutils/config.py als Python-Modul.
     Remote-Secrets werden dabei absichtlich deaktiviert.
+    Fehlende Default-Keys werden dabei automatisch ergänzt.
     """
     if not os.path.isfile(CONFIG_PATH):
         raise FileNotFoundError("config.py nicht gefunden: %s" % CONFIG_PATH)
 
+    ensure_result = ensure_config_defaults()
     backups = _install_stub_modules()
 
     try:
@@ -64,6 +201,8 @@ def load_config_module():
             raise RuntimeError("config.py konnte nicht geladen werden")
 
         module = importlib.util.module_from_spec(spec)
+        module.__allsky_defaults_applied__ = ensure_result.get("applied_keys", [])
+        module.__allsky_defaults_changed__ = bool(ensure_result.get("changed", False))
         spec.loader.exec_module(module)
         return module
     finally:
@@ -82,6 +221,8 @@ def load_config_data() -> Dict[str, Any]:
         "meta": {
             "config_path": CONFIG_PATH,
             "config_exists": True,
+            "defaults_changed": bool(_safe_get(module, "__allsky_defaults_changed__", False)),
+            "defaults_applied": _safe_get(module, "__allsky_defaults_applied__", []) or [],
         },
 
         "camera": {
@@ -230,7 +371,7 @@ def load_config_data() -> Dict[str, Any]:
 
             "analemma_enabled": bool(_safe_get(module, "ANALEMMA_ENABLED", False)),
         },
-        
+
         "cronjobs": {
             "items": crontabs,
             "count": len(crontabs),
@@ -253,6 +394,8 @@ def load_config_data_safe() -> Dict[str, Any]:
                 "config_exists": os.path.isfile(CONFIG_PATH),
                 "load_ok": False,
                 "load_error": str(e),
+                "defaults_changed": False,
+                "defaults_applied": [],
             },
             "camera": {},
             "system": {},

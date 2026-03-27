@@ -388,6 +388,50 @@
         .switch input:focus + .slider-toggle {
             box-shadow: 0 0 0 2px rgba(37,99,235,0.25);
         }
+        /* ================================
+        READONLY / LOCKED FIELDS
+        ================================ */
+
+        /* gesperrte Inputs */
+        input[readonly],
+        input:disabled {
+            background: #0a0f1a;
+            color: #94a3b8;
+            border-color: #1e293b;
+            cursor: not-allowed;
+        }
+
+        /* leicht ausgegraut + kein Glow */
+        input[readonly]:focus,
+        input:disabled:focus {
+            box-shadow: none;
+            border-color: #1e293b;
+        }
+
+        /* optisches Icon (Schloss-Effekt) */
+        .field-locked {
+            position: relative;
+        }
+
+        .field-locked::after {
+            content: "🔒";
+            position: absolute;
+            right: 12px;
+            top: 38px;
+            font-size: 0.9rem;
+            opacity: 0.6;
+        }
+
+        /* editierbare Felder leicht hervorheben */
+        .field-editable input {
+            border-color: #2563eb;
+            background: #0b1220;
+        }
+
+        .field-editable input:focus {
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.3);
+        }
+
     </style>
 </head>
 <body>
