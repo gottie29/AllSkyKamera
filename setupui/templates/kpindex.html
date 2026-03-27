@@ -2,9 +2,9 @@
 
 {% block content %}
 <div class="card">
-    <h3>KPIndex</h3>
+    <h3>{{ tr('kpindex_title') }}</h3>
     <p class="muted">
-        Hier konfigurierst du den KpIndex-Logger lokal. Der Cronjob wird separat über den Options-Block angewendet.
+        {{ tr('kpindex_intro') }}
     </p>
 
     <form method="post">
@@ -12,66 +12,66 @@
 
         <div class="placeholder-grid">
             <div class="placeholder-box {% if config_data.features.kpindex_enabled %}status-active{% else %}status-inactive{% endif %}">
-                <h3>KpIndex aktiv</h3>
+                <h3>{{ tr('kpindex_active') }}</h3>
                 <div class="toggle-row">
                     <label class="switch">
                         <input type="checkbox" name="enabled" value="1" {% if config_data.features.kpindex_enabled %}checked{% endif %}>
                         <span class="slider-toggle"></span>
                     </label>
-                    <span class="toggle-label">KpIndex aktiv</span>
+                    <span class="toggle-label">{{ tr('kpindex_active') }}</span>
                 </div>
             </div>
 
             <div class="placeholder-box">
-                <h3>Overlay</h3>
+                <h3>{{ tr('overlay') }}</h3>
                 <div class="toggle-row">
                     <label class="switch">
                         <input type="checkbox" name="overlay" value="1" {% if config_data.features.kpindex_overlay %}checked{% endif %}>
                         <span class="slider-toggle"></span>
                     </label>
-                    <span class="toggle-label">Overlay aktiv</span>
+                    <span class="toggle-label">{{ tr('overlay_active') }}</span>
                 </div>
             </div>
 
             <div class="placeholder-box">
-                <h3>Logger-Intervall</h3>
+                <h3>{{ tr('logger_interval') }}</h3>
                 <input type="number" name="log_interval_min" value="{{ config_data.features.kpindex_log_interval_min or 15 }}">
             </div>
         </div>
 
         <div class="btn-row">
-            <button class="mini-btn btn-save" type="submit">Save KPIndex locally</button>
+            <button class="mini-btn btn-save" type="submit">{{ tr('save_kpindex_locally') }}</button>
         </div>
     </form>
 </div>
 
 <div class="card" style="margin-top: 20px;">
-    <h3>Options-Cronjobs</h3>
+    <h3>{{ tr('options_cronjobs') }}</h3>
 
     <div class="placeholder-grid">
         <div class="placeholder-box {% if option_cron_in_sync %}status-active{% endif %}">
-            <h3>Status</h3>
+            <h3>{{ tr('status') }}</h3>
             {% if option_cron_current_ok %}
                 {% if option_cron_in_sync %}
-                    <p class="ok">Options-Crons sind synchron</p>
+                    <p class="ok">{{ tr('options_crons_sync_ok') }}</p>
                 {% else %}
-                    <p class="warn">Options-Crons weichen ab</p>
+                    <p class="warn">{{ tr('options_crons_sync_diff') }}</p>
                 {% endif %}
             {% else %}
-                <p class="warn">Crontab konnte nicht gelesen werden</p>
+                <p class="warn">{{ tr('cron_cannot_read') }}</p>
                 <div class="muted">{{ option_cron_current_error }}</div>
             {% endif %}
         </div>
 
         <div class="placeholder-box">
-            <h3>Gewünschte Jobs</h3>
+            <h3>{{ tr('desired_jobs') }}</h3>
             <p>{{ option_cron_jobs_desired|length }}</p>
         </div>
     </div>
 
     <form method="post" style="margin-top:18px;">
         <input type="hidden" name="action" value="apply_option_crons">
-        <button class="mini-btn btn-upload" type="submit">Apply option cronjobs</button>
+        <button class="mini-btn btn-upload" type="submit">{{ tr('apply_option_cronjobs') }}</button>
     </form>
 </div>
 {% endblock %}

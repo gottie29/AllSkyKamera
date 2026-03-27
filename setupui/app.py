@@ -8,9 +8,8 @@ from update_service import get_version_status, run_update
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from auth_service import get_cron_settings, update_cron_settings
 from sensor_service import build_sensor_overview
-from sensor_write_service import save_bme280_settings, save_dht22_settings, save_tsl2591_settings
-from sensor_test_service import test_bme280, test_dht22, test_tsl2591, test_ds18b20
 from options_write_service import save_kpindex_settings, save_meteor_settings
+from translation import TEXTS, tr
 
 from config_write_service import (
     save_config_values,
@@ -18,6 +17,8 @@ from config_write_service import (
     restore_backup,
     run_config_upload,
     test_paths,
+    prune_backups_keep_latest,
+    prune_old_backups,
 )
 
 from config_service import load_config_data_safe
@@ -50,97 +51,36 @@ from cron_service import (
     parse_option_jobs_from_block,
 )
 
+from sensor_write_service import (
+    save_bme280_settings,
+    save_dht11_settings,
+    save_dht22_settings,
+    save_tsl2591_settings,
+    save_ds18b20_settings,
+    save_mlx90614_settings,
+    save_htu21_settings,
+    save_sht3x_settings,
+)
+
+from sensor_test_service import (
+    test_bme280,
+    test_dht11,
+    test_dht22,
+    test_tsl2591,
+    test_ds18b20,
+    test_mlx90614,
+    test_htu21,
+    test_sht3x,
+)
+
 app = Flask(__name__)
 app.secret_key = os.environ.get("SETUPUI_SECRET_KEY", get_or_create_session_secret())
 
-
-TEXTS = {
-    "de": {
-        "app_title": "AllSky Setup UI",
-        "app_subtitle": "Lokale Kamera-Verwaltung",
-        "layout_subtitle": "Schrittweise Ausbau der lokalen Setup-Oberfläche",
-        "nav_general": "Allgemein",
-        "nav_options": "Optionen",
-        "nav_user": "Benutzer",
-        "dashboard": "Dashboard",
-        "allsky_settings": "AllSkyKamera Settings",
-        "sensors": "Sensoren",
-        "cronjobs": "Cronjobs",
-        "kpindex": "KPIndex",
-        "meteor": "Meteordetection (BETA)",
-        "settings": "Settings",
-        "login": "Login",
-        "logout": "Logout",
-        "first_setup": "Erster Start",
-        "language": "Sprache",
-        "username": "Benutzername",
-        "password": "Passwort",
-        "password_repeat": "Passwort wiederholen",
-        "save": "Speichern",
-        "recover": "Zugang zurücksetzen",
-        "recovery_key": "Recovery Key",
-        "new_username": "Neuer Benutzername",
-        "new_password": "Neues Passwort",
-        "setup_hint": "Bitte richte die lokale Oberfläche beim ersten Start ein.",
-        "login_hint": "Bitte melde dich an, um die Kamera zu verwalten.",
-        "recover_hint": "Setze Benutzername und Passwort mit dem kameraeigenen SecretKey zurück.",
-        "setup_success": "Ersteinrichtung erfolgreich gespeichert. Bitte anmelden.",
-        "login_failed": "Anmeldung fehlgeschlagen.",
-        "recover_failed": "Recovery Key ungültig.",
-        "recover_success": "Zugangsdaten wurden erfolgreich zurückgesetzt.",
-        "logout_success": "Du wurdest abgemeldet.",
-        "password_mismatch": "Die Passwörter stimmen nicht überein.",
-        "fields_required": "Bitte alle Felder ausfüllen.",
-        "open_camera_page": "Kamera-Seite öffnen",
-        "camera_id": "Kamera-ID",
-        "camera_location": "Standort",
-    },
-    "en": {
-        "app_title": "AllSky Setup UI",
-        "app_subtitle": "Local camera management",
-        "layout_subtitle": "Step-by-step expansion of the local setup interface",
-        "nav_general": "General",
-        "nav_options": "Options",
-        "nav_user": "User",
-        "dashboard": "Dashboard",
-        "allsky_settings": "AllSkyKamera Settings",
-        "sensors": "Sensors",
-        "cronjobs": "Cronjobs",
-        "kpindex": "KPIndex",
-        "meteor": "Meteor detection (BETA)",
-        "settings": "Settings",
-        "login": "Login",
-        "logout": "Logout",
-        "first_setup": "First start",
-        "language": "Language",
-        "username": "Username",
-        "password": "Password",
-        "password_repeat": "Repeat password",
-        "save": "Save",
-        "recover": "Recover access",
-        "recovery_key": "Recovery key",
-        "new_username": "New username",
-        "new_password": "New password",
-        "setup_hint": "Please complete the initial setup of the local interface.",
-        "login_hint": "Please sign in to manage the camera.",
-        "recover_hint": "Reset username and password using the camera-specific secret key.",
-        "setup_success": "Initial setup saved successfully. Please log in.",
-        "login_failed": "Login failed.",
-        "recover_failed": "Recovery key invalid.",
-        "recover_success": "Credentials were reset successfully.",
-        "logout_success": "You have been logged out.",
-        "password_mismatch": "Passwords do not match.",
-        "fields_required": "Please fill in all fields.",
-        "open_camera_page": "Open camera page",
-        "camera_id": "Camera ID",
-        "camera_location": "Location",
-    }
-}
-
-
-def tr(key: str, lang: str) -> str:
-    return TEXTS.get(lang, TEXTS["de"]).get(key, key)
-
+app.config["SESSION_COOKIE_NAME"] = "setupui_session"
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SECURE"] = False   # bei http über IP
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_DOMAIN"] = None    # ganz wichtig: host-only lassen
 
 @app.context_processor
 def inject_globals():
@@ -224,6 +164,12 @@ def login():
         if verify_login(username, password):
             session["logged_in"] = True
             session["username"] = username
+            
+            try:
+                prune_old_backups(max_age_days=90, keep_latest=3)
+            except Exception:
+                pass
+            
             return redirect(url_for("dashboard"))
 
         flash(tr("login_failed", lang), "error")
@@ -325,6 +271,18 @@ def allsky_settings():
                 return redirect(url_for("allsky_settings"))
             except Exception as e:
                 flash(f"Restore failed: {e}", "error")
+                return redirect(url_for("allsky_settings"))
+
+        elif action == "cleanup_backups":
+            try:
+                cleanup = prune_backups_keep_latest(keep_latest=3)
+                flash(
+                    f"{cleanup['deleted_count']} old backups deleted. Latest 3 kept.",
+                    "success"
+                )
+                return redirect(url_for("allsky_settings"))
+            except Exception as e:
+                flash(f"Backup cleanup failed: {e}", "error")
                 return redirect(url_for("allsky_settings"))
 
     context = get_base_context("allsky_settings", "allsky_settings")
@@ -539,11 +497,46 @@ def meteor():
     return render_template("meteor.html", **context)
 
 
-@app.route("/settings")
+@app.route("/settings", methods=["GET", "POST"])
 @login_required
 def settings():
-    return render_template("settings.html", **get_base_context("settings", "settings"))
+    lang = get_language()
 
+    if request.method == "POST":
+        action = (request.form.get("action") or "").strip()
+
+        if action == "change_credentials":
+            current_password = request.form.get("current_password") or ""
+            new_username = (request.form.get("new_username") or "").strip()
+            new_password = request.form.get("new_password") or ""
+            new_password_repeat = request.form.get("new_password_repeat") or ""
+
+            current_username = get_username()
+
+            if not current_password or not new_username or not new_password or not new_password_repeat:
+                flash(tr("fields_required", lang), "error")
+                return redirect(url_for("settings"))
+
+            if new_password != new_password_repeat:
+                flash(tr("password_mismatch", lang), "error")
+                return redirect(url_for("settings"))
+
+            if not verify_login(current_username, current_password):
+                flash("Aktuelles Passwort ist falsch.", "error")
+                return redirect(url_for("settings"))
+
+            try:
+                update_credentials(new_username, new_password)
+                session["username"] = new_username
+                flash("Benutzername und Passwort wurden erfolgreich geändert.", "success")
+            except Exception as e:
+                flash("Änderung fehlgeschlagen: %s" % e, "error")
+
+            return redirect(url_for("settings"))
+
+    context = get_base_context("settings", "settings")
+    context["stored_username"] = get_username()
+    return render_template("settings.html", **context)
 
 @app.route("/set-language/<lang>")
 @login_required
@@ -585,8 +578,18 @@ def test_paths_route():
         allsky_path = request.form.get("ALLSKY_PATH", "")
         image_base_path = request.form.get("IMAGE_BASE_PATH", "")
         image_path = request.form.get("IMAGE_PATH", "")
+        cameraid = request.form.get("CAMERAID", "")
 
-        result = test_paths(allsky_path, image_base_path, image_path)
+        config_data = load_config_data_safe()
+        indi = bool(config_data.get("system", {}).get("indi", False))
+
+        result = test_paths(
+            allsky_path,
+            image_base_path,
+            image_path,
+            indi=indi,
+            cameraid=cameraid,
+        )
 
         return jsonify({
             "ok": True,
@@ -598,7 +601,7 @@ def test_paths_route():
             "ok": False,
             "error": str(e)
         }), 500
-
+        
 @app.route("/save-sensor-settings", methods=["POST"])
 @login_required
 def save_sensor_settings():
@@ -639,6 +642,46 @@ def save_sensor_settings():
             save_bme280_settings(payload)
             flash("BME280 settings saved locally.", "success")
 
+        elif sensor_type == "mlx90614":
+            payload = {
+                "enabled": request.form.get("enabled") == "1",
+                "log_interval_min": int(request.form.get("log_interval_min") or "1"),
+                "items": [{
+                    "name": request.form.get("item_name_0", ""),
+                    "address": request.form.get("item_address_0", "0x5a"),
+                    "ambient_offset_c": request.form.get("item_ambient_offset_c_0", "0"),
+                    "cloud_k1": request.form.get("item_cloud_k1_0", "0"),
+                    "cloud_k2": request.form.get("item_cloud_k2_0", "0"),
+                    "cloud_k3": request.form.get("item_cloud_k3_0", "0"),
+                    "cloud_k4": request.form.get("item_cloud_k4_0", "0"),
+                    "cloud_k5": request.form.get("item_cloud_k5_0", "0"),
+                    "cloud_k6": request.form.get("item_cloud_k6_0", "0"),
+                    "cloud_k7": request.form.get("item_cloud_k7_0", "0"),
+                }]
+            }
+
+            save_mlx90614_settings(payload)
+            flash("MLX90614 settings saved locally.", "success")
+
+        elif sensor_type == "dht11":
+            payload = {
+                "enabled": request.form.get("enabled") == "1",
+                "log_interval_min": int(request.form.get("log_interval_min") or "1"),
+                "items": [{
+                    "enabled": request.form.get("item_enabled_0") == "1",
+                    "name": request.form.get("item_name_0", ""),
+                    "gpio_bcm": request.form.get("item_gpio_bcm_0", "0"),
+                    "retries": request.form.get("item_retries_0", "5"),
+                    "retry_delay": request.form.get("item_retry_delay_0", "0.3"),
+                    "overlay": request.form.get("item_overlay_0") == "1",
+                    "temp_offset_c": request.form.get("item_temp_offset_c_0", "0"),
+                    "hum_offset_pct": request.form.get("item_hum_offset_pct_0", "0"),
+                }]
+            }
+
+            save_dht11_settings(payload)
+            flash("DHT11 settings saved locally.", "success")
+
         elif sensor_type == "dht22":
             payload = {
                 "enabled": request.form.get("enabled") == "1",
@@ -675,6 +718,21 @@ def save_sensor_settings():
             save_dht22_settings(payload)
             flash("DHT22 settings saved locally.", "success")
 
+        elif sensor_type == "ds18b20":
+            payload = {
+                "enabled": request.form.get("enabled") == "1",
+                "log_interval_min": int(request.form.get("log_interval_min") or "1"),
+                "items": [{
+                    "enabled": request.form.get("item_enabled_0") == "1",
+                    "name": request.form.get("item_name_0", ""),
+                    "overlay": request.form.get("item_overlay_0") == "1",
+                    "temp_offset_c": request.form.get("item_temp_offset_c_0", "0"),
+                }]
+            }
+
+            save_ds18b20_settings(payload)
+            flash("DS18B20 settings saved locally.", "success")
+
         elif sensor_type == "tsl2591":
             payload = {
                 "enabled": request.form.get("enabled") == "1",
@@ -690,6 +748,38 @@ def save_sensor_settings():
 
             save_tsl2591_settings(payload)
             flash("TSL2591 settings saved locally.", "success")
+
+        elif sensor_type == "htu21":
+            payload = {
+                "enabled": request.form.get("enabled") == "1",
+                "log_interval_min": int(request.form.get("log_interval_min") or "1"),
+                "items": [{
+                    "name": request.form.get("item_name_0", ""),
+                    "address": request.form.get("item_address_0", "0x40"),
+                    "overlay": request.form.get("item_overlay_0") == "1",
+                    "temp_offset": request.form.get("item_temp_offset_0", "0"),
+                    "hum_offset": request.form.get("item_hum_offset_0", "0"),
+                }]
+            }
+
+            save_htu21_settings(payload)
+            flash("HTU21 settings saved locally.", "success")
+
+        elif sensor_type == "sht3x":
+            payload = {
+                "enabled": request.form.get("enabled") == "1",
+                "log_interval_min": int(request.form.get("log_interval_min") or "1"),
+                "items": [{
+                    "name": request.form.get("item_name_0", ""),
+                    "address": request.form.get("item_address_0", "0x44"),
+                    "overlay": request.form.get("item_overlay_0") == "1",
+                    "temp_offset": request.form.get("item_temp_offset_0", "0"),
+                    "hum_offset": request.form.get("item_hum_offset_0", "0"),
+                }]
+            }
+
+            save_sht3x_settings(payload)
+            flash("SHT3X settings saved locally.", "success")
 
         else:
             flash("Unsupported sensor type.", "error")
@@ -709,20 +799,42 @@ def test_sensor():
             result = test_bme280(request.form.get("address", "0x76"))
         elif sensor_type == "tsl2591":
             result = test_tsl2591(request.form.get("address", "0x29"))
+        elif sensor_type == "dht11":
+            result = test_dht11(
+                request.form.get("gpio_bcm", "6"),
+                request.form.get("retries", "5"),
+                request.form.get("retry_delay", "0.3"),
+            )            
         elif sensor_type == "dht22":
             result = test_dht22(
                 request.form.get("gpio_bcm", "6"),
                 request.form.get("retries", "5"),
                 request.form.get("retry_delay", "0.3"),
             )
+        elif sensor_type == "mlx90614":
+            result = test_mlx90614(request.form.get("address", "0x5a"))            
         elif sensor_type == "ds18b20":
             result = test_ds18b20()
+        elif sensor_type == "htu21":
+            result = test_htu21(request.form.get("address", "0x40"))
+        elif sensor_type == "sht3x":
+            result = test_sht3x(request.form.get("address", "0x44"))
         else:
             result = {"ok": False, "error": "Unsupported sensor type"}
 
         return jsonify(result)
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
+
+@app.route("/debug-session")
+def debug_session():
+    from flask import request, session
+    return {
+        "host": request.host,
+        "cookies": dict(request.cookies),
+        "session": dict(session),
+        "secret_key_len": len(str(app.secret_key)) if app.secret_key else 0,
+    }
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001, debug=False)

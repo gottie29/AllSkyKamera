@@ -2,11 +2,11 @@
 
 {% block content %}
 <div class="card">
-    <h3>AllSkyKamera Settings</h3>
+    <h3>{{ tr('allsky_settings_title') }}</h3>
     <p class="muted">
-        Hier kannst du die zentralen Kamera- und Standortdaten bearbeiten.
-        Geschützte Felder bleiben unverändert und werden nur angezeigt.
-        Vor jedem Speichern wird automatisch ein Backup der aktuellen <code>config.py</code> erstellt.
+        {{ tr('allsky_settings_intro') }}
+        {{ tr('allsky_settings_intro_2') }}
+        {{ tr('allsky_settings_intro_3') }}
     </p>
 
     <form method="post" id="settingsForm">
@@ -16,7 +16,7 @@
             <div class="placeholder-box">
                 <h3>KAMERA_ID</h3>
                 <p>{{ config_data.camera.kamera_id or '–' }}</p>
-                <div class="muted">Geschützt / nicht editierbar</div>
+                <div class="muted">{{ tr('protected_not_editable') }}</div>
             </div>
 
             <div class="placeholder-box">
@@ -77,30 +77,30 @@
             <div class="placeholder-box">
                 <h3>IMAGE_UPLOAD_SCRIPT</h3>
                 <p>{{ config_data.uploads.image_upload_script or '–' }}</p>
-                <div class="muted">Geschützt / nicht editierbar</div>
+                <div class="muted">{{ tr('protected_not_editable') }}</div>
             </div>
 
             <div class="placeholder-box">
                 <h3>NIGHTLY_UPLOAD_SCRIPT</h3>
                 <p>{{ config_data.uploads.nightly_upload_script or '–' }}</p>
-                <div class="muted">Geschützt / nicht editierbar</div>
+                <div class="muted">{{ tr('protected_not_editable') }}</div>
             </div>
 
             <div class="placeholder-box">
                 <h3>INDI</h3>
                 <p>{{ 1 if config_data.system.indi else 0 }}</p>
-                <div class="muted">Geschützt / nicht editierbar</div>
+                <div class="muted">{{ tr('protected_not_editable') }}</div>
             </div>
 
             <div class="placeholder-box" style="grid-column: 1 / -1;">
-                <h3>Pfad-Test</h3>
+                <h3>{{ tr('path_test') }}</h3>
                 <p class="muted">
-                    Testet im TJ-Modus die konfigurierten Pfade und prüft, ob Bild- und Archivstruktur vorhanden sind.
+                    {{ tr('path_test_hint_tj') }}
                 </p>
 
                 <div class="btn-row">
                     <button type="button" class="mini-btn btn-primary" id="testPathsButton">
-                        Test paths
+                        {{ tr('test_paths') }}
                     </button>
                 </div>
 
@@ -109,17 +109,17 @@
         </div>
 
         <div class="btn-row">
-            <button class="mini-btn btn-save" type="submit" id="saveButton">Save locally</button>
-            <button class="mini-btn btn-upload" type="button" id="uploadButton">Upload to server</button>
+            <button class="mini-btn btn-save" type="submit" id="saveButton">{{ tr('save_locally') }}</button>
+            <button class="mini-btn btn-upload" type="button" id="uploadButton">{{ tr('upload_to_server') }}</button>
         </div>
     </form>
 </div>
 
 <div class="card" style="margin-top: 20px;">
-    <h3>Config backups</h3>
+    <h3>{{ tr('config_backups') }}</h3>
     <p class="muted">
-        Hier kannst du eine ältere Sicherung der <code>config.py</code> wiederherstellen.
-        Vor dem Restore wird die aktuelle Datei erneut gesichert.
+        {{ tr('config_backups_hint') }}
+        {{ tr('config_backups_hint_2') }}
     </p>
 
     <form method="post">
@@ -127,7 +127,7 @@
 
         <div class="placeholder-grid">
             <div class="placeholder-box">
-                <h3>Available backups</h3>
+                <h3>{{ tr('available_backups') }}</h3>
 
                 {% if config_backups %}
                     <select name="backup_name">
@@ -137,16 +137,28 @@
                     </select>
 
                     <div class="muted" style="margin-top:10px;">
-                        {{ config_backups|length }} backup(s) available
+                        {{ config_backups|length }} {{ tr('backup_count_available') }}
                     </div>
                 {% else %}
-                    <p>No backups available yet.</p>
+                    <p>{{ tr('no_backups_available') }}</p>
                 {% endif %}
             </div>
         </div>
 
         <div class="btn-row">
-            <button class="mini-btn btn-restore" type="submit" {% if not config_backups %}disabled{% endif %}>Restore selected backup</button>
+            <button class="mini-btn btn-restore" type="submit" {% if not config_backups %}disabled{% endif %}>{{ tr('restore_selected_backup') }}</button>
+        </div>
+    </form>
+
+    <form method="post" style="margin-top:15px;">
+        <input type="hidden" name="action" value="cleanup_backups">
+        <div class="btn-row">
+            <button class="mini-btn btn-upload" type="submit" {% if not config_backups or config_backups|length <= 3 %}disabled{% endif %}>
+                {{ tr('delete_old_backups') }}
+            </button>
+        </div>
+        <div class="muted" style="margin-top:8px;">
+            {{ tr('delete_old_backups_hint') }}
         </div>
     </form>
 </div>
@@ -163,6 +175,12 @@
     const uploadForm = document.getElementById('uploadForm');
     const testBtn = document.getElementById('testPathsButton');
     const resultBox = document.getElementById('pathTestResults');
+
+    const I18N = {
+        testing: "{{ tr('testing') }}",
+        requestFailed: "{{ tr('request_failed') }}",
+        error: "{{ tr('error') }}"
+    };
 
     if (!form || !saveButton || !uploadButton) {
         return;
@@ -208,8 +226,9 @@
             formData.append('ALLSKY_PATH', form.querySelector('[name="ALLSKY_PATH"]').value);
             formData.append('IMAGE_BASE_PATH', form.querySelector('[name="IMAGE_BASE_PATH"]').value);
             formData.append('IMAGE_PATH', form.querySelector('[name="IMAGE_PATH"]').value);
+            formData.append('CAMERAID', form.querySelector('[name="CAMERAID"]').value);
 
-            resultBox.innerHTML = "<div class='muted'>Testing...</div>";
+            resultBox.innerHTML = "<div class='muted'>" + I18N.testing + "</div>";
 
             try {
                 const res = await fetch('/test-paths', {
@@ -220,7 +239,7 @@
                 const data = await res.json();
 
                 if (!data.ok) {
-                    resultBox.innerHTML = "<div class='warn'>Error: " + data.error + "</div>";
+                    resultBox.innerHTML = "<div class='warn'>" + I18N.error + ": " + data.error + "</div>";
                     return;
                 }
 
@@ -243,7 +262,7 @@
                     ${renderItem("IMAGE_PATH", data.result.image_path)}
                 `;
             } catch (err) {
-                resultBox.innerHTML = "<div class='warn'>Request failed</div>";
+                resultBox.innerHTML = "<div class='warn'>" + I18N.requestFailed + "</div>";
             }
         });
     }

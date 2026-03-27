@@ -5,7 +5,7 @@ import os
 import re
 import shutil
 import subprocess
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, Any, List
 
 
@@ -65,10 +65,70 @@ def list_backups() -> List[Dict[str, Any]]:
             "path": path,
             "size": stat.st_size,
             "mtime": datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S"),
+            "mtime_ts": stat.st_mtime,
         })
 
     return items
 
+def prune_backups_keep_latest(keep_latest: int = 3) -> Dict[str, Any]:
+    ensure_backup_dir()
+
+    backups = list_backups()
+    keep_latest = max(0, int(keep_latest))
+
+    to_keep = backups[:keep_latest]
+    to_delete = backups[keep_latest:]
+
+    deleted = []
+    errors = []
+
+    for item in to_delete:
+        try:
+            os.remove(item["path"])
+            deleted.append(item["name"])
+        except Exception as e:
+            errors.append(f"{item['name']}: {e}")
+
+    return {
+        "kept": [b["name"] for b in to_keep],
+        "deleted": deleted,
+        "deleted_count": len(deleted),
+        "error_count": len(errors),
+        "errors": errors,
+    }
+
+
+def prune_old_backups(max_age_days: int = 90, keep_latest: int = 3) -> Dict[str, Any]:
+    ensure_backup_dir()
+
+    backups = list_backups()
+    keep_latest = max(0, int(keep_latest))
+    cutoff = datetime.now() - timedelta(days=int(max_age_days))
+
+    deleted = []
+    errors = []
+
+    # Die neuesten X Backups immer behalten
+    protected = backups[:keep_latest]
+    candidates = backups[keep_latest:]
+
+    for item in candidates:
+        try:
+            file_time = datetime.fromtimestamp(item["mtime_ts"])
+            if file_time < cutoff:
+                os.remove(item["path"])
+                deleted.append(item["name"])
+        except Exception as e:
+            errors.append(f"{item['name']}: {e}")
+
+    return {
+        "kept": [b["name"] for b in protected],
+        "deleted": deleted,
+        "deleted_count": len(deleted),
+        "error_count": len(errors),
+        "errors": errors,
+        "max_age_days": max_age_days,
+    }
 
 def _py_string(value: str) -> str:
     value = "" if value is None else str(value)
@@ -175,88 +235,292 @@ def run_config_upload() -> Dict[str, Any]:
             "stderr": str(e),
             "command": "cd {} && {}".format(PROJECT_ROOT, " ".join(UPLOAD_CMD)),
         }
+
+def _normalize_join(base: str, path_part: str) -> str:
+    base = (base or "").strip()
+    path_part = (path_part or "").strip()
+
+    if not path_part:
+        return os.path.abspath(os.path.expanduser(base))
+
+    if os.path.isabs(path_part):
+        return os.path.abspath(os.path.expanduser(path_part))
+
+    return os.path.abspath(os.path.join(base, path_part))
+
+
+def build_indi_live_candidates(allsky_path: str, image_base_path: str, image_path: str) -> List[str]:
+    """
+    Baut die Livebild-Kandidaten exakt nach der Logik aus image_upload_indi_api.py:
+    1) IMAGE_BASE_PATH
+    2) IMAGE_PATH
+    3) Fallbacks unter ALLSKY_PATH und ALLSKY_PATH/images
+    """
+    candidates = []
+
+    allsky_path = (allsky_path or "").strip()
+    image_base_path = (image_base_path or "").strip()
+    image_path = (image_path or "").strip()
+
+    def add_pair(base_dir: str, name_no_ext: str) -> None:
+        if not base_dir:
+            return
+        candidates.append(os.path.join(base_dir, name_no_ext + ".jpg"))
+        candidates.append(os.path.join(base_dir, name_no_ext + ".png"))
+
+    # 1) IMAGE_BASE_PATH
+    if image_base_path:
+        base_dir = _normalize_join(allsky_path, image_base_path)
+        add_pair(base_dir, "latest")
+        add_pair(base_dir, "image")
+
+    # 2) IMAGE_PATH
+    if image_path:
+        base_dir = _normalize_join(allsky_path, image_path)
+        add_pair(base_dir, "latest")
+        add_pair(base_dir, "image")
+
+    # 3) Fallbacks unter ALLSKY_PATH
+    if allsky_path:
+        base_dir = os.path.abspath(os.path.expanduser(allsky_path))
+        add_pair(base_dir, "latest")
+        add_pair(base_dir, "image")
+        add_pair(os.path.join(base_dir, "images"), "latest")
+        add_pair(os.path.join(base_dir, "images"), "image")
+
+    # Duplikate entfernen, Reihenfolge behalten
+    seen = set()
+    unique = []
+    for p in candidates:
+        if p not in seen:
+            unique.append(p)
+            seen.add(p)
+
+    return unique
+
+
+def build_indi_primary_base(allsky_path: str, image_base_path: str) -> str:
+    """
+    Baut die INDI primary_base exakt nach nightly_upload_indi_api.py:
+    - IMAGE_BASE_PATH absolut -> direkt
+    - IMAGE_BASE_PATH relativ -> ALLSKY_PATH/IMAGE_BASE_PATH
+    - IMAGE_BASE_PATH leer -> ALLSKY_PATH
+    """
+    allsky_path = (allsky_path or "").strip()
+    image_base_path = (image_base_path or "").strip()
+
+    if image_base_path:
+        return _normalize_join(allsky_path, image_base_path)
+
+    return os.path.abspath(os.path.expanduser(allsky_path))
+
+
+def build_indi_nightly_date_dir(allsky_path: str, image_base_path: str, cameraid: str, date_str: str) -> str:
+    """
+    Baut den INDI-Tagesordner exakt nach nightly_upload_indi_api.py:
+    primary_base/CAMERAID/timelapse/YYYYMMDD
+    """
+    primary_base = build_indi_primary_base(allsky_path, image_base_path)
+    cameraid = (cameraid or "").strip()
+    date_str = (date_str or "").strip()
+
+    return os.path.join(primary_base, cameraid, "timelapse", date_str)
+
         
-def test_paths(allsky_path: str, image_base_path: str, image_path: str) -> Dict[str, Any]:
+def test_paths(
+    allsky_path: str,
+    image_base_path: str,
+    image_path: str,
+    indi: bool = False,
+    cameraid: str = "",
+) -> Dict[str, Any]:
     result = {
         "allsky_path": {"ok": False, "msg": ""},
         "image_base_path": {"ok": False, "msg": ""},
         "image_path": {"ok": False, "msg": ""},
     }
 
-    # -------------------------
-    # 1. ALLSKY_PATH
-    # -------------------------
-    if os.path.isdir(allsky_path):
-        result["allsky_path"] = {
-            "ok": True,
-            "msg": "Directory exists"
-        }
-    else:
-        result["allsky_path"] = {
-            "ok": False,
-            "msg": "Directory not found"
-        }
+    allsky_path = (allsky_path or "").strip()
+    image_base_path = (image_base_path or "").strip()
+    image_path = (image_path or "").strip()
+    cameraid = (cameraid or "").strip()
 
-    # -------------------------
-    # 2. IMAGE_BASE_PATH
-    # -------------------------
-    base_full = os.path.join(allsky_path, image_base_path)
+    # --------------------------------
+    # TJ / klassischer AllSky-Modus
+    # --------------------------------
+    if not indi:
+        # 1) ALLSKY_PATH
+        if os.path.isdir(allsky_path):
+            result["allsky_path"] = {
+                "ok": True,
+                "msg": "Directory exists"
+            }
+        else:
+            result["allsky_path"] = {
+                "ok": False,
+                "msg": "Directory not found"
+            }
 
-    if os.path.isdir(base_full):
-        try:
-            entries = os.listdir(base_full)
-            subdirs = [e for e in entries if os.path.isdir(os.path.join(base_full, e))]
+        # 2) IMAGE_BASE_PATH
+        base_full = os.path.join(allsky_path, image_base_path)
 
-            if subdirs:
-                result["image_base_path"] = {
-                    "ok": True,
-                    "msg": f"{len(subdirs)} subdirectories found"
-                }
-            else:
+        if os.path.isdir(base_full):
+            try:
+                entries = os.listdir(base_full)
+                subdirs = [e for e in entries if os.path.isdir(os.path.join(base_full, e))]
+
+                if subdirs:
+                    result["image_base_path"] = {
+                        "ok": True,
+                        "msg": "%d subdirectories found" % len(subdirs)
+                    }
+                else:
+                    result["image_base_path"] = {
+                        "ok": False,
+                        "msg": "No subdirectories found"
+                    }
+            except Exception as e:
                 result["image_base_path"] = {
                     "ok": False,
-                    "msg": "No subdirectories found"
+                    "msg": str(e)
                 }
-        except Exception as e:
+        else:
             result["image_base_path"] = {
                 "ok": False,
-                "msg": str(e)
+                "msg": "Directory not found"
             }
-    else:
-        result["image_base_path"] = {
-            "ok": False,
-            "msg": "Directory not found"
-        }
 
-    # -------------------------
-    # 3. IMAGE_PATH
-    # -------------------------
-    image_full = os.path.join(allsky_path, image_path)
+        # 3) IMAGE_PATH
+        image_full = os.path.join(allsky_path, image_path)
 
-    if os.path.isdir(image_full):
-        try:
-            files = os.listdir(image_full)
-            found = any(f.lower() in ["image.jpg", "image.png"] for f in files)
+        if os.path.isdir(image_full):
+            try:
+                files = {f.lower() for f in os.listdir(image_full)}
 
-            if found:
-                result["image_path"] = {
-                    "ok": True,
-                    "msg": "image.jpg/png found"
-                }
-            else:
+                found = any(f in files for f in ["image.jpg", "image.png"])
+                if found:
+                    result["image_path"] = {
+                        "ok": True,
+                        "msg": "image.jpg/png found"
+                    }
+                else:
+                    result["image_path"] = {
+                        "ok": False,
+                        "msg": "No image.jpg or image.png found"
+                    }
+            except Exception as e:
                 result["image_path"] = {
                     "ok": False,
-                    "msg": "No image.jpg or image.png found"
+                    "msg": str(e)
                 }
-        except Exception as e:
+        else:
             result["image_path"] = {
                 "ok": False,
-                "msg": str(e)
+                "msg": "Directory not found"
             }
-    else:
-        result["image_path"] = {
+
+        return result
+
+    # --------------------------------
+    # INDI-Modus
+    # --------------------------------
+
+    # 1) ALLSKY_PATH
+    allsky_exists = os.path.isdir(allsky_path)
+    result["allsky_path"] = {
+        "ok": allsky_exists,
+        "msg": "Directory exists" if allsky_exists else "Directory not found"
+    }
+
+    # 2) IMAGE_BASE_PATH -> primary_base und Nightly-DateDir prüfen
+    try:
+        primary_base = build_indi_primary_base(allsky_path, image_base_path)
+    except Exception as e:
+        result["image_base_path"] = {
             "ok": False,
-            "msg": "Directory not found"
+            "msg": "Primary base invalid: %s" % e
+        }
+        primary_base = ""
+
+    if primary_base:
+        primary_exists = os.path.isdir(primary_base)
+
+        nightly_msg_parts = []
+        nightly_ok = False
+
+        if not primary_exists:
+            nightly_msg_parts.append("primary_base not found: %s" % primary_base)
+        else:
+            nightly_msg_parts.append("primary_base exists: %s" % primary_base)
+
+            if not cameraid:
+                nightly_msg_parts.append("CAMERAID missing")
+            else:
+                if not cameraid:
+                    nightly_msg_parts.append("CAMERAID missing")
+                else:
+                    timelapse_root = os.path.join(primary_base, cameraid, "timelapse")
+
+                    if not os.path.isdir(timelapse_root):
+                        nightly_msg_parts.append(f"timelapse dir not found: {timelapse_root}")
+                    else:
+                        try:
+                            entries = os.listdir(timelapse_root)
+
+                            # Nur echte Datumsordner YYYYMMDD erkennen
+                            date_dirs = [
+                                e for e in entries
+                                if os.path.isdir(os.path.join(timelapse_root, e)) and e.isdigit() and len(e) == 8
+                            ]
+
+                            if date_dirs:
+                                nightly_ok = True
+                                # Optional: nur ein paar anzeigen
+                                preview = date_dirs[:3]
+                                more = ""
+                                if len(date_dirs) > 3:
+                                    more = f" (+{len(date_dirs)-3} more)"
+
+                                nightly_msg_parts.append(
+                                    f"{len(date_dirs)} date dirs found: {' | '.join(preview)}{more}"
+                                )
+                            else:
+                                nightly_msg_parts.append("no date directories found in timelapse")
+
+                        except Exception as e:
+                            nightly_msg_parts.append(f"error reading timelapse dir: {e}")
+                
+
+        result["image_base_path"] = {
+            "ok": primary_exists and nightly_ok,
+            "msg": "; ".join(nightly_msg_parts)
         }
 
-    return result        
+    # 3) IMAGE_PATH -> Livebild-Kandidaten nach echter INDI-Logik prüfen
+    try:
+        candidates = build_indi_live_candidates(allsky_path, image_base_path, image_path)
+        found_files = [p for p in candidates if os.path.isfile(p)]
+
+        if found_files:
+            newest = max(found_files, key=os.path.getmtime)
+            result["image_path"] = {
+                "ok": True,
+                "msg": "Live image found: %s" % newest
+            }
+        else:
+            preview = candidates[:6]
+            more = ""
+            if len(candidates) > 6:
+                more = " ... (+%d more)" % (len(candidates) - 6)
+
+            result["image_path"] = {
+                "ok": False,
+                "msg": "No INDI live image found. Checked: %s%s" % (" | ".join(preview), more)
+            }
+    except Exception as e:
+        result["image_path"] = {
+            "ok": False,
+            "msg": str(e)
+        }
+
+    return result

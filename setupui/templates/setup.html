@@ -49,8 +49,8 @@
 </head>
 <body>
     <div class="box">
-        <h1>AllSky Setup UI</h1>
-        <p class="muted">Bitte richte die lokale Oberfläche beim ersten Start ein.</p>
+        <h1>{{ tr('setup_title') }}</h1>
+        <p class="muted">{{ tr('setup_hint') }}</p>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
@@ -61,22 +61,22 @@
         {% endwith %}
 
         <form method="post">
-            <label>Sprache / Language</label>
+            <label>{{ tr('setup_language') }}</label>
             <select name="language">
                 <option value="de">Deutsch</option>
                 <option value="en">English</option>
             </select>
 
-            <label>Benutzername / Username</label>
+            <label>{{ tr('setup_username') }}</label>
             <input type="text" name="username" required>
 
-            <label>Passwort / Password</label>
+            <label>{{ tr('setup_password') }}</label>
             <input type="password" name="password" required>
 
-            <label>Passwort wiederholen / Repeat password</label>
+            <label>{{ tr('setup_password_repeat') }}</label>
             <input type="password" name="password_repeat" required>
 
-            <button type="submit">Speichern / Save</button>
+            <button type="submit">{{ tr('setup_save') }}</button>
         </form>
     </div>
 </body>

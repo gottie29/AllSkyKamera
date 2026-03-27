@@ -2,9 +2,9 @@
 
 {% block content %}
 <div class="card">
-    <h3>Meteordetection (BETA)</h3>
+    <h3>{{ tr('meteor_title') }}</h3>
     <p class="muted">
-        Hier konfigurierst du die lokale Meteordetektion. Der Cronjob wird separat über den Options-Block angewendet.
+        {{ tr('meteor_intro') }}
     </p>
 
     <form method="post">
@@ -12,83 +12,83 @@
 
         <div class="placeholder-grid">
             <div class="placeholder-box {% if config_data.features.meteor_enabled %}status-active{% else %}status-inactive{% endif %}">
-                <h3>Meteor aktiv</h3>
+                <h3>{{ tr('meteor_active') }}</h3>
                 <div class="toggle-row">
                     <label class="switch">
                         <input type="checkbox" name="enabled" value="1" {% if config_data.features.meteor_enabled %}checked{% endif %}>
                         <span class="slider-toggle"></span>
                     </label>
-                    <span class="toggle-label">Meteordetection aktiv</span>
+                    <span class="toggle-label">{{ tr('meteor_active') }}</span>
                 </div>
             </div>
 
             <div class="placeholder-box">
-                <h3>Output directory</h3>
+                <h3>{{ tr('output_directory') }}</h3>
                 <input type="text" name="output_dir" value="{{ config_data.features.meteor_output_dir or '' }}">
             </div>
 
             <div class="placeholder-box">
-                <h3>State file</h3>
+                <h3>{{ tr('state_file') }}</h3>
                 <input type="text" name="state_file" value="{{ config_data.features.meteor_state_file or '' }}">
             </div>
 
             <div class="placeholder-box">
-                <h3>Keep days local</h3>
+                <h3>{{ tr('keep_days_local') }}</h3>
                 <input type="number" name="keep_days_local" value="{{ config_data.features.meteor_keep_days_local or 3 }}">
             </div>
 
             <div class="placeholder-box">
-                <h3>Threshold</h3>
+                <h3>{{ tr('threshold') }}</h3>
                 <input type="number" name="threshold" value="{{ config_data.features.meteor_threshold or 80 }}">
             </div>
 
             <div class="placeholder-box">
-                <h3>Min pixels</h3>
+                <h3>{{ tr('min_pixels') }}</h3>
                 <input type="number" name="min_pixels" value="{{ config_data.features.meteor_min_pixels or 1200 }}">
             </div>
 
             <div class="placeholder-box">
-                <h3>Min blob pixels</h3>
+                <h3>{{ tr('min_blob_pixels') }}</h3>
                 <input type="number" name="min_blob_pixels" value="{{ config_data.features.meteor_min_blob_pixels or 25 }}">
             </div>
 
             <div class="placeholder-box">
-                <h3>Min line length</h3>
+                <h3>{{ tr('min_line_length') }}</h3>
                 <input type="number" name="min_line_length" value="{{ config_data.features.meteor_min_line_length or 20 }}">
             </div>
 
             <div class="placeholder-box">
-                <h3>Min aspect ratio</h3>
+                <h3>{{ tr('min_aspect_ratio') }}</h3>
                 <input type="text" name="min_aspect_ratio" value="{{ config_data.features.meteor_min_aspect_ratio or 4.0 }}">
             </div>
 
             <div class="placeholder-box">
-                <h3>FullHD width</h3>
+                <h3>{{ tr('fullhd_width') }}</h3>
                 <input type="number" name="fullhd_width" value="{{ config_data.features.meteor_fullhd_width or 1920 }}">
             </div>
 
             <div class="placeholder-box">
-                <h3>Small width</h3>
+                <h3>{{ tr('small_width') }}</h3>
                 <input type="number" name="small_width" value="{{ config_data.features.meteor_small_width or 640 }}">
             </div>
 
             <div class="placeholder-box">
-                <h3>Diff width</h3>
+                <h3>{{ tr('diff_width') }}</h3>
                 <input type="number" name="diff_width" value="{{ config_data.features.meteor_diff_width or 640 }}">
             </div>
 
             <div class="placeholder-box">
-                <h3>Boxed width</h3>
+                <h3>{{ tr('boxed_width') }}</h3>
                 <input type="number" name="boxed_width" value="{{ config_data.features.meteor_boxed_width or 640 }}">
             </div>
 
             <div class="placeholder-box">
-                <h3>Preview small width</h3>
+                <h3>{{ tr('preview_small_width') }}</h3>
                 <input type="number" name="prev_small_width" value="{{ config_data.features.meteor_prev_small_width or 640 }}">
             </div>
 
             <div class="placeholder-box">
-                <h3>Upload jitter max sec</h3>
+                <h3>{{ tr('upload_jitter_max_sec') }}</h3>
                 <input type="number" name="upload_jitter_max_seconds" value="{{ config_data.features.meteor_upload_jitter_max_seconds or 90 }}">
             </div>
         </div>
@@ -100,32 +100,32 @@
 </div>
 
 <div class="card" style="margin-top: 20px;">
-    <h3>Options-Cronjobs</h3>
+    <h3>{{ tr('options_cronjobs') }}</h3>
 
     <div class="placeholder-grid">
         <div class="placeholder-box {% if option_cron_in_sync %}status-active{% endif %}">
-            <h3>Status</h3>
+            <h3>{{ tr('status') }}</h3>
             {% if option_cron_current_ok %}
                 {% if option_cron_in_sync %}
-                    <p class="ok">Options-Crons sind synchron</p>
+                    <p class="ok">{{ tr('options_crons_sync_ok') }}</p>
                 {% else %}
-                    <p class="warn">Options-Crons weichen ab</p>
+                    <p class="warn">{{ tr('options_crons_sync_diff') }}</p>
                 {% endif %}
             {% else %}
-                <p class="warn">Crontab konnte nicht gelesen werden</p>
+                <p class="warn">{{ tr('cron_cannot_read') }}</p>
                 <div class="muted">{{ option_cron_current_error }}</div>
             {% endif %}
         </div>
 
         <div class="placeholder-box">
-            <h3>Gewünschte Jobs</h3>
+            <h3>{{ tr('desired_jobs') }}</h3>
             <p>{{ option_cron_jobs_desired|length }}</p>
         </div>
     </div>
 
     <form method="post" style="margin-top:18px;">
         <input type="hidden" name="action" value="apply_option_crons">
-        <button class="mini-btn btn-upload" type="submit">Apply option cronjobs</button>
+        <button class="mini-btn btn-upload" type="submit">{{ tr('apply_option_cronjobs') }}</button>
     </form>
 </div>
 {% endblock %}

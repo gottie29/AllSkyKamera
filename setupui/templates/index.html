@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>AllSky Setup UI</title>
+    <title>{{ tr('app_title') }}</title>
     <style>
         body {
             margin: 0;
@@ -87,60 +87,60 @@
 <body>
     <div class="wrap">
         <div class="card">
-            <h1>AllSky Setup UI</h1>
-            <p class="muted">Lokale Konfigurationsoberfläche für deine Kamera</p>
+            <h1>{{ tr('app_title') }}</h1>
+            <p class="muted">{{ tr('index_subtitle') }}</p>
 
             <p>
-                Status:
-                <span class="ok">App läuft</span>
+                {{ tr('status') }}:
+                <span class="ok">{{ tr('app_running') }}</span>
             </p>
 
             <div class="grid">
                 <div class="box">
-                    <div class="label">Hostname</div>
+                    <div class="label">{{ tr('hostname') }}</div>
                     <div class="value">{{ hostname }}</div>
                 </div>
 
                 <div class="box">
-                    <div class="label">Kamera-ID</div>
+                    <div class="label">{{ tr('camera_id') }}</div>
                     <div class="value">{{ camera_id }}</div>
                 </div>
 
                 <div class="box">
-                    <div class="label">Standortname</div>
+                    <div class="label">{{ tr('dashboard_location_name') }}</div>
                     <div class="value">{{ location_name }}</div>
                 </div>
 
                 <div class="box">
-                    <div class="label">Config-Datei</div>
+                    <div class="label">{{ tr('dashboard_config_file') }}</div>
                     <div class="value">
                         {% if config_found %}
-                            <span class="ok">gefunden</span>
+                            <span class="ok">{{ tr('found') }}</span>
                         {% else %}
-                            <span class="warn">nicht gefunden</span>
+                            <span class="warn">{{ tr('not_found') }}</span>
                         {% endif %}
                     </div>
                 </div>
             </div>
 
             <div class="box" style="margin-top: 16px;">
-                <div class="label">Pfad</div>
+                <div class="label">{{ tr('path') }}</div>
                 <div class="value"><code>{{ config_path }}</code></div>
             </div>
 
             {% if error %}
             <div class="box" style="margin-top: 16px;">
-                <div class="label">Fehler</div>
+                <div class="label">{{ tr('error') }}</div>
                 <div class="warn">{{ error }}</div>
             </div>
             {% endif %}
 
             <div class="box" style="margin-top: 16px;">
-                <div class="label">Test-URLs</div>
+                <div class="label">{{ tr('test_urls') }}</div>
                 <div class="muted">
-                    Heimnetz: <code>http://DEINE-LAN-IP:5001</code><br>
-                    ZeroTier: <code>http://DEINE-ZT-IP:5001</code><br>
-                    Health: <code>/health</code>
+                    {{ tr('home_network') }}: <code>http://DEINE-LAN-IP:5001</code><br>
+                    {{ tr('zerotier') }}: <code>http://DEINE-ZT-IP:5001</code><br>
+                    {{ tr('health') }}: <code>/health</code>
                 </div>
             </div>
         </div>

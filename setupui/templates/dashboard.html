@@ -2,218 +2,218 @@
 
 {% block content %}
 <div class="card">
-    <h3>Systemübersicht</h3>
+    <h3>{{ tr('dashboard_overview') }}</h3>
     <p class="muted">
-        Das Dashboard liest die aktuellen Basisdaten direkt aus deiner <code>config.py</code>.
+        {{ tr('dashboard_intro') }}
     </p>
 
     {% if config_meta.load_ok %}
-        <p><span class="ok">config.py erfolgreich geladen</span></p>
+        <p><span class="ok">{{ tr('dashboard_config_loaded') }}</span></p>
     {% else %}
-        <p><span class="warn">config.py konnte nicht geladen werden</span></p>
+        <p><span class="warn">{{ tr('dashboard_config_load_failed') }}</span></p>
         <div class="placeholder-box" style="margin-top: 12px;">
-            <h3>Fehler</h3>
+            <h3>{{ tr('dashboard_error') }}</h3>
             <p class="warn">{{ config_meta.load_error }}</p>
         </div>
     {% endif %}
 
     <div class="placeholder-grid">
         <div class="placeholder-box">
-            <h3>Kamera-ID</h3>
-            <p>{{ config_data.camera.kamera_id or '–' }}</p>
+            <h3>{{ tr('camera_id') }}</h3>
+            <p>{{ config_data.camera.kamera_id or tr('dash') }}</p>
         </div>
 
         <div class="placeholder-box">
-            <h3>Kameraname</h3>
-            <p>{{ config_data.camera.kamera_name or '–' }}</p>
+            <h3>{{ tr('dashboard_camera_name') }}</h3>
+            <p>{{ config_data.camera.kamera_name or tr('dash') }}</p>
         </div>
 
         <div class="placeholder-box">
-            <h3>Standortname</h3>
-            <p>{{ config_data.camera.standort_name or '–' }}</p>
+            <h3>{{ tr('dashboard_location_name') }}</h3>
+            <p>{{ config_data.camera.standort_name or tr('dash') }}</p>
         </div>
 
         <div class="placeholder-box">
-            <h3>Benutzer</h3>
-            <p>{{ config_data.camera.benutzer_name or '–' }}</p>
+            <h3>{{ tr('dashboard_user') }}</h3>
+            <p>{{ config_data.camera.benutzer_name or tr('dash') }}</p>
         </div>
 
         <div class="placeholder-box">
-            <h3>Latitude</h3>
-            <p>{{ config_data.camera.latitude or '–' }}</p>
+            <h3>{{ tr('latitude') }}</h3>
+            <p>{{ config_data.camera.latitude or tr('dash') }}</p>
         </div>
 
         <div class="placeholder-box">
-            <h3>Longitude</h3>
-            <p>{{ config_data.camera.longitude or '–' }}</p>
+            <h3>{{ tr('longitude') }}</h3>
+            <p>{{ config_data.camera.longitude or tr('dash') }}</p>
         </div>
 
         <div class="placeholder-box">
-            <h3>Systemtyp</h3>
-            <p>{{ 'INDI' if config_data.system.indi else 'TJ / Allsky' }}</p>
+            <h3>{{ tr('dashboard_system_type') }}</h3>
+            <p>{{ tr('indi') if config_data.system.indi else tr('tj_allsky') }}</p>
         </div>
 
         <div class="placeholder-box">
-            <h3>Camera ID</h3>
-            <p>{{ config_data.system.cameraid or '–' }}</p>
+            <h3>{{ tr('camera_id_system') }}</h3>
+            <p>{{ config_data.system.cameraid or tr('dash') }}</p>
         </div>
 
         <div class="placeholder-box">
-            <h3>Auflösung</h3>
-            <p>{{ config_data.system.kamera_width or '–' }} × {{ config_data.system.kamera_height or '–' }}</p>
+            <h3>{{ tr('dashboard_resolution') }}</h3>
+            <p>{{ config_data.system.kamera_width or tr('dash') }} × {{ config_data.system.kamera_height or tr('dash') }}</p>
         </div>
 
         <div class="placeholder-box">
-            <h3>Bild-Upload</h3>
-            <p>{{ 'Aktiv' if config_data.uploads.image_upload_enabled else 'Inaktiv' }}</p>
+            <h3>{{ tr('dashboard_image_upload') }}</h3>
+            <p>{{ tr('active') if config_data.uploads.image_upload_enabled else tr('inactive') }}</p>
         </div>
 
         <div class="placeholder-box">
-            <h3>Nightly Upload</h3>
-            <p>{{ 'Aktiv' if config_data.uploads.nightly_upload_enabled else 'Inaktiv' }}</p>
+            <h3>{{ tr('dashboard_nightly_upload') }}</h3>
+            <p>{{ tr('active') if config_data.uploads.nightly_upload_enabled else tr('inactive') }}</p>
         </div>
 
         <div class="placeholder-box">
-            <h3>Config-Upload</h3>
-            <p>{{ 'Aktiv' if config_data.uploads.config_upload_enabled else 'Inaktiv' }}</p>
+            <h3>{{ tr('dashboard_config_upload') }}</h3>
+            <p>{{ tr('active') if config_data.uploads.config_upload_enabled else tr('inactive') }}</p>
         </div>
     </div>
 </div>
 
 <div class="card" style="margin-top: 20px;">
-    <h3>Versionen</h3>
+    <h3>{{ tr('dashboard_versions') }}</h3>
     <div class="placeholder-grid">
         <div class="placeholder-box">
-            <h3>Lokal</h3>
+            <h3>{{ tr('dashboard_local') }}</h3>
             <p>{{ version_info.local_version }}</p>
         </div>
 
         <div class="placeholder-box">
-            <h3>GitHub</h3>
+            <h3>{{ tr('dashboard_github') }}</h3>
             <p>{{ version_info.github_version }}</p>
         </div>
 
         <div class="placeholder-box {% if version_info.update_available %}status-active{% endif %}">
-            <h3>Status</h3>
+            <h3>{{ tr('status') }}</h3>
             {% if version_info.github_reachable %}
                 {% if version_info.update_available %}
-                    <p class="ok">Update verfügbar</p>
+                    <p class="ok">{{ tr('dashboard_update_available') }}</p>
                 {% else %}
-                    <p>Aktuell</p>
+                    <p>{{ tr('dashboard_up_to_date') }}</p>
                 {% endif %}
             {% else %}
-                <p class="warn">GitHub nicht erreichbar</p>
+                <p class="warn">{{ tr('dashboard_github_unreachable') }}</p>
             {% endif %}
         </div>
     </div>
 </div>
 
 <div class="card" style="margin-top: 20px;">
-    <h3>Sensorstatus</h3>
+    <h3>{{ tr('dashboard_sensor_status') }}</h3>
     <div class="placeholder-grid">
         <div class="placeholder-box {% if config_data.sensors.bme280_enabled %}status-active{% else %}status-inactive{% endif %}">
-            <h3>BME280</h3>
+            <h3>{{ tr('bme280') }}</h3>
             <p>
-                {{ 'Aktiv' if config_data.sensors.bme280_enabled else 'Inaktiv' }}
+                {{ tr('active') if config_data.sensors.bme280_enabled else tr('inactive') }}
                 {% if config_data.sensors.bme280_count %}
-                    ({{ config_data.sensors.bme280_count }} aktiv)
+                    ({{ config_data.sensors.bme280_count }} {{ tr('active')|lower }})
                 {% endif %}
             </p>
             <span class="status-badge {% if config_data.sensors.bme280_enabled %}active{% else %}inactive{% endif %}">
-                {{ 'ACTIVE' if config_data.sensors.bme280_enabled else 'INACTIVE' }}
+                {{ tr('active_upper') if config_data.sensors.bme280_enabled else tr('inactive_upper') }}
             </span>
         </div>
 
         <div class="placeholder-box {% if config_data.sensors.dht11_enabled %}status-active{% else %}status-inactive{% endif %}">
-            <h3>DHT11</h3>
-            <p>{{ 'Aktiv' if config_data.sensors.dht11_enabled else 'Inaktiv' }}</p>
+            <h3>{{ tr('dht11') }}</h3>
+            <p>{{ tr('active') if config_data.sensors.dht11_enabled else tr('inactive') }}</p>
             <span class="status-badge {% if config_data.sensors.dht11_enabled %}active{% else %}inactive{% endif %}">
-                {{ 'ACTIVE' if config_data.sensors.dht11_enabled else 'INACTIVE' }}
+                {{ tr('active_upper') if config_data.sensors.dht11_enabled else tr('inactive_upper') }}
             </span>
         </div>
 
         <div class="placeholder-box {% if config_data.sensors.dht22_enabled %}status-active{% else %}status-inactive{% endif %}">
-            <h3>DHT22</h3>
+            <h3>{{ tr('dht22') }}</h3>
             <p>
-                {{ 'Aktiv' if config_data.sensors.dht22_enabled else 'Inaktiv' }}
+                {{ tr('active') if config_data.sensors.dht22_enabled else tr('inactive') }}
                 {% if config_data.sensors.dht22_count %}
-                    ({{ config_data.sensors.dht22_count }} aktiv)
+                    ({{ config_data.sensors.dht22_count }} {{ tr('active')|lower }})
                 {% endif %}
             </p>
             <span class="status-badge {% if config_data.sensors.dht22_enabled %}active{% else %}inactive{% endif %}">
-                {{ 'ACTIVE' if config_data.sensors.dht22_enabled else 'INACTIVE' }}
+                {{ tr('active_upper') if config_data.sensors.dht22_enabled else tr('inactive_upper') }}
             </span>
         </div>
 
         <div class="placeholder-box {% if config_data.sensors.tsl2591_enabled %}status-active{% else %}status-inactive{% endif %}">
-            <h3>TSL2591</h3>
-            <p>{{ 'Aktiv' if config_data.sensors.tsl2591_enabled else 'Inaktiv' }}</p>
+            <h3>{{ tr('tsl2591') }}</h3>
+            <p>{{ tr('active') if config_data.sensors.tsl2591_enabled else tr('inactive') }}</p>
             <span class="status-badge {% if config_data.sensors.tsl2591_enabled %}active{% else %}inactive{% endif %}">
-                {{ 'ACTIVE' if config_data.sensors.tsl2591_enabled else 'INACTIVE' }}
+                {{ tr('active_upper') if config_data.sensors.tsl2591_enabled else tr('inactive_upper') }}
             </span>
         </div>
 
         <div class="placeholder-box {% if config_data.sensors.mlx90614_enabled %}status-active{% else %}status-inactive{% endif %}">
-            <h3>MLX90614</h3>
-            <p>{{ 'Aktiv' if config_data.sensors.mlx90614_enabled else 'Inaktiv' }}</p>
+            <h3>{{ tr('mlx90614') }}</h3>
+            <p>{{ tr('active') if config_data.sensors.mlx90614_enabled else tr('inactive') }}</p>
             <span class="status-badge {% if config_data.sensors.mlx90614_enabled %}active{% else %}inactive{% endif %}">
-                {{ 'ACTIVE' if config_data.sensors.mlx90614_enabled else 'INACTIVE' }}
+                {{ tr('active_upper') if config_data.sensors.mlx90614_enabled else tr('inactive_upper') }}
             </span>
         </div>
 
         <div class="placeholder-box {% if config_data.sensors.ds18b20_enabled %}status-active{% else %}status-inactive{% endif %}">
-            <h3>DS18B20</h3>
-            <p>{{ 'Aktiv' if config_data.sensors.ds18b20_enabled else 'Inaktiv' }}</p>
+            <h3>{{ tr('ds18b20') }}</h3>
+            <p>{{ tr('active') if config_data.sensors.ds18b20_enabled else tr('inactive') }}</p>
             <span class="status-badge {% if config_data.sensors.ds18b20_enabled %}active{% else %}inactive{% endif %}">
-                {{ 'ACTIVE' if config_data.sensors.ds18b20_enabled else 'INACTIVE' }}
+                {{ tr('active_upper') if config_data.sensors.ds18b20_enabled else tr('inactive_upper') }}
             </span>
         </div>
 
         <div class="placeholder-box {% if config_data.sensors.htu21_enabled %}status-active{% else %}status-inactive{% endif %}">
-            <h3>HTU21</h3>
-            <p>{{ 'Aktiv' if config_data.sensors.htu21_enabled else 'Inaktiv' }}</p>
+            <h3>{{ tr('htu21') }}</h3>
+            <p>{{ tr('active') if config_data.sensors.htu21_enabled else tr('inactive') }}</p>
             <span class="status-badge {% if config_data.sensors.htu21_enabled %}active{% else %}inactive{% endif %}">
-                {{ 'ACTIVE' if config_data.sensors.htu21_enabled else 'INACTIVE' }}
+                {{ tr('active_upper') if config_data.sensors.htu21_enabled else tr('inactive_upper') }}
             </span>
         </div>
 
         <div class="placeholder-box {% if config_data.sensors.sht3x_enabled %}status-active{% else %}status-inactive{% endif %}">
-            <h3>SHT3X</h3>
-            <p>{{ 'Aktiv' if config_data.sensors.sht3x_enabled else 'Inaktiv' }}</p>
+            <h3>{{ tr('sht3x') }}</h3>
+            <p>{{ tr('active') if config_data.sensors.sht3x_enabled else tr('inactive') }}</p>
             <span class="status-badge {% if config_data.sensors.sht3x_enabled %}active{% else %}inactive{% endif %}">
-                {{ 'ACTIVE' if config_data.sensors.sht3x_enabled else 'INACTIVE' }}
+                {{ tr('active_upper') if config_data.sensors.sht3x_enabled else tr('inactive_upper') }}
             </span>
         </div>
     </div>
 </div>
 
 <div class="card" style="margin-top: 20px;">
-    <h3>Zusatzfunktionen</h3>
+    <h3>{{ tr('dashboard_features') }}</h3>
     <div class="placeholder-grid">
         <div class="placeholder-box">
-            <h3>KPIndex</h3>
-            <p>{{ 'Aktiv' if config_data.features.kpindex_enabled else 'Inaktiv' }}</p>
+            <h3>{{ tr('kpindex') }}</h3>
+            <p>{{ tr('active') if config_data.features.kpindex_enabled else tr('inactive') }}</p>
         </div>
 
         <div class="placeholder-box">
-            <h3>Meteordetection</h3>
-            <p>{{ 'Aktiv' if config_data.features.meteor_enabled else 'Inaktiv' }}</p>
+            <h3>{{ tr('meteor_detection') }}</h3>
+            <p>{{ tr('active') if config_data.features.meteor_enabled else tr('inactive') }}</p>
         </div>
 
         <div class="placeholder-box">
-            <h3>Analemma</h3>
-            <p>{{ 'Aktiv' if config_data.features.analemma_enabled else 'Inaktiv' }}</p>
+            <h3>{{ tr('analemma') }}</h3>
+            <p>{{ tr('active') if config_data.features.analemma_enabled else tr('inactive') }}</p>
         </div>
 
         <div class="placeholder-box">
-            <h3>Cronjobs</h3>
+            <h3>{{ tr('dashboard_cronjobs') }}</h3>
             <p>{{ config_data.cronjobs.count or 0 }}</p>
         </div>
     </div>
 </div>
 
 <div class="card" style="margin-top: 20px;">
-    <h3>Config-Datei</h3>
+    <h3>{{ tr('dashboard_config_file') }}</h3>
     <p><code>{{ config_meta.config_path }}</code></p>
 </div>
 {% endblock %}

@@ -149,6 +149,40 @@ def save_bme280_settings(payload):
     _write_config(content)
     return {"ok": True, "backup_path": backup_path}
 
+def save_ds18b20_settings(payload):
+    content = _read_config()
+    backup_path = create_backup()
+
+    item = payload.get("items", [{}])[0]
+
+    content = _replace_simple_assignment(content, "DS18B20_ENABLED", _py_bool(payload.get("enabled")))
+    content = _replace_simple_assignment(content, "DS18B20_NAME", _py_string(item.get("name", "")))
+    content = _replace_simple_assignment(content, "DS18B20_OVERLAY", _py_bool(item.get("overlay")))
+    content = _replace_simple_assignment(content, "DS18B20_TEMP_OFFSET_C", _py_float(item.get("temp_offset_c", 0.0)))
+    content = _replace_simple_assignment(content, "DS18B20_LOG_INTERVAL_MIN", _py_int(payload.get("log_interval_min", 1)))
+
+    _write_config(content)
+    return {"ok": True, "backup_path": backup_path}
+
+def save_dht11_settings(payload):
+    content = _read_config()
+    backup_path = create_backup()
+
+    item = payload.get("items", [{}])[0]
+
+    content = _replace_simple_assignment(content, "DHT11_ENABLED", _py_bool(payload.get("enabled")))
+    content = _replace_simple_assignment(content, "DHT11_NAME", _py_string(item.get("name", "")))
+    content = _replace_simple_assignment(content, "DHT11_GPIO_BCM", _py_int(item.get("gpio_bcm", 0)))
+    content = _replace_simple_assignment(content, "DHT11_RETRIES", _py_int(item.get("retries", 5)))
+    content = _replace_simple_assignment(content, "DHT11_RETRY_DELAY", _py_float(item.get("retry_delay", 0.3)))
+    content = _replace_simple_assignment(content, "DHT11_OVERLAY", _py_bool(item.get("overlay")))
+    content = _replace_simple_assignment(content, "DHT11_TEMP_OFFSET_C", _py_float(item.get("temp_offset_c", 0.0)))
+    content = _replace_simple_assignment(content, "DHT11_HUM_OFFSET_PCT", _py_float(item.get("hum_offset_pct", 0.0)))
+    content = _replace_simple_assignment(content, "DHT11_LOG_INTERVAL_MIN", _py_int(payload.get("log_interval_min", 1)))
+
+    _write_config(content)
+    return {"ok": True, "backup_path": backup_path}
+
 
 def save_dht22_settings(payload):
     content = _read_config()
@@ -194,6 +228,65 @@ def save_tsl2591_settings(payload):
     content = _replace_simple_assignment(content, "TSL2591_SQM_CORRECTION", _py_float(item.get("sqm_correction", 0.0)))
     content = _replace_simple_assignment(content, "TSL2591_OVERLAY", _py_bool(item.get("overlay")))
     content = _replace_simple_assignment(content, "TSL2591_LOG_INTERVAL_MIN", _py_int(payload.get("log_interval_min", 1)))
+
+    _write_config(content)
+    return {"ok": True, "backup_path": backup_path}
+
+def save_mlx90614_settings(payload):
+    content = _read_config()
+    backup_path = create_backup()
+
+    item = payload.get("items", [{}])[0]
+
+    content = _replace_simple_assignment(content, "MLX90614_ENABLED", _py_bool(payload.get("enabled")))
+    content = _replace_simple_assignment(content, "MLX90614_NAME", _py_string(item.get("name", "")))
+    content = _replace_simple_assignment(content, "MLX90614_I2C_ADDRESS", _py_address(item.get("address", "0x5a")))
+    content = _replace_simple_assignment(content, "MLX90614_AMBIENT_OFFSET_C", _py_float(item.get("ambient_offset_c", 0.0)))
+
+    content = _replace_simple_assignment(content, "MLX_CLOUD_K1", _py_float(item.get("cloud_k1", 0.0)))
+    content = _replace_simple_assignment(content, "MLX_CLOUD_K2", _py_float(item.get("cloud_k2", 0.0)))
+    content = _replace_simple_assignment(content, "MLX_CLOUD_K3", _py_float(item.get("cloud_k3", 0.0)))
+    content = _replace_simple_assignment(content, "MLX_CLOUD_K4", _py_float(item.get("cloud_k4", 0.0)))
+    content = _replace_simple_assignment(content, "MLX_CLOUD_K5", _py_float(item.get("cloud_k5", 0.0)))
+    content = _replace_simple_assignment(content, "MLX_CLOUD_K6", _py_float(item.get("cloud_k6", 0.0)))
+    content = _replace_simple_assignment(content, "MLX_CLOUD_K7", _py_float(item.get("cloud_k7", 0.0)))
+
+    content = _replace_simple_assignment(content, "MLX90614_LOG_INTERVAL_MIN", _py_int(payload.get("log_interval_min", 1)))
+
+    _write_config(content)
+    return {"ok": True, "backup_path": backup_path}
+
+def save_htu21_settings(payload):
+    content = _read_config()
+    backup_path = create_backup()
+
+    item = payload.get("items", [{}])[0]
+
+    content = _replace_simple_assignment(content, "HTU21_ENABLED", _py_bool(payload.get("enabled")))
+    content = _replace_simple_assignment(content, "HTU21_NAME", _py_string(item.get("name", "")))
+    content = _replace_simple_assignment(content, "HTU21_I2C_ADDRESS", _py_address(item.get("address", "0x40"), 0x40))
+    content = _replace_simple_assignment(content, "HTU21_TEMP_OFFSET", _py_float(item.get("temp_offset", 0.0)))
+    content = _replace_simple_assignment(content, "HTU21_HUM_OFFSET", _py_float(item.get("hum_offset", 0.0)))
+    content = _replace_simple_assignment(content, "HTU21_OVERLAY", _py_bool(item.get("overlay")))
+    content = _replace_simple_assignment(content, "HTU21_LOG_INTERVAL_MIN", _py_int(payload.get("log_interval_min", 1)))
+
+    _write_config(content)
+    return {"ok": True, "backup_path": backup_path}
+
+
+def save_sht3x_settings(payload):
+    content = _read_config()
+    backup_path = create_backup()
+
+    item = payload.get("items", [{}])[0]
+
+    content = _replace_simple_assignment(content, "SHT3X_ENABLED", _py_bool(payload.get("enabled")))
+    content = _replace_simple_assignment(content, "SHT3X_NAME", _py_string(item.get("name", "")))
+    content = _replace_simple_assignment(content, "SHT3X_I2C_ADDRESS", _py_address(item.get("address", "0x44"), 0x44))
+    content = _replace_simple_assignment(content, "SHT3X_TEMP_OFFSET", _py_float(item.get("temp_offset", 0.0)))
+    content = _replace_simple_assignment(content, "SHT3X_HUM_OFFSET", _py_float(item.get("hum_offset", 0.0)))
+    content = _replace_simple_assignment(content, "SHT3X_OVERLAY", _py_bool(item.get("overlay")))
+    content = _replace_simple_assignment(content, "SHT3X_LOG_INTERVAL_MIN", _py_int(payload.get("log_interval_min", 1)))
 
     _write_config(content)
     return {"ok": True, "backup_path": backup_path}
