@@ -173,6 +173,7 @@ askutils/config.py.bak
 tests/mlx90614_coeffs.j*
 tests/*.csv
 tj_settings.json
+indi_settings.json
 
 # SetupUI local data
 setupui/data/session_secret.txt
