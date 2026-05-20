@@ -1,385 +1,313 @@
 # AllSkyKamera
 
-Python library for all-sky cameras in the **AllSkyKamera** network  
+Python client for all-sky cameras in the **AllSkyKamera** network  
 (<https://allskykamera.space>)
 
-Version: v2026.01.14_01
+Version: v2026.03.27_01
 
-## Further documentation and Wiki
+## Overview
 
-For extended guides, troubleshooting, sensor information, development notes and advanced configuration,  
-please visit the official AllSkyKamera Wiki:
+The AllSkyKamera network collects images, videos and sensor data from all-sky
+cameras at different locations. The goal is to make sky and environmental data
+available for schools, astronomy projects and interested observers.
 
-🔗 **https://github.com/gottie29/AllSkyKamera/wiki**
+This repository contains the Raspberry Pi client. It reads data from an existing
+all-sky installation and uploads it to the AllSkyKamera server. It supports both:
 
-The Wiki is continuously updated and contains many additional examples and best practices.
+- Thomas Jacquin allsky
+- INDI AllSky
 
-## Description
-
-The AllSkyKamera network is a collection of all-sky cameras at different locations.
-Its goal is to provide easy access to image and sensor data, for example:
-
-- to run environmental and astronomy projects in schools, or  
-- simply to explore the night sky from different locations.
-
-This Python library makes it possible to send images, videos and sensor data from a local
-all-sky camera to the central server, where they are published via
+The client does not modify the core allsky camera software. It reads generated
+images, videos, metadata and sensor values, then transfers them to
 <https://allskykamera.space>.
-
-The library **does not modify** the standard allsky software by Thomas Jacquin and does
-not change any of your local camera settings or custom scripts.  
-It only reads the data and uploads it to the AllSkyKamera server.
 
 ## Requirements
 
-Participating in the AllSkyKamera network is intentionally kept as simple as possible.
-
 You need:
 
-- a Raspberry Pi-based all-sky camera (Raspberry Pi 4 or newer recommended)
-- the standard allsky software and web interface by Thomas Jacquin or INDI AllSky
-- a working internet connection (for data upload)
+- Raspberry Pi 4 or newer recommended
+- Raspberry Pi OS with internet access
+- Thomas Jacquin allsky or INDI AllSky already installed
+- API key for the AllSkyKamera network
 
-To join the network you need a **secret API key**.  
-You can request a key here: <https://www.allskykamera.space/machmit.php>
+You can request an API key here:
 
-Without this secret key the library will not work and your camera cannot upload any data.
+<https://www.allskykamera.space/machmit.php>
 
-## Updating the library
+Without this API key the client cannot fetch upload credentials and cannot send
+data to the central server.
 
-If you already have the AllSkyKamera Python library installed, it is a good idea to
-update it from time to time. New features and improvements are added continuously.
+## Installation
 
-Updating is as simple as pulling the latest changes from GitHub:
+Clone the repository and run the installer:
 
-1. Log in to your Raspberry Pi (SSH or local console).
-2. Run the following commands:
+```bash
+cd
+git clone https://github.com/gottie29/AllSkyKamera.git
+cd AllSkyKamera
+./install.sh
+```
 
-   ```bash
-   cd ~/AllSkyKamera
-   git pull origin main
-   ```
+The installer performs the initial setup:
 
-Existing configuration values (for example in askutils/config.py) are not
-overwritten by a normal update. Only the library code and scripts tracked by Git
-are updated.
+- checks whether an existing `askutils/config.py` or `askutils/ASKsecret.py`
+  exists and offers to back it up
+- asks for your API key and validates it against the AllSkyKamera server
+- asks whether you use Thomas Jacquin allsky or INDI AllSky
+- detects the relevant image path or camera directory where possible
+- installs required system packages
+- enables I2C, 1-Wire and camera support where supported by the system
+- installs Python dependencies
+- creates `askutils/ASKsecret.py`
+- creates an initial `askutils/config.py`
+- uploads the first camera configuration
+- installs base cronjobs
+- installs and starts the local SetupUI as a systemd service
 
-## Installation / Uninstallation
+After installation, open the SetupUI in your browser:
 
-Installing the Python library is straightforward.
+```text
+http://<raspberry-pi-ip>:5001
+```
 
-### Installation
+The installer prints detected network addresses at the end, for example:
 
-The installation of the Python library is split into two steps:
+```text
+SetupUI: http://192.168.1.23:5001
+```
 
-- `install.sh` – basic installation (packages, API key, minimal config)
-- `setup.sh` – interactive configuration (camera, site, sensors, cronjobs)
+### First SetupUI Login
 
-1. **Download the library**
+On first access, the SetupUI asks you to create a local user account. This
+account is only for the local Raspberry Pi web interface.
 
-   ```bash
-   cd
-   git clone https://github.com/gottie29/AllSkyKamera.git
-   cd AllSkyKamera
-   ```
-2. **Run the installer**
+The SetupUI can then be used to manage:
 
-   ```bash
-   ./install.sh
-   ```
+- camera and location settings
+- allsky paths
+- sensor settings
+- sensor tests
+- cronjobs
+- KpIndex and meteor detection options
+- config upload
+- local config backups
+- update checks
 
-When you start the installer, all required packages for the library will be installed.
-After that, the script will ask you for the necessary configuration values.
+Important privacy note: precise latitude and longitude values can reveal the
+exact camera location on the public map. If you do not want that, shift the
+coordinates slightly before uploading the configuration.
 
-<strong>Important (privacy):</strong>
-If you enter very precise location data, the map on the website will show the exact
-position of your camera.
-If you do not want that, simply shift your latitude and longitude by a small amount.
+## Optional Text Setup
 
-The final step is to upload this configuration to the server.
-Once the configuration has been transferred, your camera will appear on the website.
+The older text-based setup is still available:
 
-After installation you do not need to reboot the camera, the allsky software, or
-the Raspberry Pi. As soon as the cronjobs are installed, data transfer will start
-automatically.
+```bash
+cd ~/AllSkyKamera
+./setup.sh
+```
 
-If nothing appears on the website, either the configuration has not been uploaded yet,
-or the cronjobs are not running correctly.
+It uses `whiptail` and can edit camera, site, sensor and cron settings from the
+terminal. For most users, the web-based SetupUI is now the easier path.
 
-3. **Run the setup**
+## Updating
 
-   ```bash
-   ./setup.sh
-   ```
-This script opens a text-based menu interface (using whiptail) and allows you to edit all configuration values in a safe and structured way.
+You can update from the command line:
 
-**Note:**
-After installation and setup you do not need to reboot the Raspberry Pi or the allsky software.
-As soon as the cronjobs are active, data transfer starts automatically.
+```bash
+cd ~/AllSkyKamera
+git pull origin main
+```
 
-## Uninstallation
+Local configuration files such as `askutils/config.py`, `askutils/ASKsecret.py`,
+`config.json` and SetupUI data are ignored by Git and should not be overwritten
+by a normal update.
 
-To remove the AllSkyKamera library from your Raspberry Pi, you can use the
-uninstallation script:
+The SetupUI also contains update-related functionality. If an update was pulled
+while the SetupUI service is running, restart it with:
 
-   ```bash
-   cd ~/AllSkyKamera
-   ./uninstall.sh
-   ```
+```bash
+sudo systemctl restart allsky-setupui.service
+```
 
-This will:
-- remove the library directory
-- remove all cronjobs created by the installer
+## Service Management
 
-You can verify your current cron table with:
+The installer creates this systemd service:
 
-   ```bash
-   crontab -l
-   ```
+```text
+allsky-setupui.service
+```
+
+Useful commands:
+
+```bash
+sudo systemctl status allsky-setupui.service
+sudo systemctl restart allsky-setupui.service
+sudo systemctl stop allsky-setupui.service
+sudo systemctl start allsky-setupui.service
+```
+
+The web interface runs on port `5001`.
 
 ## Cronjobs
 
-The library uses **cronjobs** to run all recurring tasks (status updates, image uploads, sensor loggers, SQM, etc.).  
-These cronjobs are written into the user’s crontab and can be viewed or edited at any time with standard tools like `crontab -l`.
+All recurring tasks are executed through cronjobs. The installer writes the base
+cronjobs immediately after creating the initial configuration.
 
-### How cronjobs are created
+Typical base jobs are:
 
-Cronjobs are not written manually – they are generated from the `CRONTABS` list inside `askutils/config.py`.
+- Raspberry Pi status upload
+- live image upload
+- daily configuration upload
+- nightly upload of videos and processed assets
+- SQM measurement
 
-- `install.sh` creates an initial `config.py` with a set of **base jobs**, for example:
-  - Raspberry Pi status (`scripts.raspi_status`)
-  - image upload (`scripts.run_image_upload`)
-  - daily config upload (`scripts.upload_config_json`)
-  - nightly FTP upload (`scripts.run_nightly_upload`)
-  - SQM measurement and SQM plot generation
+Additional jobs are created for enabled sensors and optional features such as
+KpIndex or meteor detection.
 
-- `setup.sh` then:
-  - rewrites `config.py` with all your chosen settings (camera, site, sensors, intervals),
-  - **adds additional cronjobs** dynamically for each enabled sensor (`BME280`, `TSL2591`, `DS18B20`, `DHT11`, `DHT22`, `MLX90614`) and optional KpIndex,
-  - and finally calls `scripts.manage_crontabs` to apply all cronjobs to your crontab.
+You can inspect the current crontab with:
 
-In normal operation you do **not** need to edit cronjobs manually. You change settings via `setup.sh`, and the script regenerates both `config.py` and the cron configuration.
+```bash
+crontab -l
+```
 
-### Apply cronjobs manually
+You can reapply cronjobs manually:
 
-If you ever change `config.py` by hand, or want to reapply the cron configuration, you can run:
+```bash
+cd ~/AllSkyKamera
+python3 -m scripts.manage_crontabs
+```
 
-   ```bash
-   cd ~/AllSkyKamera
-   python3 -m scripts.manage_crontabs
-   ```
+The SetupUI also shows desired and installed cronjobs and can apply them from
+the browser.
 
-This command:
+## Uploads
 
-- reads the CRONTABS list from config.py,
-- removes old AllSkyKamera entries from your crontab,
-- and writes the current set of jobs into the crontab.
+The current upload scripts use the AllSkyKamera API for live images and nightly
+assets. Depending on the camera type and configuration, the client uploads:
 
-If it succeeds, the Raspberry Pi will start sending data within the defined intervals (typically within 1–2 minutes).
-The data should then appear on the network site: https://allskykamera.space
+- live image variants: full HD, mobile and thumbnail
+- nightly timelapse videos
+- keograms
+- startrail images
+- startrail timelapse videos where supported
+- camera configuration metadata
+- Raspberry Pi status
+- sensor values
+- optional KpIndex and meteor detection data
 
-### Upload configuration to the server
+Recommended file formats:
 
-For your camera to appear on the website, a minimal configuration JSON must be uploaded to the central server.
-Both install.sh (optionally) and setup.sh already call this for you, but you can also trigger it manually:
+- JPG or PNG for source images
+- MP4 for videos
 
+WebM is supported in parts of the code, but MP4 is usually better for browser
+playback and buffering.
 
-   ```bash
-   cd ~/AllSkyKamera
-   python3 -m scripts.upload_config_json
-   ```
+## Supported Sensors
 
-After a successful upload:
+The client supports these sensors:
 
-- the camera entry is created or updated on the server,
-- name, site, operator and other metadata are visible on the map and detail pages.
+- BME280: temperature, humidity, pressure; supports multi-sensor configuration
+- TSL2591: sky brightness / SQM-style measurements
+- MLX90614: infrared sky temperature
+- DHT11: temperature and humidity
+- DHT22: temperature and humidity; supports multi-sensor configuration
+- DS18B20: temperature
+- HTU21 / GY-21 / SHT21: temperature and humidity
+- SHT3x: temperature and humidity
 
-If your camera still does not show up:
+Sensor settings can be managed in the SetupUI or with `setup.sh`. Depending on
+the sensor, settings include:
 
-- Check that upload_config_json ran without errors.
+- enabled / disabled
+- display name
+- I2C address or GPIO pin
+- logging interval
+- offset values
+- overlay output
+- sensor test
 
-Verify that manage_crontabs has been executed and the jobs are present:
+Sensor values are written to InfluxDB through the credentials fetched from the
+AllSkyKamera API.
 
-   ```bash
-   crontab -l
-   ```
+## Manual Commands
 
-## What data is transferred?
+Upload the current public configuration:
 
-The AllSkyKamera library automatically uploads a variety of data products to the central server.  
-These uploads are handled through the cron-based automation system and the FTP uploader included in the library.
+```bash
+cd ~/AllSkyKamera
+python3 -m scripts.upload_config_json
+```
 
-### **1. Timelapse videos**
-Every night a timelapse video (day-to-night or full-night depending on your allsky configuration) is created by the allsky interface.  
-The library uploads this file to the server
+Run the live image upload manually:
 
-### **2. Keograms**
-A keogram is a vertical time-slice representation of the night sky, generated by the allsky interface.  
-The library uploads each nightly keogram to the server.
+```bash
+cd ~/AllSkyKamera
+python3 -m scripts.run_image_upload_indi_api
+```
 
-Keograms provide a quick visual overview of cloud cover and sky transitions throughout the night and are used both in the web interface and later in data analysis.
+For Thomas Jacquin allsky installations use:
 
-### **3. Startrails**
-Startrail images show the apparent motion of stars across the sky, created by stacking all long-exposure frames of the night.  
-These files are uploaded to the server.
+```bash
+cd ~/AllSkyKamera
+python3 -m scripts.run_image_upload_tj_api
+```
 
-Startrails offer insight into sky rotation, sky quality and cloud dynamics.
+Run the nightly upload manually:
 
----
+```bash
+cd ~/AllSkyKamera
+python3 -m scripts.run_nightly_upload_indi_api
+```
 
-### **4. Raw and processed auxiliary files**
-Depending on the camera configuration, the library may also upload:
+For Thomas Jacquin allsky installations use:
 
-- `image.jpg` → current live image  
-- `config.json` → camera configuration for website display  
+```bash
+cd ~/AllSkyKamera
+python3 -m scripts.run_nightly_upload_tj_api
+```
 
-All uploads follow the directory structure used by the AllSkyKamera server.
+## Uninstallation
 
-You can choose different file- and video-types.
-The Website is working with that types.
+To remove the client, run:
 
-We recommend the follow filetypes:
-- MP4 for vidoe (webm is possible, but the browser buffering is not so good for webm formated files)
-- JPG for images
+```bash
+cd ~/AllSkyKamera
+./uninstall.sh
+```
 
----
+Afterwards, verify your crontab:
 
-## Supported sensors
+```bash
+crontab -l
+```
 
-The AllSkyKamera library supports a range of environmental and sky-quality sensors.  
-Each sensor can be:
+If the SetupUI service was installed, also check:
 
-- **enabled/disabled** in `setup.sh`,  
-- given a **custom display name**,  
-- set with a **logging interval**,  
-- optionally included as **overlay information** on the image.
-
-Below is a list of all sensors currently supported:
-
----
-
-### **1. BME280 (Temperature, Humidity, Pressure)**  
-**Connection:** I2C (`0x76` or `0x77`)  
-**Features:**  
-- Temperature  
-- Relative humidity  
-- Air pressure  
-- Optional image overlay  
-- Configurable logging interval  
-- Data written to InfluxDB and shown in the web UI  
-
-Ideal for housing climate monitoring inside the camera.
-
----
-
-### **2. TSL2591 (Sky Brightness / SQM Replacement)**  
-**Connection:** I2C (`0x29`)  
-**Features:**  
-- High-sensitivity light sensor  
-- Can act as a digital SQM meter  
-- Supports:
-  - `SQM2_LIMIT` threshold  
-  - Correction factor for calibration  
-  - Optional overlay in the nightly image  
-- Automatic logging via cron  
-- Used for cloud detection and sky brightness plots  
-
----
-
-### **3. MLX90614 (Infrared Temperature Sensor)**  
-**Connection:** I2C (`0x5a`)  
-**Features:**  
-- Measures temperature via infrared radiation  
-- Detects **sky temperature** for cloud estimation  
-- Optional logging and overlay  
-- Excellent complement to TSL2591  
-
----
-
-### **4. DHT11 (Temperature & Humidity)**  
-**Connection:** GPIO (single-wire)  
-**Features:**  
-- Basic temperature & humidity sensor  
-- Adjustable retry count and delay  
-- Optional overlay  
-- Good for simple internal monitoring  
-
----
-
-### **5. DHT22 (Temperature & Humidity, high accuracy)**  
-**Connection:** GPIO (single-wire)  
-**Features:**  
-- Higher precision than DHT11  
-- Configurable retries and delay  
-- Overlay support  
-- Suitable for external or internal climate tracking  
-
----
-
-### **6. DS18B20 (Temperature)**  
-**Connection:** GPIO (single-wire)  
-**Features:**  
-- Configurable retries and delay  
-- Overlay support  
-- Suitable for external or internal climate tracking  
-
----
-
-### **7. HTU21/GY-21/SHT21 (Temperature, Huminity)**  
-**Connection:** I2C (`0x40`)  
-**Features:**  
-- Basic temperature & humidity sensor  
-- Adjustable retry count and delay  
-- Optional overlay  
-- Good for simple internal monitoring    
-
----
-
-### **8. SHT3x (Temperature, Huminity)**  
-**Connection:** I2C (`0x44`)  
-**Features:**  
-- Basic temperature & humidity sensor  
-- Adjustable retry count and delay  
-- Optional overlay  
-- Good for simple internal monitoring    
-
----
-
-### **Sensor configuration**
-
-All sensor settings are controlled via `setup.sh`:
-
-- Enable / disable  
-- Set custom names  
-- Configure I2C address or GPIO pin  
-- Enable overlays  
-- Set logging interval  
-- Write updated cronjobs  
+```bash
+sudo systemctl status allsky-setupui.service
+```
 
 ## API Access
 
-The AllSkyKamera ecosystem provides a dedicated and secure API for external sensors,
-weather stations, microcontrollers (ESP32, ESP8266, Arduino), and custom data sources.
+The AllSkyKamera ecosystem provides an API for cameras, external sensors,
+weather stations, microcontrollers and custom data sources.
 
-The API documentation is available here:
+API documentation:
 
-🔗 **https://allskykamera.space/api-doc.php**
+<https://allskykamera.space/api-doc.php>
 
-The page includes:
+It includes:
 
-- how to request an API key  
-- authentication requirements  
-- allowed request formats  
-- examples for sending multiple sensor values  
-- error codes and common responses  
+- API key usage
+- authentication requirements
+- allowed request formats
+- examples for sending sensor values
+- error codes and common responses
 
-A detailed guide, including Python and ESP32 examples, can also be found in the Wiki:
+## Documentation and Wiki
 
-🔗 **https://github.com/gottie29/AllSkyKamera/wiki**
+More documentation, examples and troubleshooting notes are available in the
+project Wiki:
 
-## Additional information
-
-For more details about installation, sensor integration, overlays, plotting tools, backend processes,
-and internal structure of the library, consult the AllSkyKamera Wiki:
-
-🔗 **https://github.com/gottie29/AllSkyKamera/wiki**
+<https://github.com/gottie29/AllSkyKamera/wiki>
