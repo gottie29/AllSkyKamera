@@ -1,5 +1,8 @@
 Version history
 ----------------
+# v2026.10.15_01
+- Update TJ-Intercae upload with support for older TJ-Interface-Versions
+
 # v2026.10.14_01
 - TJ-Interface only: META data for current image.jpog will be send to server
 

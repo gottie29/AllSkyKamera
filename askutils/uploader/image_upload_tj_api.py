@@ -164,6 +164,14 @@ def _build_payload_meta() -> dict:
 _SAVE_RE = re.compile(r"Saving\s+(DAY|NIGHT)\s+image\s+'image-(\d{14})\.[^']+'", re.I)
 _GOT_RE = re.compile(r"GOT IMAGE:.*?shutter_us:\s*([0-9]+(?:[.,][0-9]+)?)\s*(sec|ms|us|µs).*?gain:\s*([0-9]+(?:[.,][0-9]+)?)", re.I)
 _JOURNAL_RE = re.compile(r"^\s*(\d+(?:\.\d+)?)\s+.*?:\s*(.*)$")
+# Older TJ versions (_02/_03) log the exposure at its start, rather than a
+# GOT IMAGE line. The timestamp also occurs in the saved image filename.
+_START_RE = re.compile(
+    r"STARTING\s+EXPOSURE\s+at:\s*(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})"
+    r"\s*@\s*([0-9]+(?:[.,][0-9]+)?)\s*(sec|ms|us|µs)", re.I)
+# Night exposures can last a minute or more; use both the exact filename
+# timestamp and journal ordering, never only the temporal proximity.
+TJ_MAX_START_TO_SAVE_SECONDS = 300.0
 
 
 def _parse_decimal(text: str) -> float:
@@ -193,11 +201,29 @@ def _journal_metadata(source_mtime: float) -> Optional[dict]:
 
     matches = []
     last_got = None
+    last_start = None
     for line in result.stdout.splitlines():
         item = _JOURNAL_RE.match(line)
         if not item:
             continue
         log_epoch, message = float(item.group(1)), item.group(2)
+        started = _START_RE.search(message)
+        if started:
+            try:
+                v = _parse_decimal(started.group(2))
+                unit = started.group(3).lower()
+                exposure = int(round(v * {"sec": 1_000_000, "ms": 1000,
+                                          "us": 1, "µs": 1}[unit]))
+                if not 0 < exposure <= 120_000_000:
+                    last_start = None
+                else:
+                    stamp = datetime.strptime(started.group(1), "%Y-%m-%d %H:%M:%S")
+                    last_start = (log_epoch, stamp.strftime("%Y%m%d%H%M%S"), exposure)
+            except (ValueError, KeyError, OverflowError):
+                last_start = None
+            # Starting a new capture invalidates any previous GOT IMAGE event.
+            last_got = None
+            continue
         got = _GOT_RE.search(message)
         if got:
             try:
@@ -207,26 +233,35 @@ def _journal_metadata(source_mtime: float) -> Optional[dict]:
                                              "us": 1, "µs": 1}[unit]))
                 gain = _parse_decimal(got.group(3))
                 last_got = (log_epoch, exposure_us, gain)
-            except (ValueError, KeyError):
+            except (ValueError, KeyError, OverflowError):
                 last_got = None
             continue
         saved = _SAVE_RE.search(message)
         if not saved:
             continue
-        # GOT IMAGE belongs to the same capture only when it preceded the
-        # saving line closely. A missing value is represented as null.
-        exposure_us, gain = None, None
-        if last_got is not None and 0 <= log_epoch - last_got[0] <= 10:
+        filename_time = saved.group(2)
+        exposure_us, gain, exposure_source = None, None, None
+        # Prefer the newer TJ's original GOT IMAGE record, preserving its gain.
+        if (last_got is not None and 0 <= log_epoch-last_got[0] <= 10
+                and 0 < last_got[1] <= 120_000_000):
             exposure_us, gain = last_got[1], last_got[2]
+            exposure_source = "tj_got_image"
+        # Older TJ's STARTING EXPOSURE has no gain. Match the saved filename's
+        # precise LOCAL capture-start second, not merely the nearest journal row.
+        elif (last_start is not None and last_start[1] == filename_time
+              and 0 <= log_epoch-last_start[0] <= TJ_MAX_START_TO_SAVE_SECONDS):
+            exposure_us = last_start[2]
+            exposure_source = "tj_starting_exposure"
         last_got = None
+        last_start = None
         delta = source_mtime - log_epoch
         if abs(delta) <= TJ_MAX_SAVE_MTIME_DELTA_SECONDS:
-            matches.append((abs(delta), saved.group(2), log_epoch,
-                            exposure_us, gain, saved.group(1)))
+            matches.append((abs(delta), filename_time, log_epoch,
+                            exposure_us, gain, saved.group(1), exposure_source))
 
     if len(matches) != 1:
         return None
-    _, filename_time, save_epoch, exposure_us, gain, day_or_night = matches[0]
+    _, filename_time, save_epoch, exposure_us, gain, day_or_night, exposure_source = matches[0]
 
     # Convert filename's local time using configured local timezone, if given.
     # Do not silently assume Europe/Berlin for network cameras elsewhere.
@@ -262,6 +297,7 @@ def _journal_metadata(source_mtime: float) -> Optional[dict]:
         "capture_local_timezone": zone_name,
         "tj_original_filename": f"image-{filename_time}.jpg",
         "exposure_us": exposure_us,
+        "exposure_source": exposure_source,
         "gain": gain,
         "day_or_night": day_or_night.upper(),
     }
