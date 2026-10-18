@@ -995,7 +995,7 @@ edit_bme280() {
     fi
     BME280_I2C_ADDRESS="$tmp"
 
-    tmp=$(whiptail --title "$title" --inputbox "$q_toff" 10 70 "$BME280_TEMP_OFFSET_C" 3>&1 1>&2 2>&3)
+    tmp=$(whiptail --title "$title" --inputbox "$q_toff" 10 70 -- "$BME280_TEMP_OFFSET_C" 3>&1 1>&2 2>&3)
     rc=$?
     if [ $rc -ne 0 ]; then
       BME280_ENABLED="$OLD_ENABLED"; BME280_NAME="$OLD_NAME"; BME280_I2C_ADDRESS="$OLD_ADDR"; BME280_OVERLAY="$OLD_OV"; BME280_LOG_INTERVAL_MIN="$OLD_INT"
@@ -1004,7 +1004,7 @@ edit_bme280() {
     fi
     BME280_TEMP_OFFSET_C="${tmp//,/.}"
 
-    tmp=$(whiptail --title "$title" --inputbox "$q_poff" 10 70 "$BME280_PRESS_OFFSET_HPA" 3>&1 1>&2 2>&3)
+    tmp=$(whiptail --title "$title" --inputbox "$q_poff" 10 70 -- "$BME280_PRESS_OFFSET_HPA" 3>&1 1>&2 2>&3)
     rc=$?
     if [ $rc -ne 0 ]; then
       BME280_ENABLED="$OLD_ENABLED"; BME280_NAME="$OLD_NAME"; BME280_I2C_ADDRESS="$OLD_ADDR"; BME280_OVERLAY="$OLD_OV"; BME280_LOG_INTERVAL_MIN="$OLD_INT"
@@ -1013,7 +1013,7 @@ edit_bme280() {
     fi
     BME280_PRESS_OFFSET_HPA="${tmp//,/.}"
 
-    tmp=$(whiptail --title "$title" --inputbox "$q_hoff" 10 70 "$BME280_HUM_OFFSET_PCT" 3>&1 1>&2 2>&3)
+    tmp=$(whiptail --title "$title" --inputbox "$q_hoff" 10 70 -- "$BME280_HUM_OFFSET_PCT" 3>&1 1>&2 2>&3)
     rc=$?
     if [ $rc -ne 0 ]; then
       BME280_ENABLED="$OLD_ENABLED"; BME280_NAME="$OLD_NAME"; BME280_I2C_ADDRESS="$OLD_ADDR"; BME280_OVERLAY="$OLD_OV"; BME280_LOG_INTERVAL_MIN="$OLD_INT"
@@ -1077,15 +1077,15 @@ edit_bme280() {
     rc=$?; [ $rc -ne 0 ] && return 0
     BME280_SENSOR1_ADDRESS="$tmp"
 
-    tmp=$(whiptail --title "$title" --inputbox "$q_s1_toff" 10 70 "$BME280_SENSOR1_TEMP_OFFSET_C" 3>&1 1>&2 2>&3)
+    tmp=$(whiptail --title "$title" --inputbox "$q_s1_toff" 10 70 -- "$BME280_SENSOR1_TEMP_OFFSET_C" 3>&1 1>&2 2>&3)
     rc=$?; [ $rc -ne 0 ] && return 0
     BME280_SENSOR1_TEMP_OFFSET_C="${tmp//,/.}"
 
-    tmp=$(whiptail --title "$title" --inputbox "$q_s1_poff" 10 70 "$BME280_SENSOR1_PRESS_OFFSET_HPA" 3>&1 1>&2 2>&3)
+    tmp=$(whiptail --title "$title" --inputbox "$q_s1_poff" 10 70 -- "$BME280_SENSOR1_PRESS_OFFSET_HPA" 3>&1 1>&2 2>&3)
     rc=$?; [ $rc -ne 0 ] && return 0
     BME280_SENSOR1_PRESS_OFFSET_HPA="${tmp//,/.}"
 
-    tmp=$(whiptail --title "$title" --inputbox "$q_s1_hoff" 10 70 "$BME280_SENSOR1_HUM_OFFSET_PCT" 3>&1 1>&2 2>&3)
+    tmp=$(whiptail --title "$title" --inputbox "$q_s1_hoff" 10 70 -- "$BME280_SENSOR1_HUM_OFFSET_PCT" 3>&1 1>&2 2>&3)
     rc=$?; [ $rc -ne 0 ] && return 0
     BME280_SENSOR1_HUM_OFFSET_PCT="${tmp//,/.}"
 
@@ -1107,15 +1107,15 @@ edit_bme280() {
     rc=$?; [ $rc -ne 0 ] && return 0
     BME280_SENSOR2_ADDRESS="$tmp"
 
-    tmp=$(whiptail --title "$title" --inputbox "$q_s2_toff" 10 70 "$BME280_SENSOR2_TEMP_OFFSET_C" 3>&1 1>&2 2>&3)
+    tmp=$(whiptail --title "$title" --inputbox "$q_s2_toff" 10 70 -- "$BME280_SENSOR2_TEMP_OFFSET_C" 3>&1 1>&2 2>&3)
     rc=$?; [ $rc -ne 0 ] && return 0
     BME280_SENSOR2_TEMP_OFFSET_C="${tmp//,/.}"
 
-    tmp=$(whiptail --title "$title" --inputbox "$q_s2_poff" 10 70 "$BME280_SENSOR2_PRESS_OFFSET_HPA" 3>&1 1>&2 2>&3)
+    tmp=$(whiptail --title "$title" --inputbox "$q_s2_poff" 10 70 -- "$BME280_SENSOR2_PRESS_OFFSET_HPA" 3>&1 1>&2 2>&3)
     rc=$?; [ $rc -ne 0 ] && return 0
     BME280_SENSOR2_PRESS_OFFSET_HPA="${tmp//,/.}"
 
-    tmp=$(whiptail --title "$title" --inputbox "$q_s2_hoff" 10 70 "$BME280_SENSOR2_HUM_OFFSET_PCT" 3>&1 1>&2 2>&3)
+    tmp=$(whiptail --title "$title" --inputbox "$q_s2_hoff" 10 70 -- "$BME280_SENSOR2_HUM_OFFSET_PCT" 3>&1 1>&2 2>&3)
     rc=$?; [ $rc -ne 0 ] && return 0
     BME280_SENSOR2_HUM_OFFSET_PCT="${tmp//,/.}"
 
@@ -1187,7 +1187,7 @@ edit_ds18b20() {
   DS18B20_NAME="$tmp"
 
   if [ "$DS18B20_ENABLED" = "True" ]; then
-    tmp=$(whiptail --title "$title" --inputbox "$q_off" 10 70 "$DS18B20_TEMP_OFFSET_C" 3>&1 1>&2 2>&3)
+    tmp=$(whiptail --title "$title" --inputbox "$q_off" 10 70 -- "$DS18B20_TEMP_OFFSET_C" 3>&1 1>&2 2>&3)
     rc=$?
     if [ $rc -ne 0 ]; then
       DS18B20_ENABLED="$OLD_ENABLED"
@@ -1324,7 +1324,7 @@ edit_mlx90614() {
     fi
     MLX90614_LOG_INTERVAL_MIN="$tmp"
 
-    tmp=$(whiptail --title "$title" --inputbox "$q_off" 10 70 "$MLX90614_AMBIENT_OFFSET_C" 3>&1 1>&2 2>&3)
+    tmp=$(whiptail --title "$title" --inputbox "$q_off" 10 70 -- "$MLX90614_AMBIENT_OFFSET_C" 3>&1 1>&2 2>&3)
     rc=$?
     if [ $rc -ne 0 ]; then
       MLX90614_ENABLED="$OLD_ENABLED"
@@ -1602,7 +1602,7 @@ edit_dht11() {
     fi
     DHT11_RETRY_DELAY="${tmp//,/.}"
 
-    tmp=$(whiptail --title "$title" --inputbox "$q_toff" 10 70 "$DHT11_TEMP_OFFSET_C" 3>&1 1>&2 2>&3)
+    tmp=$(whiptail --title "$title" --inputbox "$q_toff" 10 70 -- "$DHT11_TEMP_OFFSET_C" 3>&1 1>&2 2>&3)
     rc=$?; if [ $rc -ne 0 ]; then
       DHT11_ENABLED="$OLD_ENABLED"; DHT11_NAME="$OLD_NAME"; DHT11_GPIO_BCM="$OLD_GPIO"; DHT11_RETRIES="$OLD_RET"; DHT11_RETRY_DELAY="$OLD_DEL"; DHT11_OVERLAY="$OLD_OV"; DHT11_LOG_INTERVAL_MIN="$OLD_INT"
       DHT11_TEMP_OFFSET_C="$OLD_TOFF"; DHT11_HUM_OFFSET_PCT="$OLD_HOFF"
@@ -1610,7 +1610,7 @@ edit_dht11() {
     fi
     DHT11_TEMP_OFFSET_C="${tmp//,/.}"
 
-    tmp=$(whiptail --title "$title" --inputbox "$q_hoff" 10 70 "$DHT11_HUM_OFFSET_PCT" 3>&1 1>&2 2>&3)
+    tmp=$(whiptail --title "$title" --inputbox "$q_hoff" 10 70 -- "$DHT11_HUM_OFFSET_PCT" 3>&1 1>&2 2>&3)
     rc=$?; if [ $rc -ne 0 ]; then
       DHT11_ENABLED="$OLD_ENABLED"; DHT11_NAME="$OLD_NAME"; DHT11_GPIO_BCM="$OLD_GPIO"; DHT11_RETRIES="$OLD_RET"; DHT11_RETRY_DELAY="$OLD_DEL"; DHT11_OVERLAY="$OLD_OV"; DHT11_LOG_INTERVAL_MIN="$OLD_INT"
       DHT11_TEMP_OFFSET_C="$OLD_TOFF"; DHT11_HUM_OFFSET_PCT="$OLD_HOFF"
@@ -1833,7 +1833,7 @@ edit_dht22() {
     fi
     DHT22_RETRY_DELAY="${tmp//,/.}"
 
-    tmp=$(whiptail --title "$title" --inputbox "$q_toff" 10 70 "$DHT22_TEMP_OFFSET_C" 3>&1 1>&2 2>&3)
+    tmp=$(whiptail --title "$title" --inputbox "$q_toff" 10 70 -- "$DHT22_TEMP_OFFSET_C" 3>&1 1>&2 2>&3)
     rc=$?
     if [ $rc -ne 0 ]; then
       DHT22_ENABLED="$OLD_ENABLED"; DHT22_NAME="$OLD_NAME"; DHT22_GPIO_BCM="$OLD_GPIO"; DHT22_RETRIES="$OLD_RET"; DHT22_RETRY_DELAY="$OLD_DEL"
@@ -1842,7 +1842,7 @@ edit_dht22() {
     fi
     DHT22_TEMP_OFFSET_C="${tmp//,/.}"
 
-    tmp=$(whiptail --title "$title" --inputbox "$q_hoff" 10 70 "$DHT22_HUM_OFFSET_PCT" 3>&1 1>&2 2>&3)
+    tmp=$(whiptail --title "$title" --inputbox "$q_hoff" 10 70 -- "$DHT22_HUM_OFFSET_PCT" 3>&1 1>&2 2>&3)
     rc=$?
     if [ $rc -ne 0 ]; then
       DHT22_ENABLED="$OLD_ENABLED"; DHT22_NAME="$OLD_NAME"; DHT22_GPIO_BCM="$OLD_GPIO"; DHT22_RETRIES="$OLD_RET"; DHT22_RETRY_DELAY="$OLD_DEL"
@@ -1916,11 +1916,11 @@ edit_dht22() {
     rc=$?; [ $rc -ne 0 ] && return 0
     DHT22_SENSOR1_RETRY_DELAY="${tmp//,/.}"
 
-    tmp=$(whiptail --title "$title" --inputbox "$q_s1_toff" 10 70 "$DHT22_SENSOR1_TEMP_OFFSET_C" 3>&1 1>&2 2>&3)
+    tmp=$(whiptail --title "$title" --inputbox "$q_s1_toff" 10 70 -- "$DHT22_SENSOR1_TEMP_OFFSET_C" 3>&1 1>&2 2>&3)
     rc=$?; [ $rc -ne 0 ] && return 0
     DHT22_SENSOR1_TEMP_OFFSET_C="${tmp//,/.}"
 
-    tmp=$(whiptail --title "$title" --inputbox "$q_s1_hoff" 10 70 "$DHT22_SENSOR1_HUM_OFFSET_PCT" 3>&1 1>&2 2>&3)
+    tmp=$(whiptail --title "$title" --inputbox "$q_s1_hoff" 10 70 -- "$DHT22_SENSOR1_HUM_OFFSET_PCT" 3>&1 1>&2 2>&3)
     rc=$?; [ $rc -ne 0 ] && return 0
     DHT22_SENSOR1_HUM_OFFSET_PCT="${tmp//,/.}"
 
@@ -1950,11 +1950,11 @@ edit_dht22() {
     rc=$?; [ $rc -ne 0 ] && return 0
     DHT22_SENSOR2_RETRY_DELAY="${tmp//,/.}"
 
-    tmp=$(whiptail --title "$title" --inputbox "$q_s2_toff" 10 70 "$DHT22_SENSOR2_TEMP_OFFSET_C" 3>&1 1>&2 2>&3)
+    tmp=$(whiptail --title "$title" --inputbox "$q_s2_toff" 10 70 -- "$DHT22_SENSOR2_TEMP_OFFSET_C" 3>&1 1>&2 2>&3)
     rc=$?; [ $rc -ne 0 ] && return 0
     DHT22_SENSOR2_TEMP_OFFSET_C="${tmp//,/.}"
 
-    tmp=$(whiptail --title "$title" --inputbox "$q_s2_hoff" 10 70 "$DHT22_SENSOR2_HUM_OFFSET_PCT" 3>&1 1>&2 2>&3)
+    tmp=$(whiptail --title "$title" --inputbox "$q_s2_hoff" 10 70 -- "$DHT22_SENSOR2_HUM_OFFSET_PCT" 3>&1 1>&2 2>&3)
     rc=$?; [ $rc -ne 0 ] && return 0
     DHT22_SENSOR2_HUM_OFFSET_PCT="${tmp//,/.}"
 
@@ -2049,7 +2049,7 @@ edit_htu21() {
     fi
     HTU21_I2C_ADDRESS="$tmp"
 
-    tmp=$(whiptail --title "$title" --inputbox "$q_toff" 10 70 "$HTU21_TEMP_OFFSET" 3>&1 1>&2 2>&3)
+    tmp=$(whiptail --title "$title" --inputbox "$q_toff" 10 70 -- "$HTU21_TEMP_OFFSET" 3>&1 1>&2 2>&3)
     rc=$?
     if [ $rc -ne 0 ]; then
       HTU21_ENABLED="$OLD_ENABLED"
@@ -2063,7 +2063,7 @@ edit_htu21() {
     fi
     HTU21_TEMP_OFFSET="${tmp//,/.}"
 
-    tmp=$(whiptail --title "$title" --inputbox "$q_hoff" 10 70 "$HTU21_HUM_OFFSET" 3>&1 1>&2 2>&3)
+    tmp=$(whiptail --title "$title" --inputbox "$q_hoff" 10 70 -- "$HTU21_HUM_OFFSET" 3>&1 1>&2 2>&3)
     rc=$?
     if [ $rc -ne 0 ]; then
       HTU21_ENABLED="$OLD_ENABLED"
@@ -2180,7 +2180,7 @@ edit_sht3x() {
     fi
     SHT3X_I2C_ADDRESS="$tmp"
 
-    tmp=$(whiptail --title "$title" --inputbox "$q_toff" 10 70 "$SHT3X_TEMP_OFFSET" 3>&1 1>&2 2>&3)
+    tmp=$(whiptail --title "$title" --inputbox "$q_toff" 10 70 -- "$SHT3X_TEMP_OFFSET" 3>&1 1>&2 2>&3)
     rc=$?
     if [ $rc -ne 0 ]; then
       SHT3X_ENABLED="$OLD_ENABLED"
@@ -2194,7 +2194,7 @@ edit_sht3x() {
     fi
     SHT3X_TEMP_OFFSET="${tmp//,/.}"
 
-    tmp=$(whiptail --title "$title" --inputbox "$q_hoff" 10 70 "$SHT3X_HUM_OFFSET" 3>&1 1>&2 2>&3)
+    tmp=$(whiptail --title "$title" --inputbox "$q_hoff" 10 70 -- "$SHT3X_HUM_OFFSET" 3>&1 1>&2 2>&3)
     rc=$?
     if [ $rc -ne 0 ]; then
       SHT3X_ENABLED="$OLD_ENABLED"

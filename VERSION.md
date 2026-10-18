@@ -1,5 +1,8 @@
 Version history
 ----------------
+# v2026.10.18_01
+- Bugfix in Offset-Variable handling for setup.sh fixed
+
 # v2026.10.15_01
 - Update TJ-Intercae upload with support for older TJ-Interface-Versions
 
