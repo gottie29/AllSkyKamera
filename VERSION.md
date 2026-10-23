@@ -1,5 +1,9 @@
 Version history
 ----------------
+
+# v2026.10.23_01
+- sending config data files with API
+
 # v2026.10.18_01
 - Bugfix in Offset-Variable handling for setup.sh fixed
 
