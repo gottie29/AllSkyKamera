@@ -1,3 +1,5 @@
+from urllib.parse import urlsplit
+from askutils.ASKsecret import API_URL
 #!/usr/bin/env python3
 """AllSkyKamera API upload for TJ / INDI, with optional TJ journal metadata.
 
@@ -64,7 +66,8 @@ def log(msg: str) -> None:
 
 
 def _get_api_url() -> str:
-    return base64.b64decode(_DEFAULT_ENC_IMAGE_UPLOAD_API_URL).decode().strip()
+    parts = urlsplit(API_URL)
+    return f"{parts.scheme}://{parts.netloc}/api/v1/image_upload.php"
 
 
 def _choose_newest_existing(*candidates: str) -> Optional[str]:

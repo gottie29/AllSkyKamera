@@ -1,6 +1,14 @@
 Version history
 ----------------
 
+# v2026.10.23_02
+
+- Centralized API URL handling for TJ-Allsky and INDI-Allsky image uploads.
+- Centralized API URL handling for TJ-Allsky and INDI-Allsky nightly uploads.
+- All four upload modules now derive their API endpoint from `ASKsecret.py` (`API_URL`).
+- Removed dependency on fixed server addresses for API URL resolution.
+- No changes to image processing, upload formats, retry logic or jitter.
+
 # v2026.10.23_01
 - sending config data files with API
 

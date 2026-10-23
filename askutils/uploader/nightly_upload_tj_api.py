@@ -1,3 +1,5 @@
+from urllib.parse import urlsplit
+from askutils.ASKsecret import API_URL
 #!/usr/bin/env python3
 # askutils/uploader/nightly_upload_tj_api.py
 
@@ -80,8 +82,9 @@ def _log_nightly_status(value, asset):
 # -----------------------------------------------------------
 # Helper
 # -----------------------------------------------------------
-def _get_api_url():
-    return base64.b64decode(_DEFAULT_ENC_NIGHTLY_UPLOAD_API_URL).decode().strip()
+def _get_api_url() -> str:
+    parts = urlsplit(API_URL)
+    return f"{parts.scheme}://{parts.netloc}/api/v1/nightly_upload.php"
 
 
 def _truthy(v):
