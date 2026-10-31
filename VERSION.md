@@ -1,6 +1,19 @@
 Version history
 ----------------
 
+# v2026.10.31_01
+
+- Added structured JSONL diagnostics for TJ-Allsky nightly uploads.
+- Added structured JSONL diagnostics for INDI-Allsky nightly uploads.
+- Logs include camera ID, library version, recording date and run ID.
+- Added millisecond-accurate HTTP upload timing and status reporting.
+- Added diagnostic information for assets, upload attempts and errors.
+- Added automatic HTTPS diagnostic log upload via raspi_status.
+- Logs are stored in camera-specific directories on the AllSkyKamera server.
+- Local logs are deleted only after successful server confirmation and checksum verification.
+- Added local queue handling to prevent uncontrolled storage growth.
+- No changes to nightly upload timeouts, video processing, retry logic or cron schedules.
+
 # v2026.10.23_02
 
 - Centralized API URL handling for TJ-Allsky and INDI-Allsky image uploads.

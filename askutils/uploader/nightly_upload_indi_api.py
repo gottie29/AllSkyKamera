@@ -16,6 +16,7 @@ from datetime import datetime, timedelta
 
 import requests
 from askutils import config
+from askutils.utils import nightly_diagnostics as _diagnostics
 
 try:
     from askutils.utils import influx_writer
@@ -58,6 +59,7 @@ HTTP_VERIFY_SSL = True
 def log(msg):
     ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print("{0} {1}".format(ts, msg), flush=True)
+    _diagnostics.record_message(msg)
 
 
 # -----------------------------------------------------------
@@ -451,7 +453,7 @@ def _upload(asset, date, datafiles, publish_last):
                     "kamera": str(_get_camera_id() or ""),
                 }
 
-                r = requests.post(
+                r = _diagnostics.timed_post(
                     url,
                     headers=headers,
                     data=data,
@@ -496,7 +498,7 @@ def _upload(asset, date, datafiles, publish_last):
                     "kamera": str(_get_camera_id() or ""),
                 }
 
-                r = requests.post(
+                r = _diagnostics.timed_post(
                     url,
                     headers=headers,
                     data=data,
@@ -583,7 +585,7 @@ def _apply_jitter(date):
 # -----------------------------------------------------------
 # Main
 # -----------------------------------------------------------
-def upload_nightly_batch(date=None):
+def _upload_nightly_batch_impl(date=None):
     if date is None:
         date = (datetime.now() - timedelta(days=1)).strftime("%Y%m%d")
 
@@ -670,3 +672,19 @@ def upload_nightly_batch(date=None):
         _log_nightly_status(2, "batch")
 
     return any_success
+
+# Diagnosehuelle: die interne Upload-, Retry- und FFmpeg-Logik ist unveraendert.
+def upload_nightly_batch(date=None):
+    run_date = date if date is not None else (datetime.now() - timedelta(days=1)).strftime("%Y%m%d")
+    _diagnostics.begin(
+        run_date,
+        getattr(config, "KAMERA_ID", None) or getattr(config, "KAMERA", None) or "ASK000",
+        getattr(config, "VERSION", "unknown"),
+    )
+    try:
+        result = _upload_nightly_batch_impl(date)
+        _diagnostics.finish("success" if result else "failed")
+        return result
+    except BaseException as exc:
+        _diagnostics.finish("aborted", type(exc).__name__)
+        raise

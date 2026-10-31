@@ -49,3 +49,11 @@ influx_writer.log_metric("raspistatus", {
     "cameraSensorTemp": float(raspiCamTemp) if raspiCamTemp is not None else 0.0,
     "online": 1.0
 }, tags={"host": "host1"})
+
+
+# Nightly-Diagnose-Logs unabhaengig vom Systemstatus per HTTPS senden.
+try:
+    from askutils.uploader.log_upload_api import upload_pending_logs
+    upload_pending_logs()
+except Exception as exc:
+    print('log_upload: unerwarteter Fehler: ' + type(exc).__name__, flush=True)
