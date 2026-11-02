@@ -1,6 +1,14 @@
 Version history
 ----------------
 
+# v2026.11.02_01
+
+- Increased HTTP connect timeout for TJ-Allsky nightly uploads from 120 to 600 seconds.
+- Increased HTTP connect timeout for INDI-AllSky nightly uploads from 120 to 600 seconds.
+- Improves reliability of large video uploads on slow or heavily utilized upstream connections.
+- HTTP read timeout remains unchanged at 600 seconds.
+- No changes to video processing, upload formats, retry logic, jitter or cron schedules.
+
 # v2026.10.31_01
 
 - Added structured JSONL diagnostics for TJ-Allsky nightly uploads.
