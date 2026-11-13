@@ -1,6 +1,6 @@
 """Kompakte, fehlertolerante JSONL-Diagnose für Nightly-Uploads.
 
-Die Logs bleiben zunächst lokal. Ein getrennter Uploader wird später ergänzt.
+Abgeschlossene Logs werden getrennt durch raspi_status per HTTPS übertragen.
 Keine API-Keys, Tokens oder vollständigen HTTP-Antworten erfassen.
 """
 import json

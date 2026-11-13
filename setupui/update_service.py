@@ -10,7 +10,6 @@ from typing import Dict, Any
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 LOCAL_VERSION_PATH = os.path.join(PROJECT_ROOT, "version")
 
-# HIER SPÄTER DEIN ECHTES RAW-GITHUB-ZIEL EINTRAGEN
 GITHUB_VERSION_URL = "https://raw.githubusercontent.com/gottie29/AllSkyKamera/main/version"
 
 SETUPUI_SERVICE_NAME = "allsky-setupui.service"
